@@ -32,6 +32,6 @@ a = spjs.index("/* ---------- the lean method"); b = spjs.index("/* ---------- t
 lean = spjs[a:b]
 c = spjs.index("/* ---------- classic algorithms ---------- */"); d = spjs.index("/* ---------- puzzles ---------- */")
 classic = spjs[c:d]
-page = head + rd(D + "tensor_body.html") + "\n<script>" + helpers + "\n/* ---------- engines copied as is from the Speed page ---------- */\n" + lean + classic + rd(D + "tensor_engine.js") + rd(D + "matrix_engine.js") + rd(D + "shared_engine.js") + rd(D + "tensor_ui.js") + "</script>\n</body>\n</html>\n"
+page = head + rd(D + "tensor_body.html") + "\n<script>" + helpers + "\n/* ---------- engines copied as is from the Speed page ---------- */\n" + lean + classic + rd(D + "tensor_engine.js") + rd(D + "matrix_engine.js") + rd(D + "shared_engine.js") + rd(D + "dancing_engine.js") + rd(D + "tensor_ui.js") + "</script>\n</body>\n</html>\n"
 open("C:/Sudoku_shaimaa/LayerSudoku-Tensor.html", "w", encoding="utf-8").write(page)
 print("written", len(page))

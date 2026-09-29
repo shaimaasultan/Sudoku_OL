@@ -4,8 +4,8 @@ const SHOT = process.argv[2];
 const b = await launch(9361);
 await b.viewport(620, 1500, 2, false);
 await b.open("C:/Sudoku_shaimaa/LayerSudoku-Tensor.html", "typeof tensorOL === 'function'");
-await b.send("Runtime.evaluate", { expression: `window.__errs = []; window.addEventListener("error", e => __errs.push(e.message + " @" + e.lineno)); true` });
-const wait = async c => { for (let t = 0; t < 60; t++) { await new Promise(r => setTimeout(r, 300)); if (await b.eval(c)) return; } };
+await b.send("Runtime.evaluate", { expression: `window.__errs = []; window.addEventListener("error", e => __errs.push(e.message + " @" + e.lineno)); window.addEventListener("unhandledrejection", e => __errs.push("async: " + (e.reason && e.reason.stack || e.reason))); true` });
+const wait = async c => { for (let t = 0; t < 100; t++) { await new Promise(r => setTimeout(r, 300)); if (await b.eval(c)) return; } };
 await wait(`!!T && $("busy").classList.contains("hidden")`);
 if (process.argv[4]) { await b.eval(`$("engine").value = "${process.argv[4]}"; $("engine").onchange(); $("newBtn").click(); T = null; true`); await wait(`!!T && $("busy").classList.contains("hidden")`); }
 console.log(await b.eval(`$("info").textContent`));

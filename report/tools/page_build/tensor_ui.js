@@ -10,6 +10,7 @@ function makePuzzle(level) {
   return { p, sol };
 }
 const sOpt = () => ({ top: Math.max(1, +$("startK").value), cap: +$("cap").value });
+const dOpt = () => ({ top: +$("startK").value, cap: +$("cap").value });
 const mOpt = eng => ({ top: eng === "m3" ? 3 : 2, cap: +$("cap").value });
 const tOpt = () => ({ dirs: $("dirs").value.split("").map(Number), start: +$("startK").value, cap: +$("cap").value });
 
@@ -30,12 +31,12 @@ function newPuzzle() {
     setSize(n);
     const z = withSeed(() => makePuzzle(level));
     P = { p: z.p, n, level };
-    const eng = $("engine").value, run = eng === "tensor" ? q => tensorOL(q, tOpt()) : eng === "shared" ? q => sharedOL(q, sOpt()) : q => matrixOL(q, mOpt(eng));
+    const eng = $("engine").value, run = eng === "tensor" ? q => tensorOL(q, tOpt()) : eng === "shared" ? q => sharedOL(q, sOpt()) : eng === "dancing" ? q => dancingLayers(q, dOpt()) : q => matrixOL(q, mOpt(eng));
     const t0 = performance.now(); const r = run(P.p); const ms = performance.now() - t0;
-    T = eng === "tensor" ? tensorTrace(P.p, tOpt()) : eng === "shared" ? sharedTrace(P.p, sOpt()) : matrixTrace(P.p, mOpt(eng)); V.k = 0;
+    T = eng === "tensor" ? tensorTrace(P.p, tOpt()) : eng === "shared" ? sharedTrace(P.p, sOpt()) : eng === "dancing" ? dancingTrace(P.p, dOpt()) : matrixTrace(P.p, mOpt(eng)); V.k = 0;
     // running totals for the stats boxes
     CUM = []; const b = [0, 0, 0, 0]; let gu = 0;
-    for (const e of T.ev) { if (e.kind === "build" && !e.big) b[(e.key / N) | 0]++; if (e.kind === "vertical") e.layers.forEach((v, k) => b[k + 1] += v); if (e.kind === "sbuild" && !e.big) b[0] = Math.max(b[0], e.set.length); if (e.kind === "guess") gu++; CUM.push({ b: b.slice(), gu }); }
+    for (const e of T.ev) { if (e.kind === "build" && !e.big) b[(e.key / N) | 0]++; if (e.kind === "vertical") e.layers.forEach((v, k) => b[k + 1] += v); if (e.kind === "sbuild" && !e.big) b[0] = Math.max(b[0], e.set.length); if (e.kind === "dlbuild") b[0] = e.tz.length; if (e.kind === "guess") gu++; CUM.push({ b: b.slice(), gu }); }
     $("busy").classList.add("hidden");
     const giv = P.p.filter(Boolean).length;
     $("info").innerHTML = `${n}×${n}, ${giv} givens (${Math.round(100 * giv / (n * n))}%) — ${/^\d+$/.test(level) ? "random cells, usually many answers" : "exactly one answer"}. ` +
@@ -174,6 +175,10 @@ function explain(e) {
   switch (e.kind) {
     case "start": return ["Start", `The givens are placed in the tensor: each one removes the other numbers of its cell and its number from its row, column and box.`];
     case "singles": return ["Lines with one point", `${e.pl.length ? `Placed ${ptList(e.pl)} — a line of the cube (a cell, or a number in a row, column or box) had only that point left.` : ""} ${e.rm.length ? `${e.rm.length} point${e.rm.length > 1 ? "s" : ""} removed from the tensor.` : ""}`];
+    case "dlbuild": return ["Dancing Layers: the rows", `${e.tz.length ? `Numbers with templates as rows: ${e.tz.map(([z, n]) => `<b>${sym(z + 1)}</b> (${n.toLocaleString()})`).join(", ")}. ` : "No number gets templates: plain Dancing Links. "}Every other number has one row per possible cell. In all: <b>${e.rows.toLocaleString()}</b> rows, <b>${e.cols.toLocaleString()}</b> columns.`];
+    case "dlpick": { const where = e.key != null ? `the <b>${layerName(e.key)}</b> column (one template must be chosen)` : `the column <b>${lineName(e.line)}</b>`;
+      return e.size ? ["Choose the smallest column", `${where[0].toUpperCase() + where.slice(1)} has the fewest live rows: <b>${e.size}</b>. Its rows will be tried one by one.`] : ["Dead end", `${where[0].toUpperCase() + where.slice(1)} has no live row left: the last choice was wrong.`]; }
+    case "dlsel": return [e.of > 1 ? "Choose a row" : "Forced row", `${e.of > 1 ? `Row ${e.t + 1} of ${e.of}` : "The only row left"} for ${e.key != null ? `the ${layerName(e.key)} column` : lineName(e.line)}: ${e.tpl ? `a whole template — ${ptList(e.pts, 4)}` : ptName(e.pts[0])}. Every row that clashes with it is unlinked (toggled off).`];
     case "sbuild": return e.big ? ["Shared walk too long", `Walking the patterns of numbers <b>${e.set.map(z => sym(z + 1)).join(", ")}</b> together passed the cap (${e.n.toLocaleString()} patterns). It waits until they shrink.`]
       : ["Build the shared patterns", `One walk over the patterns for numbers <b>${e.set.map(z => sym(z + 1)).join(", ")}</b> together: <b>${e.n.toLocaleString()}</b> patterns, each kept once with the set of these numbers it fits. Support counts are set up for every point.`];
     case "shared": return ["Support counts", `${e.pl.length ? `Every live pattern of its number uses ${ptList(e.pl)}: placed. ` : ""}${e.rm.length ? `${e.rm.length} point${e.rm.length > 1 ? "s" : ""} lost their last supporting pattern (or were taken by what was placed): removed.` : ""} Only the patterns through changed cells were touched.`];
@@ -194,6 +199,9 @@ function explain(e) {
 const chip = e => { switch (e.kind) {
   case "singles": return e.pl.length ? [`single ×${e.pl.length}`, ""] : null;
   case "build": return [`${e.big ? "✗ " : "▣ "}${layerName(e.key)}${e.big ? "" : " (" + e.n + ")"}`, e.big ? "back" : "pick"];
+  case "dlbuild": return [`▦ rows ${e.rows.toLocaleString()}`, "pick"];
+  case "dlpick": return e.size ? [`◇ ${e.key != null ? layerName(e.key) : lineName(e.line)} (${e.size})`, "pick"] : ["✗ empty column", "back"];
+  case "dlsel": return e.of > 1 ? [`? ${e.tpl ? "template" : ptName(e.pts[0])} ${e.t + 1}/${e.of}`, "pick"] : null;
   case "sbuild": return [`${e.big ? "✗" : "▣"} shared ${e.set.map(z => sym(z + 1)).join("")}${e.big ? "" : " (" + e.n + ")"}`, e.big ? "back" : "pick"];
   case "shared": return [`support${e.pl.length ? " +" + e.pl.length : ""}${e.rm.length ? " −" + e.rm.length : ""}`, ""];
   case "vertical": return [`▦ vertical ${e.n.reduce((a, b) => a + b, 0).toLocaleString()}`, "pick"];
@@ -255,6 +263,8 @@ const METHODS = [
   { key: "tNum", name: "Tensor OL · number layers only", color: "#6f98ff", run: p => tensorOL(p, { ...tOpt(), dirs: [1, 0, 0, 0] }) },
   { key: "tUnit", name: "Tensor OL · row, column, box layers", color: "#8a4fd0", run: p => tensorOL(p, { ...tOpt(), dirs: [0, 1, 1, 1] }) },
   { key: "sh", name: "Shared number patterns · support counts", color: "#00897b", run: p => sharedOL(p, sOpt()) },
+  { key: "dl", name: "Dancing Layers · templates as rows", color: "#6d4c41", run: p => dancingLayers(p, dOpt()) },
+  { key: "dl0", name: "Dancing Layers · no templates (plain exact cover)", color: "#a1887f", run: p => dancingLayers(p, { top: 0 }) },
   { key: "x2", name: "Matrix OL · top 2 + full vertical (matmul)", color: "#c2185b", run: p => matrixOL(p, { top: 2, cap: +$("cap").value }) },
   { key: "x3", name: "Matrix OL · top 3 + full vertical (matmul)", color: "#f06292", run: p => matrixOL(p, { top: 3, cap: +$("cap").value }) },
   // exactly the Speed page's lean method, as is (top 2, fewest open cells first, cap 300,000)
@@ -306,11 +316,11 @@ $("raceBtn").onclick = async () => {
   const best = Math.min(...use.map(m => median(res[m.key].slice(0, done).map(x => x.ms))));
   const giv = mean(puzzles.slice(0, done).map(p => p.filter(Boolean).length));
   $("rTbl").innerHTML = `<tr><th>Method</th><th>Solved</th><th>Median</th><th>Mean</th><th>Slowest</th><th>Guesses (median)</th><th>Layers built N·R·C·B (median)</th></tr>` + use.map(m => {
-    const R = res[m.key].slice(0, done), ms = R.map(x => x.ms), md = median(ms), t = m.key.startsWith("t") || m.key.startsWith("x") || m.key === "sh";
+    const R = res[m.key].slice(0, done), ms = R.map(x => x.ms), md = median(ms), t = ["tAll", "tNum", "tUnit", "sh", "x2", "x3", "dl", "dl0"].includes(m.key);
     return `<tr><td><span class="sw" style="background:${m.color}"></span>${m.name}</td><td>${R.filter(x => x.ok).length} of ${R.length}</td><td class="${md === best ? "best" : ""}">${fmt(md)}</td><td>${fmt(mean(ms))}</td><td>${fmt(Math.max(...ms))}</td>` +
       `<td>${t || m.key === "mrv" || m.key === "dlx" ? median(R.map(x => x.gu)).toLocaleString() : "–"}</td><td>${t ? [0, 1, 2, 3].map(d => median(R.map(x => x.b[d]))).join("·") : "–"}</td></tr>`; }).join("");
   $("rStatus").textContent = `${n}×${n}, ${$("rLevel").selectedOptions[0].textContent}: ${done} puzzle${done > 1 ? "s" : ""}, ${giv.toFixed(1)} givens on average (${(100 * giv / (n * n)).toFixed(0)}%).${raceStop ? " Stopped early." : ""}`;
-  $("rNote").textContent = `Tensor settings: start top ${$("startK").value}, cap ${(+$("cap").value).toLocaleString()}. Matrix: top 2 or 3 number layers (same cap) + every row, column and box layer in full. Shared: starts with the top numbers from the Start menu (at least 1); its "layers built" = how many shared walks. MRV and Dancing Links stop at 5 million steps; a stopped run counts as not solved. For MRV and Dancing Links the "guesses" column is their search nodes.`;
+  $("rNote").textContent = `Tensor settings: start top ${$("startK").value}, cap ${(+$("cap").value).toLocaleString()}. Matrix: top 2 or 3 number layers (same cap) + every row, column and box layer in full. Shared: starts with the top numbers from the Start menu (at least 1); its "layers built" = how many shared walks. Dancing Layers: numbers with templates as rows (Start menu); its "guesses" are search nodes, as for Dancing Links and MRV. MRV and Dancing Links stop at 5 million steps; a stopped run counts as not solved. For MRV and Dancing Links the "guesses" column is their search nodes.`;
   $("raceBtn").disabled = false; $("raceStop").disabled = true; prog(1);
   if (P) setSize(P.n);                               // the replay above keeps its own size
 };

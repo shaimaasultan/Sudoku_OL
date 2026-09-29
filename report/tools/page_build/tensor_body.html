@@ -16,6 +16,7 @@
       <select id="engine" aria-label="Engine">
         <option value="tensor" selected>Tensor OL — layers chosen by the menus below</option>
         <option value="shared">Shared number patterns — built together, cut by support counts (Start = how many numbers)</option>
+        <option value="dancing">Dancing Layers — Dancing Links with whole templates as rows (Start = how many numbers get templates)</option>
         <option value="m2">Matrix OL (matmul) — top 2 number layers + all vertical layers in full</option>
         <option value="m3">Matrix OL (matmul) — top 3 number layers + all vertical layers in full</option>
       </select>
@@ -97,6 +98,13 @@
       <li><b>Thinnest first, in any direction.</b> For each layer a size bound is worked out from the tensor (the product of the open points along its lines). The start builds the top 1–9 thinnest layers; when nothing changes, one more is built, the thinnest in any allowed direction. A layer with more options than the cap is left unbuilt, and tried again only when its bound has shrunk about 8 times.</li>
       <li><b>Cut and AND / OR.</b> An option that uses a removed point is cut. A point used by no option is removed from the tensor (OR); a point used by every option is placed (AND). The same rule works for all four directions.</li>
       <li><b>Guess last, on the smallest choice.</b> When nothing more can be done, guess on the built layer with the fewest options or on the tensor line with the fewest points, whichever is smaller; go back if it leads to a dead end.</li>
+    </ol>
+    <h2 style="margin-top:12px">Dancing Layers</h2>
+    <ol>
+      <li><b>Exact cover with whole templates.</b> For the thinnest numbers (the Start menu) whose layer fits the cap, every template is one row: it covers its N cells and the column "number d". Every other number keeps ordinary rows: one per possible cell, covering that cell and "d in its row / column / box". A solution is a set of rows that covers every column exactly once.</li>
+      <li><b>Toggle, don't rebuild.</b> Choosing a row unlinks every row that clashes with it — all templates and candidates through its cells; going back links them again (Knuth's dancing links). No list is ever cut, copied or built again during the search.</li>
+      <li><b>Choose the smallest column.</b> Every step works on the column with the fewest live rows: a cell, a whole number layer (choose one of its templates), or a number in a row, column or box. A column with one row is a forced move; with none, a dead end.</li>
+      <li>With Start = no layer, it is plain Dancing Links on the candidates the givens leave open — the race lists it separately, so the effect of the templates can be seen.</li>
     </ol>
     <h2 style="margin-top:12px">The shared-patterns version</h2>
     <ol>

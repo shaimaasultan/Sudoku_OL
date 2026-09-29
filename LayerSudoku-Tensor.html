@@ -105,6 +105,7 @@ td.best{color:var(--ok);font-weight:700}
       <select id="engine" aria-label="Engine">
         <option value="tensor" selected>Tensor OL — layers chosen by the menus below</option>
         <option value="shared">Shared number patterns — built together, cut by support counts (Start = how many numbers)</option>
+        <option value="dancing">Dancing Layers — Dancing Links with whole templates as rows (Start = how many numbers get templates)</option>
         <option value="m2">Matrix OL (matmul) — top 2 number layers + all vertical layers in full</option>
         <option value="m3">Matrix OL (matmul) — top 3 number layers + all vertical layers in full</option>
       </select>
@@ -186,6 +187,13 @@ td.best{color:var(--ok);font-weight:700}
       <li><b>Thinnest first, in any direction.</b> For each layer a size bound is worked out from the tensor (the product of the open points along its lines). The start builds the top 1–9 thinnest layers; when nothing changes, one more is built, the thinnest in any allowed direction. A layer with more options than the cap is left unbuilt, and tried again only when its bound has shrunk about 8 times.</li>
       <li><b>Cut and AND / OR.</b> An option that uses a removed point is cut. A point used by no option is removed from the tensor (OR); a point used by every option is placed (AND). The same rule works for all four directions.</li>
       <li><b>Guess last, on the smallest choice.</b> When nothing more can be done, guess on the built layer with the fewest options or on the tensor line with the fewest points, whichever is smaller; go back if it leads to a dead end.</li>
+    </ol>
+    <h2 style="margin-top:12px">Dancing Layers</h2>
+    <ol>
+      <li><b>Exact cover with whole templates.</b> For the thinnest numbers (the Start menu) whose layer fits the cap, every template is one row: it covers its N cells and the column "number d". Every other number keeps ordinary rows: one per possible cell, covering that cell and "d in its row / column / box". A solution is a set of rows that covers every column exactly once.</li>
+      <li><b>Toggle, don't rebuild.</b> Choosing a row unlinks every row that clashes with it — all templates and candidates through its cells; going back links them again (Knuth's dancing links). No list is ever cut, copied or built again during the search.</li>
+      <li><b>Choose the smallest column.</b> Every step works on the column with the fewest live rows: a cell, a whole number layer (choose one of its templates), or a number in a row, column or box. A column with one row is a forced move; with none, a dead end.</li>
+      <li>With Start = no layer, it is plain Dancing Links on the candidates the givens leave open — the race lists it separately, so the effect of the templates can be seen.</li>
     </ol>
     <h2 style="margin-top:12px">The shared-patterns version</h2>
     <ol>
@@ -993,6 +1001,96 @@ function sharedTrace(p, opt, maxEv = 20000) {
   return { ev: rec.list, ok: r.ok, full: rec.full, guesses: r.guesses, built: r.built };
 }
 
+/* ---------- Dancing Layers: Dancing Links whose rows are whole templates ---------- */
+// Exact cover with two kinds of rows:
+//   a templated number d (its layer fits the cap): one row per template = its N cells + the column "number d";
+//   any other number: one row per possible cell = that cell + "d in its row" + "d in its column" + "d in its box".
+// Columns: every cell, "number d" for templated numbers, and row / column / box columns for the others.
+// Choosing a row unlinks every row that clashes with it (a toggle, not a rebuild); going back links them again.
+// Every choice is made on the column with the fewest live rows — a cell, a whole number layer, or a number in a row / column / box.
+function dancingLayers(p, opt = {}) {
+  if (!TG || TG.N !== N) tensorSetup();
+  const { NN, R, C, B, UC } = TG;
+  const cap = opt.cap || 2000, top = opt.top == null ? 2 : opt.top, nodeCap = opt.nodeCap || 5e6;
+  const all = N === 32 ? 0xFFFFFFFF : (1 << N) - 1;
+  const fail = () => ({ ok: false, grid: null, guesses: 0, built: [0, 0, 0, 0] });
+  // the points the givens leave open
+  const rm = new Uint32Array(N), cm = new Uint32Array(N), bm = new Uint32Array(N), cnt = new Int16Array(N), allow = new Uint32Array(NN);
+  for (let i = 0; i < NN; i++) if (p[i]) { const b = 1 << (p[i] - 1); if ((rm[R[i]] | cm[C[i]] | bm[B[i]]) & b) return fail(); rm[R[i]] |= b; cm[C[i]] |= b; bm[B[i]] |= b; cnt[p[i] - 1]++; }
+  for (let i = 0; i < NN; i++) allow[i] = p[i] ? 1 << (p[i] - 1) : all & ~(rm[R[i]] | cm[C[i]] | bm[B[i]]);
+  // template lists for the thinnest numbers (complete numbers always, they have one template)
+  const est = z => { let s = 0; for (let b = 0; b < N; b++) { let k = 0; for (const i of UC[3][b]) k += (allow[i] >>> z) & 1; if (!k) return -1; s += Math.log(k); } return s; };
+  const order = []; for (let z = 0; z < N; z++) { const e = est(z); if (e < 0) return fail(); order.push([cnt[z] === N ? -1 : e, z]); }
+  order.sort((a, b) => a[0] - b[0]);
+  const tpl = new Array(N).fill(null); let tried = 0;
+  for (const [e, z] of order) {
+    if (e >= 0 && tried >= top) break; if (e >= 0) tried++;
+    const slots = []; for (let b = 0; b < N; b++) slots.push(UC[3][b].filter(i => (allow[i] >>> z) & 1)); slots.sort((a, b) => a.length - b.length);
+    const out = []; const cur = new Int16Array(N); let over = false;
+    (function rec(s, uR, uC) { if (over) return; if (s === N) { if (out.length >= cap) { over = true; return; } out.push(Array.from(cur)); return; }
+      for (const i of slots[s]) { const rb = 1 << R[i], cb = 1 << C[i]; if ((uR & rb) || (uC & cb)) continue; cur[s] = i; rec(s + 1, uR | rb, uC | cb); } })(0, 0, 0);
+    if (!over) { if (!out.length) return fail(); tpl[z] = out; }
+  }
+  // columns: cells, then per number either "number d" or its row / column / box columns
+  let nc = NN; const numCol = new Int32Array(N).fill(-1), rcol = new Int32Array(N * N), kcol = new Int32Array(N * N), bcol = new Int32Array(N * N), ctype = [];
+  for (let i = 0; i < NN; i++) ctype.push([0, i, -1]);
+  for (let z = 0; z < N; z++) {
+    if (tpl[z]) { numCol[z] = nc++; ctype.push([4, z]); continue; }
+    for (let u = 0; u < N; u++) { rcol[z * N + u] = nc++; ctype.push([1, u, z]); }
+    for (let u = 0; u < N; u++) { kcol[z * N + u] = nc++; ctype.push([2, u, z]); }
+    for (let u = 0; u < N; u++) { bcol[z * N + u] = nc++; ctype.push([3, u, z]); }
+  }
+  // Dancing Links arrays (as dlxSolve on the Speed page)
+  const L = [], Rt = [], U = [], D = [], Cl = [], RowId = [], S = new Int32Array(nc + 1);
+  for (let j = 0; j <= nc; j++) { L.push(j - 1); Rt.push(j + 1); U.push(j); D.push(j); Cl.push(j); RowId.push(-1); }
+  L[0] = nc; Rt[nc] = 0;
+  const rows = [];                                   // each row: [number index, cells...]
+  const addRow = (cols, info) => { let first = -1; for (const col of cols) { const x = L.length; Cl.push(col + 1); RowId.push(rows.length); U.push(U[col + 1]); D.push(col + 1); D[U[col + 1]] = x; U[col + 1] = x; S[col + 1]++; if (first < 0) { first = x; L.push(x); Rt.push(x); } else { L.push(L[first]); Rt.push(first); Rt[L[first]] = x; L[first] = x; } } rows.push(info); };
+  for (let z = 0; z < N; z++) {
+    if (tpl[z]) { for (const t of tpl[z]) addRow([...t, numCol[z]], [z, ...t]); continue; }
+    for (let i = 0; i < NN; i++) if ((allow[i] >>> z) & 1) addRow([i, rcol[z * N + R[i]], kcol[z * N + C[i]], bcol[z * N + B[i]]], [z, i]);
+  }
+  const cover = c => { Rt[L[c]] = Rt[c]; L[Rt[c]] = L[c]; for (let i = D[c]; i !== c; i = D[i]) for (let j = Rt[i]; j !== i; j = Rt[j]) { D[U[j]] = D[j]; U[D[j]] = U[j]; S[Cl[j]]--; } };
+  const uncover = c => { for (let i = U[c]; i !== c; i = U[i]) for (let j = L[i]; j !== i; j = L[j]) { S[Cl[j]]++; D[U[j]] = j; U[D[j]] = j; } Rt[L[c]] = c; L[Rt[c]] = c; };
+  const built = [tpl.filter(Boolean).length, 0, 0, 0];
+  // the replay: the grid from the chosen rows, and the tensor from the rows still linked
+  const g = new Int8Array(NN), pts = r => rows[r].slice(1).map(i => i * N + rows[r][0]);
+  const view = () => { const cv = new Uint32Array(NN); let left = 0;
+    for (let i = 0; i < NN; i++) { if (g[i]) { cv[i] = 1 << (g[i] - 1); continue; } left++; for (let x = D[i + 1]; x !== i + 1; x = D[x]) cv[i] |= 1 << rows[RowId[x]][0]; }
+    return { g, cv, left }; };
+  const region = c => { const t = ctype[c - 1]; return t[0] === 4 ? { key: t[1] } : { line: t[0] === 0 ? [0, t[1], -1] : [t[0], t[1], t[2]] }; };
+  const set = (r, v) => { const z = rows[r][0]; for (let k = 1; k < rows[r].length; k++) g[rows[r][k]] = v ? z + 1 : 0; };
+  let nodes = 0, aborted = false;
+  if (TR) { TR.ev(view(), { kind: "start" }); TR.ev(view(), { kind: "dlbuild", tz: tpl.map((t, z) => t ? [z, t.length] : null).filter(Boolean), rows: rows.length, cols: nc }); }
+  const search = () => {
+    if (++nodes > nodeCap) { aborted = true; return true; }
+    if (Rt[0] === 0) return true;
+    let c = Rt[0]; for (let j = Rt[0]; j !== 0; j = Rt[j]) if (S[j] < S[c]) c = j;
+    if (!S[c]) { if (TR) TR.ev(view(), { kind: "dlpick", ...region(c), size: 0 }); return false; }
+    if (TR && S[c] > 1) TR.ev(view(), { kind: "dlpick", ...region(c), size: S[c] });
+    const n = S[c]; cover(c); let t = 0;
+    for (let r = D[c]; r !== c; r = D[r], t++) {
+      for (let j = Rt[r]; j !== r; j = Rt[j]) cover(Cl[j]);
+      set(RowId[r], 1);
+      if (TR) { TR.pl.push(...pts(RowId[r])); TR.ev(view(), { kind: "dlsel", ...region(c), t, of: n, pts: pts(RowId[r]), tpl: !!tpl[rows[RowId[r]][0]], depth: n > 1 ? ++TR.depth : TR.depth }); }
+      if (search()) return true;
+      set(RowId[r], 0);
+      for (let j = L[r]; j !== r; j = L[j]) uncover(Cl[j]);
+      if (TR) { if (n > 1) TR.depth--; TR.ev(view(), { kind: "back", ...region(c), t, of: n }); }
+    }
+    uncover(c); return false;
+  };
+  const ok = search() && !aborted;
+  return { ok, grid: ok ? Array.from(g) : null, guesses: nodes - 1, built };
+}
+function dancingTrace(p, opt, maxEv = 20000) {
+  TR = makeRecorder(maxEv);
+  let r; try { r = dancingLayers(p, opt); } finally { var rec = TR; TR = null; }
+  const last = rec.list[rec.list.length - 1];
+  rec.ev({ g: r.grid ? Int8Array.from(r.grid) : last.g, cv: last.cv, left: r.grid ? 0 : -1 }, { kind: r.ok ? "done" : "fail" });
+  return { ev: rec.list, ok: r.ok, full: rec.full, guesses: r.guesses, built: r.built };
+}
+
 /* ---------- seed: the same seed makes the same puzzles again ---------- */
 const RND = Math.random;
 function seeded(seed) { let s = seed >>> 0; return () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -1004,6 +1102,7 @@ function makePuzzle(level) {
   return { p, sol };
 }
 const sOpt = () => ({ top: Math.max(1, +$("startK").value), cap: +$("cap").value });
+const dOpt = () => ({ top: +$("startK").value, cap: +$("cap").value });
 const mOpt = eng => ({ top: eng === "m3" ? 3 : 2, cap: +$("cap").value });
 const tOpt = () => ({ dirs: $("dirs").value.split("").map(Number), start: +$("startK").value, cap: +$("cap").value });
 
@@ -1024,12 +1123,12 @@ function newPuzzle() {
     setSize(n);
     const z = withSeed(() => makePuzzle(level));
     P = { p: z.p, n, level };
-    const eng = $("engine").value, run = eng === "tensor" ? q => tensorOL(q, tOpt()) : eng === "shared" ? q => sharedOL(q, sOpt()) : q => matrixOL(q, mOpt(eng));
+    const eng = $("engine").value, run = eng === "tensor" ? q => tensorOL(q, tOpt()) : eng === "shared" ? q => sharedOL(q, sOpt()) : eng === "dancing" ? q => dancingLayers(q, dOpt()) : q => matrixOL(q, mOpt(eng));
     const t0 = performance.now(); const r = run(P.p); const ms = performance.now() - t0;
-    T = eng === "tensor" ? tensorTrace(P.p, tOpt()) : eng === "shared" ? sharedTrace(P.p, sOpt()) : matrixTrace(P.p, mOpt(eng)); V.k = 0;
+    T = eng === "tensor" ? tensorTrace(P.p, tOpt()) : eng === "shared" ? sharedTrace(P.p, sOpt()) : eng === "dancing" ? dancingTrace(P.p, dOpt()) : matrixTrace(P.p, mOpt(eng)); V.k = 0;
     // running totals for the stats boxes
     CUM = []; const b = [0, 0, 0, 0]; let gu = 0;
-    for (const e of T.ev) { if (e.kind === "build" && !e.big) b[(e.key / N) | 0]++; if (e.kind === "vertical") e.layers.forEach((v, k) => b[k + 1] += v); if (e.kind === "sbuild" && !e.big) b[0] = Math.max(b[0], e.set.length); if (e.kind === "guess") gu++; CUM.push({ b: b.slice(), gu }); }
+    for (const e of T.ev) { if (e.kind === "build" && !e.big) b[(e.key / N) | 0]++; if (e.kind === "vertical") e.layers.forEach((v, k) => b[k + 1] += v); if (e.kind === "sbuild" && !e.big) b[0] = Math.max(b[0], e.set.length); if (e.kind === "dlbuild") b[0] = e.tz.length; if (e.kind === "guess") gu++; CUM.push({ b: b.slice(), gu }); }
     $("busy").classList.add("hidden");
     const giv = P.p.filter(Boolean).length;
     $("info").innerHTML = `${n}×${n}, ${giv} givens (${Math.round(100 * giv / (n * n))}%) — ${/^\d+$/.test(level) ? "random cells, usually many answers" : "exactly one answer"}. ` +
@@ -1168,6 +1267,10 @@ function explain(e) {
   switch (e.kind) {
     case "start": return ["Start", `The givens are placed in the tensor: each one removes the other numbers of its cell and its number from its row, column and box.`];
     case "singles": return ["Lines with one point", `${e.pl.length ? `Placed ${ptList(e.pl)} — a line of the cube (a cell, or a number in a row, column or box) had only that point left.` : ""} ${e.rm.length ? `${e.rm.length} point${e.rm.length > 1 ? "s" : ""} removed from the tensor.` : ""}`];
+    case "dlbuild": return ["Dancing Layers: the rows", `${e.tz.length ? `Numbers with templates as rows: ${e.tz.map(([z, n]) => `<b>${sym(z + 1)}</b> (${n.toLocaleString()})`).join(", ")}. ` : "No number gets templates: plain Dancing Links. "}Every other number has one row per possible cell. In all: <b>${e.rows.toLocaleString()}</b> rows, <b>${e.cols.toLocaleString()}</b> columns.`];
+    case "dlpick": { const where = e.key != null ? `the <b>${layerName(e.key)}</b> column (one template must be chosen)` : `the column <b>${lineName(e.line)}</b>`;
+      return e.size ? ["Choose the smallest column", `${where[0].toUpperCase() + where.slice(1)} has the fewest live rows: <b>${e.size}</b>. Its rows will be tried one by one.`] : ["Dead end", `${where[0].toUpperCase() + where.slice(1)} has no live row left: the last choice was wrong.`]; }
+    case "dlsel": return [e.of > 1 ? "Choose a row" : "Forced row", `${e.of > 1 ? `Row ${e.t + 1} of ${e.of}` : "The only row left"} for ${e.key != null ? `the ${layerName(e.key)} column` : lineName(e.line)}: ${e.tpl ? `a whole template — ${ptList(e.pts, 4)}` : ptName(e.pts[0])}. Every row that clashes with it is unlinked (toggled off).`];
     case "sbuild": return e.big ? ["Shared walk too long", `Walking the patterns of numbers <b>${e.set.map(z => sym(z + 1)).join(", ")}</b> together passed the cap (${e.n.toLocaleString()} patterns). It waits until they shrink.`]
       : ["Build the shared patterns", `One walk over the patterns for numbers <b>${e.set.map(z => sym(z + 1)).join(", ")}</b> together: <b>${e.n.toLocaleString()}</b> patterns, each kept once with the set of these numbers it fits. Support counts are set up for every point.`];
     case "shared": return ["Support counts", `${e.pl.length ? `Every live pattern of its number uses ${ptList(e.pl)}: placed. ` : ""}${e.rm.length ? `${e.rm.length} point${e.rm.length > 1 ? "s" : ""} lost their last supporting pattern (or were taken by what was placed): removed.` : ""} Only the patterns through changed cells were touched.`];
@@ -1188,6 +1291,9 @@ function explain(e) {
 const chip = e => { switch (e.kind) {
   case "singles": return e.pl.length ? [`single ×${e.pl.length}`, ""] : null;
   case "build": return [`${e.big ? "✗ " : "▣ "}${layerName(e.key)}${e.big ? "" : " (" + e.n + ")"}`, e.big ? "back" : "pick"];
+  case "dlbuild": return [`▦ rows ${e.rows.toLocaleString()}`, "pick"];
+  case "dlpick": return e.size ? [`◇ ${e.key != null ? layerName(e.key) : lineName(e.line)} (${e.size})`, "pick"] : ["✗ empty column", "back"];
+  case "dlsel": return e.of > 1 ? [`? ${e.tpl ? "template" : ptName(e.pts[0])} ${e.t + 1}/${e.of}`, "pick"] : null;
   case "sbuild": return [`${e.big ? "✗" : "▣"} shared ${e.set.map(z => sym(z + 1)).join("")}${e.big ? "" : " (" + e.n + ")"}`, e.big ? "back" : "pick"];
   case "shared": return [`support${e.pl.length ? " +" + e.pl.length : ""}${e.rm.length ? " −" + e.rm.length : ""}`, ""];
   case "vertical": return [`▦ vertical ${e.n.reduce((a, b) => a + b, 0).toLocaleString()}`, "pick"];
@@ -1249,6 +1355,8 @@ const METHODS = [
   { key: "tNum", name: "Tensor OL · number layers only", color: "#6f98ff", run: p => tensorOL(p, { ...tOpt(), dirs: [1, 0, 0, 0] }) },
   { key: "tUnit", name: "Tensor OL · row, column, box layers", color: "#8a4fd0", run: p => tensorOL(p, { ...tOpt(), dirs: [0, 1, 1, 1] }) },
   { key: "sh", name: "Shared number patterns · support counts", color: "#00897b", run: p => sharedOL(p, sOpt()) },
+  { key: "dl", name: "Dancing Layers · templates as rows", color: "#6d4c41", run: p => dancingLayers(p, dOpt()) },
+  { key: "dl0", name: "Dancing Layers · no templates (plain exact cover)", color: "#a1887f", run: p => dancingLayers(p, { top: 0 }) },
   { key: "x2", name: "Matrix OL · top 2 + full vertical (matmul)", color: "#c2185b", run: p => matrixOL(p, { top: 2, cap: +$("cap").value }) },
   { key: "x3", name: "Matrix OL · top 3 + full vertical (matmul)", color: "#f06292", run: p => matrixOL(p, { top: 3, cap: +$("cap").value }) },
   // exactly the Speed page's lean method, as is (top 2, fewest open cells first, cap 300,000)
@@ -1300,11 +1408,11 @@ $("raceBtn").onclick = async () => {
   const best = Math.min(...use.map(m => median(res[m.key].slice(0, done).map(x => x.ms))));
   const giv = mean(puzzles.slice(0, done).map(p => p.filter(Boolean).length));
   $("rTbl").innerHTML = `<tr><th>Method</th><th>Solved</th><th>Median</th><th>Mean</th><th>Slowest</th><th>Guesses (median)</th><th>Layers built N·R·C·B (median)</th></tr>` + use.map(m => {
-    const R = res[m.key].slice(0, done), ms = R.map(x => x.ms), md = median(ms), t = m.key.startsWith("t") || m.key.startsWith("x") || m.key === "sh";
+    const R = res[m.key].slice(0, done), ms = R.map(x => x.ms), md = median(ms), t = ["tAll", "tNum", "tUnit", "sh", "x2", "x3", "dl", "dl0"].includes(m.key);
     return `<tr><td><span class="sw" style="background:${m.color}"></span>${m.name}</td><td>${R.filter(x => x.ok).length} of ${R.length}</td><td class="${md === best ? "best" : ""}">${fmt(md)}</td><td>${fmt(mean(ms))}</td><td>${fmt(Math.max(...ms))}</td>` +
       `<td>${t || m.key === "mrv" || m.key === "dlx" ? median(R.map(x => x.gu)).toLocaleString() : "–"}</td><td>${t ? [0, 1, 2, 3].map(d => median(R.map(x => x.b[d]))).join("·") : "–"}</td></tr>`; }).join("");
   $("rStatus").textContent = `${n}×${n}, ${$("rLevel").selectedOptions[0].textContent}: ${done} puzzle${done > 1 ? "s" : ""}, ${giv.toFixed(1)} givens on average (${(100 * giv / (n * n)).toFixed(0)}%).${raceStop ? " Stopped early." : ""}`;
-  $("rNote").textContent = `Tensor settings: start top ${$("startK").value}, cap ${(+$("cap").value).toLocaleString()}. Matrix: top 2 or 3 number layers (same cap) + every row, column and box layer in full. Shared: starts with the top numbers from the Start menu (at least 1); its "layers built" = how many shared walks. MRV and Dancing Links stop at 5 million steps; a stopped run counts as not solved. For MRV and Dancing Links the "guesses" column is their search nodes.`;
+  $("rNote").textContent = `Tensor settings: start top ${$("startK").value}, cap ${(+$("cap").value).toLocaleString()}. Matrix: top 2 or 3 number layers (same cap) + every row, column and box layer in full. Shared: starts with the top numbers from the Start menu (at least 1); its "layers built" = how many shared walks. Dancing Layers: numbers with templates as rows (Start menu); its "guesses" are search nodes, as for Dancing Links and MRV. MRV and Dancing Links stop at 5 million steps; a stopped run counts as not solved. For MRV and Dancing Links the "guesses" column is their search nodes.`;
   $("raceBtn").disabled = false; $("raceStop").disabled = true; prog(1);
   if (P) setSize(P.n);                               // the replay above keeps its own size
 };

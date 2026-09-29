@@ -8,73 +8,89 @@
    "methods": {
     "tAll": {
      "name": "Tensor · all four directions",
-     "median": 0.22898097826086938,
-     "mean": 0.5008532919923032,
-     "max": 2.1061800000000006,
+     "median": 0.17554048964218463,
+     "mean": 0.39486865248336056,
+     "max": 1.1262333333333363,
      "solved": 10,
      "guesses": 0
     },
     "tNum": {
      "name": "Tensor · number layers only",
-     "median": 0.07992193545625761,
-     "mean": 0.13569535077473407,
-     "max": 0.37636315789473723,
+     "median": 0.19328745644599338,
+     "mean": 0.27546296696067624,
+     "max": 0.7572888888888909,
      "solved": 10,
      "guesses": 0
     },
     "tUnit": {
      "name": "Tensor · row/column/box layers",
-     "median": 0.17474030303030286,
-     "mean": 0.29604448158838126,
-     "max": 0.7278750000000009,
+     "median": 0.28427582619339065,
+     "mean": 0.46575680454865953,
+     "max": 1.084699999999998,
      "solved": 10,
      "guesses": 0
     },
     "shared": {
      "name": "Shared patterns · support counts",
-     "median": 0.13230595238095277,
-     "mean": 1.0966143038664726,
-     "max": 8.37560000000002,
+     "median": 0.156842076923077,
+     "mean": 1.1096495309527135,
+     "max": 8.395299999999963,
      "solved": 10,
      "guesses": 0
     },
+    "dl": {
+     "name": "Dancing Layers · templates as rows (top 2)",
+     "median": 0.13005962621607745,
+     "mean": 0.18009364361363267,
+     "max": 0.4122166666666658,
+     "solved": 10,
+     "guesses": 65
+    },
+    "dl0": {
+     "name": "Dancing Layers · no templates",
+     "median": 0.18753097527472398,
+     "mean": 0.19457531615606535,
+     "max": 0.3060166666666646,
+     "solved": 10,
+     "guesses": 81
+    },
     "x2": {
      "name": "Matrix · top 2 + full vertical",
-     "median": 0.6901884615384623,
-     "mean": 0.7344114617626859,
-     "max": 1.4855888888888873,
+     "median": 1.1677412698412697,
+     "mean": 1.268934785103784,
+     "max": 2.4898400000000036,
      "solved": 10,
      "guesses": 0
     },
     "x3": {
      "name": "Matrix · top 3 + full vertical",
-     "median": 0.656472500000001,
-     "mean": 0.7162563606866986,
-     "max": 1.065514285714276,
+     "median": 1.1700314285714155,
+     "mean": 1.2857651948051907,
+     "max": 2.5340400000000045,
      "solved": 10,
      "guesses": 0
     },
     "lean": {
      "name": "Lean OL (Speed page)",
-     "median": 0.09419793833813714,
-     "mean": 0.21340131197741496,
-     "max": 0.9048250000000166,
+     "median": 0.10983209415584352,
+     "mean": 0.6057607675616494,
+     "max": 4.0271000000000186,
      "solved": 10,
      "guesses": null
     },
     "dlx": {
      "name": "Dancing Links",
-     "median": 0.17876689852700528,
-     "mean": 0.2257508919169632,
-     "max": 0.5009749999999826,
+     "median": 0.15592280701754302,
+     "mean": 0.2603779378258076,
+     "max": 0.966012500000005,
      "solved": 10,
      "guesses": 81
     },
     "mrv": {
      "name": "MRV backtracking",
-     "median": 0.05597704906204873,
-     "mean": 0.11101209240895378,
-     "max": 0.3986400000000003,
+     "median": 0.04988508377880525,
+     "mean": 0.1040518971994556,
+     "max": 0.35645000000000476,
      "solved": 10,
      "guesses": 130.5
     }
@@ -87,73 +103,89 @@
    "methods": {
     "tAll": {
      "name": "Tensor · all four directions",
-     "median": 20.71965,
-     "mean": 24.54869000000001,
-     "max": 38.09259999999995,
+     "median": 19.537700000000086,
+     "mean": 22.750750000000018,
+     "max": 37.846700000000055,
      "solved": 10,
      "guesses": 26
     },
     "tNum": {
      "name": "Tensor · number layers only",
-     "median": 8.732400000000098,
-     "mean": 8.203500000000009,
-     "max": 11.335100000000011,
+     "median": 10.455100000000016,
+     "mean": 9.958719999999971,
+     "max": 15.126099999999951,
      "solved": 10,
      "guesses": 26.5
     },
     "tUnit": {
      "name": "Tensor · row/column/box layers",
-     "median": 16.211000000000126,
-     "mean": 16.145090000000003,
-     "max": 22.875,
+     "median": 26.934949999999958,
+     "mean": 24.55776000000003,
+     "max": 31.705799999999954,
      "solved": 10,
      "guesses": 27
     },
     "shared": {
      "name": "Shared patterns · support counts",
-     "median": 4.541600000000054,
-     "mean": 5.602329166666669,
-     "max": 14.111300000000028,
+     "median": 8.890949999999975,
+     "mean": 8.827013333333298,
+     "max": 23.53780000000006,
      "solved": 10,
      "guesses": 26.5
     },
+    "dl": {
+     "name": "Dancing Layers · templates as rows (top 2)",
+     "median": 0.3918924358974355,
+     "mean": 0.5334687011806718,
+     "max": 1.251633333333353,
+     "solved": 10,
+     "guesses": 65
+    },
+    "dl0": {
+     "name": "Dancing Layers · no templates",
+     "median": 0.2832809523809482,
+     "mean": 0.27874140405676195,
+     "max": 0.3115285714286204,
+     "solved": 10,
+     "guesses": 81
+    },
     "x2": {
      "name": "Matrix · top 2 + full vertical",
-     "median": 59.97159999999985,
-     "mean": 69.04188000000003,
-     "max": 145.71080000000006,
+     "median": 45.03795000000014,
+     "mean": 53.61360000000004,
+     "max": 122.5589,
      "solved": 10,
      "guesses": 26.5
     },
     "x3": {
      "name": "Matrix · top 3 + full vertical",
-     "median": 49.84349999999995,
-     "mean": 54.39147999999996,
-     "max": 104.73749999999973,
+     "median": 38.711250000000064,
+     "mean": 56.460800000000106,
+     "max": 134.9922999999999,
      "solved": 10,
      "guesses": 27
     },
     "lean": {
      "name": "Lean OL (Speed page)",
-     "median": 4.707049999999981,
-     "mean": 7.869621999999977,
-     "max": 37.32559999999967,
+     "median": 4.995883333333344,
+     "mean": 6.7058933333333695,
+     "max": 24.00520000000006,
      "solved": 10,
      "guesses": null
     },
     "dlx": {
      "name": "Dancing Links",
-     "median": 0.2027949039264842,
-     "mean": 0.2304054368129412,
-     "max": 0.5072357142857332,
+     "median": 0.3036726666666753,
+     "mean": 0.4282918725962947,
+     "max": 1.5640000000000025,
      "solved": 10,
      "guesses": 81
     },
     "mrv": {
      "name": "MRV backtracking",
-     "median": 0.07813527777778151,
-     "mean": 0.11038389772984043,
-     "max": 0.3678705882352915,
+     "median": 0.15370642006802399,
+     "mean": 0.18703808866290267,
+     "max": 0.45286153846154775,
      "solved": 10,
      "guesses": 79
     }
@@ -166,73 +198,89 @@
    "methods": {
     "tAll": {
      "name": "Tensor · all four directions",
-     "median": 1.4231160714285807,
-     "mean": 1.3811103614718614,
-     "max": 2.0425833333332926,
+     "median": 1.8845200000000206,
+     "mean": 2.152860761904771,
+     "max": 4.25643333333331,
      "solved": 10,
      "guesses": 7
     },
     "tNum": {
      "name": "Tensor · number layers only",
-     "median": 0.4423357142857113,
-     "mean": 0.5494907485108191,
-     "max": 1.3483000000000174,
+     "median": 0.7315400000000181,
+     "mean": 0.9349729662698557,
+     "max": 2.0866250000000264,
      "solved": 10,
      "guesses": 7
     },
     "tUnit": {
      "name": "Tensor · row/column/box layers",
-     "median": 0.7956593406593353,
-     "mean": 1.0318799928894715,
-     "max": 1.9975400000000263,
+     "median": 1.1384208333333654,
+     "mean": 1.4291701984126999,
+     "max": 3.2974000000000765,
      "solved": 10,
      "guesses": 6.5
     },
     "shared": {
      "name": "Shared patterns · support counts",
-     "median": 1.2222729166666872,
-     "mean": 1.340173500000026,
-     "max": 2.4687333333334514,
+     "median": 1.0378409090908784,
+     "mean": 1.149878684371175,
+     "max": 3.3107666666664954,
      "solved": 10,
      "guesses": 7
     },
+    "dl": {
+     "name": "Dancing Layers · templates as rows (top 2)",
+     "median": 0.1126955853263765,
+     "mean": 0.14751199561334888,
+     "max": 0.3906866666666853,
+     "solved": 10,
+     "guesses": 65
+    },
+    "dl0": {
+     "name": "Dancing Layers · no templates",
+     "median": 0.1266203431372522,
+     "mean": 0.14048992362963802,
+     "max": 0.18639218750000452,
+     "solved": 10,
+     "guesses": 81
+    },
     "x2": {
      "name": "Matrix · top 2 + full vertical",
-     "median": 1.596281250000061,
-     "mean": 1.8138008333333406,
-     "max": 3.0773999999999737,
+     "median": 1.6646300000000336,
+     "mean": 1.5829221111111176,
+     "max": 2.262474999999995,
      "solved": 10,
      "guesses": 7
     },
     "x3": {
      "name": "Matrix · top 3 + full vertical",
-     "median": 1.5722516666667161,
-     "mean": 1.7400129523809593,
-     "max": 2.973566666666708,
+     "median": 1.598555000000033,
+     "mean": 1.8426582142856602,
+     "max": 4.945799999999508,
      "solved": 10,
      "guesses": 7
     },
     "lean": {
      "name": "Lean OL (Speed page)",
-     "median": 0.23643269704433045,
-     "mean": 0.28362764090546133,
-     "max": 0.4534875000000085,
+     "median": 0.18875571266968816,
+     "mean": 0.27693968809517483,
+     "max": 0.5583250000000248,
      "solved": 10,
      "guesses": null
     },
     "dlx": {
      "name": "Dancing Links",
-     "median": 0.2434642857142968,
-     "mean": 0.2477072964171457,
-     "max": 0.3175105263157763,
+     "median": 0.2893078817734076,
+     "mean": 0.29300169031434786,
+     "max": 0.35487407407409016,
      "solved": 10,
      "guesses": 81
     },
     "mrv": {
      "name": "MRV backtracking",
-     "median": 0.05377317102713296,
-     "mean": 0.1322646793767648,
-     "max": 0.7340454545454288,
+     "median": 0.0376851371141943,
+     "mean": 0.08359962213651514,
+     "max": 0.4869588235294085,
      "solved": 10,
      "guesses": 76
     }
@@ -245,73 +293,89 @@
    "methods": {
     "tAll": {
      "name": "Tensor · all four directions",
-     "median": 0.4993439278937391,
-     "mean": 0.9144598042912244,
-     "max": 2.64754999999991,
+     "median": 0.43773942528730747,
+     "mean": 1.074787870240985,
+     "max": 2.6535399999997025,
      "solved": 10,
      "guesses": 0
     },
     "tNum": {
      "name": "Tensor · number layers only",
-     "median": 0.6851824999999735,
-     "mean": 1.2826048519092008,
-     "max": 4.062300000000202,
+     "median": 0.7896692307692512,
+     "mean": 1.709590320179928,
+     "max": 5.374100000000908,
      "solved": 10,
      "guesses": 0
     },
     "tUnit": {
      "name": "Tensor · row/column/box layers",
-     "median": 0.5439985714285545,
-     "mean": 0.7819541035799554,
-     "max": 2.2837999999999736,
+     "median": 0.6524309523809799,
+     "mean": 1.1812282191877794,
+     "max": 3.2497333333334004,
      "solved": 10,
      "guesses": 0
     },
     "shared": {
      "name": "Shared patterns · support counts",
-     "median": 0.3672164772727273,
-     "mean": 1.6984710125291653,
-     "max": 11.8742000000002,
+     "median": 0.581115584415524,
+     "mean": 4.334845577817881,
+     "max": 34.289199999999255,
      "solved": 10,
      "guesses": 0
     },
+    "dl": {
+     "name": "Dancing Layers · templates as rows (top 2)",
+     "median": 0.8152703208556229,
+     "mean": 1.6717860165519063,
+     "max": 6.741299999999683,
+     "solved": 10,
+     "guesses": 227
+    },
+    "dl0": {
+     "name": "Dancing Layers · no templates",
+     "median": 1.187018750000084,
+     "mean": 1.2606049880952748,
+     "max": 2.0681374999999207,
+     "solved": 10,
+     "guesses": 256
+    },
     "x2": {
      "name": "Matrix · top 2 + full vertical",
-     "median": 16.04285000000027,
-     "mean": 34.38726000000024,
-     "max": 110.44160000000011,
+     "median": 21.688000000000102,
+     "mean": 33.14387000000024,
+     "max": 81.45730000000003,
      "solved": 10,
      "guesses": 0
     },
     "x3": {
      "name": "Matrix · top 3 + full vertical",
-     "median": 13.51909999999998,
-     "mean": 32.55211999999983,
-     "max": 95.80249999999978,
+     "median": 15.718799999999646,
+     "mean": 40.12939000000006,
+     "max": 126.54299999999967,
      "solved": 10,
      "guesses": 0
     },
     "lean": {
      "name": "Lean OL (Speed page)",
-     "median": 1.07640555555564,
-     "mean": 3.5053847759464483,
-     "max": 26.148200000001452,
+     "median": 1.4765516666665766,
+     "mean": 7.085729916666841,
+     "max": 51.479300000000876,
      "solved": 10,
      "guesses": null
     },
     "dlx": {
      "name": "Dancing Links",
-     "median": 1.2557318181817954,
-     "mean": 2.358586696969721,
-     "max": 12.742500000000291,
+     "median": 1.3463446428572103,
+     "mean": 1.8288423448772106,
+     "max": 4.382899999998699,
      "solved": 10,
      "guesses": 256
     },
     "mrv": {
      "name": "MRV backtracking",
-     "median": 3.7334666666665726,
-     "mean": 4.558418871795018,
-     "max": 10.028400000001056,
+     "median": 4.872649999999339,
+     "mean": 6.104646666666546,
+     "max": 12.149600000000646,
      "solved": 10,
      "guesses": 3101.5
     }
@@ -324,57 +388,73 @@
    "methods": {
     "tAll": {
      "name": "Tensor · all four directions",
-     "median": 58.79870000000028,
-     "mean": 63.254499999999645,
-     "max": 107.50540000000001,
+     "median": 37.94984999999997,
+     "mean": 52.80393000000022,
+     "max": 102.71010000000024,
      "solved": 10,
      "guesses": 24.5
     },
     "tNum": {
      "name": "Tensor · number layers only",
-     "median": 21.283950000000004,
-     "mean": 22.397409999999763,
-     "max": 42.905799999998635,
+     "median": 23.15990000000056,
+     "mean": 25.267770000000382,
+     "max": 54.348800000001575,
      "solved": 10,
      "guesses": 25
     },
     "tUnit": {
      "name": "Tensor · row/column/box layers",
-     "median": 38.96060000000125,
-     "mean": 51.670050000000266,
-     "max": 167.04640000000109,
+     "median": 49.43934999999965,
+     "mean": 66.28477999999977,
+     "max": 191.79700000000048,
      "solved": 10,
      "guesses": 24.5
     },
     "shared": {
      "name": "Shared patterns · support counts",
-     "median": 15.027299999999741,
-     "mean": 19.91838000000025,
-     "max": 59.46320000000014,
+     "median": 12.103000000000065,
+     "mean": 15.429899999999725,
+     "max": 33.10599999999977,
      "solved": 10,
      "guesses": 33
     },
+    "dl": {
+     "name": "Dancing Layers · templates as rows (top 2)",
+     "median": 1.2578712499999027,
+     "mean": 2.819906988095073,
+     "max": 7.926400000000285,
+     "solved": 10,
+     "guesses": 306.5
+    },
+    "dl0": {
+     "name": "Dancing Layers · no templates",
+     "median": 1.0756833333333513,
+     "mean": 1.7782614610390315,
+     "max": 6.135299999999916,
+     "solved": 10,
+     "guesses": 416
+    },
     "lean": {
      "name": "Lean OL (Speed page)",
-     "median": 47.417599999999766,
-     "mean": 136.32665999999972,
-     "max": 393.96780000000035,
+     "median": 30.822299999999814,
+     "mean": 142.50660999999963,
+     "max": 516.7916999999998,
      "solved": 10,
      "guesses": null
     },
     "dlx": {
      "name": "Dancing Links",
-     "median": 1.4001666666666097,
-     "mean": 2.167021138888706,
-     "max": 5.074199999999109,
+     "median": 1.70862499999987,
+     "mean": 2.8969778333333656,
+     "max": 7.910499999999956,
      "solved": 10,
      "guesses": 435
     },
     "mrv": {
      "name": "MRV backtracking",
-     "median": 254.6718499999988,
-     "mean": 1686.5536999999997,
-     "max": 5906.095799999999,
+     "median": 260.3398500000003,
+     "mean": 1673.4622800000002,
+     "max": 5895.135,
      "solved": 8,
      "guesses": 223700.5
     }

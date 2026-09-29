@@ -4,8 +4,8 @@ const load = f => { const h = readFileSync(f, "utf8").split("\r\n").join("\n"); 
 globalThis.document = { getElementById: () => ({ innerHTML: "", textContent: "", style: {}, classList: { add() {}, remove() {}, toggle() {} }, value: "9", checked: true, options: [], addEventListener() {}, children: [] }) };
 const seedRng = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 const P = "C:/Sudoku_shaimaa/report/tools/page_build/";
-const A = new Function(load("C:/Sudoku_shaimaa/LayerSudoku-Speed.html") + "\n" + ["tensor_engine.js", "matrix_engine.js", "shared_engine.js"].map(f => readFileSync(P + f, "utf8")).join("\n") +
-  "; return { setSize, carve, randomSolution, shuffle, leanLayers, mrvSolve, dlxSolve, tensorOL, matrixOL, sharedOL, median, get N() { return N; } };")();
+const A = new Function(load("C:/Sudoku_shaimaa/LayerSudoku-Speed.html") + "\n" + ["tensor_engine.js", "matrix_engine.js", "shared_engine.js", "dancing_engine.js"].map(f => readFileSync(P + f, "utf8")).join("\n") +
+  "; return { setSize, carve, randomSolution, shuffle, leanLayers, mrvSolve, dlxSolve, tensorOL, matrixOL, sharedOL, dancingLayers, median, get N() { return N; } };")();
 const valid = (g, p, n) => { if (!g) return false; const box = (r, c) => { const [br, bc] = [0, 0]; return 0; }; for (let i = 0; i < n * n; i++) if (p[i] && g[i] !== p[i]) return false;
   const seen = new Set(); for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) { const v = g[r * n + c]; if (!(v >= 1 && v <= n)) return false; for (const k of [`r${r}:${v}`, `c${c}:${v}`]) { if (seen.has(k)) return false; seen.add(k); } } return true; };
 const M = [
@@ -13,6 +13,8 @@ const M = [
   ["tNum", "Tensor · number layers only", p => A.tensorOL(p, { start: 2, cap: 2000, dirs: [1, 0, 0, 0] })],
   ["tUnit", "Tensor · row/column/box layers", p => A.tensorOL(p, { start: 2, cap: 2000, dirs: [0, 1, 1, 1] })],
   ["shared", "Shared patterns · support counts", p => A.sharedOL(p, { top: 2, cap: 2000 })],
+  ["dl", "Dancing Layers · templates as rows (top 2)", p => A.dancingLayers(p, { top: 2, cap: 2000 })],
+  ["dl0", "Dancing Layers · no templates", p => A.dancingLayers(p, { top: 0 })],
   ["x2", "Matrix · top 2 + full vertical", p => A.matrixOL(p, { top: 2, cap: 2000 })],
   ["x3", "Matrix · top 3 + full vertical", p => A.matrixOL(p, { top: 3, cap: 2000 })],
   ["lean", "Lean OL (Speed page)", p => A.leanLayers(p, { start: 2, order: "cells", cap: 300000 })],
