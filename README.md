@@ -25,4 +25,4 @@ Every page is a single offline HTML file — open it in a browser, nothing is se
 
 ## Earlier work
 
-`sudoku_solver/`, `Sudoku/` and the `New folder (…)` directories hold earlier Python versions of the solver.
+`sudoku_solver/` and `Sudoku/` hold earlier Python versions of the solver.
