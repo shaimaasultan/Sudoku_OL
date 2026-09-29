@@ -67,6 +67,7 @@ li { margin: 1.5pt 0; }
     <li>Optimisation: map colouring and Star Cost</li>
     <li>Comparison with existing algorithms</li>
     <li>When option layers win and when MRV wins</li>
+    <li>The cube as a tensor: three more engines</li>
     <li>Discussion, limits and related work</li>
     <li>Appendix: seeds, settings and how to reproduce</li>
   </ol>
@@ -500,8 +501,38 @@ The full engine is for <b>explaining</b>: no guesses and a reason for every step
 <p class="small">Limits: the table by number of answers is 9×9 only. For 16×16 and larger there are the 34 – 40% random-fill runs (30 puzzles) and the carved runs of Section 5.4, but no split by number of answers. Worst-case values come from single runs and are less stable than the medians.</p>
 </section>
 <section class="chap">
-<h2>9. Discussion, limits and related work</h2>
-<h3>9.1 What the experiments show</h3>
+<h2>9. The cube as a tensor: three more engines</h2>
+<p>The option-layer cube (row × column × number) can be held as one N×N×N true/false <b>tensor</b>: a point is true while that number can still go in that cell. Every rule of Sudoku says "exactly one true point on each line of the cube" — each cell, and each number in each row, column and box. This chapter tests three engines built on that view, on the Tensor Layers page (<code>LayerSudoku-Tensor.html</code>), against the lean engine and the classic solvers.</p>
+<h3>9.1 Three engines</h3>
+<ul>
+  <li><b>Tensor OL.</b> The tensor is kept in four views at once (cell, row, column, box), each line packed into one 32-bit word, so a line with no point (a dead end) or one point (a naked or hidden single) is found in one pass. Layers can be cut in four directions: a <b>number</b> layer (a horizontal slice: the templates of the lean method), or a <b>row</b>, <b>column</b> or <b>box</b> layer (vertical slices: every way to give its open cells different numbers). The thinnest layer in any allowed direction is built next — top 2 at the start, one more when stuck, never all; a layer over the cap (2,000 options) waits until its size bound shrinks 8 times. Cut and AND / OR are the same in every direction: row, column and box layers find naked and hidden sets, number layers find fish patterns.</li>
+  <li><b>Matrix OL (matmul).</b> The tensor is one flat 0/1 vector <b>x</b>. The line sums are one product <b>A·x</b> with the fixed line matrix A. All layers of one direction are stacked into one option × point matrix <b>M</b>; one pass is <b>alive = (M·(1−x) = 0)</b> (cut) and <b>count = aliveᵀ·M</b> (count 0 → remove, OR; count = the live options of its layer → place, AND). Every row, column and box layer is built <b>in full</b> at the start; only the top 2 or 3 number layers are built.</li>
+  <li><b>Shared number patterns.</b> A template is a pattern — one cell per row, column and box — that does not depend on the number. So the thinnest numbers are built in <b>one</b> walk over the patterns, each pattern kept once with a mask of the numbers it fits. Instead of cutting the lists again, each point keeps a <b>support count</b> (the live patterns that use it) and each number its live count; removing a point touches only the patterns through that cell. Support 0 removes a point; support equal to the live count places it. After a failed guess the changes are undone from a trail, so the list is never scanned or copied again. When stuck, one more number joins the shared set.</li>
+</ul>
+<h3>9.2 Results</h3>
+<p>10 seeded puzzles per case, the same puzzles for every method, after a warm-up; fast runs are repeated and averaged. Tensor and shared engines: start top 2, cap 2,000. Median time per puzzle in ms; <span class="good">green</span> = fastest overall, <b>bold</b> = fastest option-layer engine where a classic solver was faster; a red fraction = puzzles solved within the 5-million-step limit.</p>
+<table style="font-size:8.2pt">
+  <tr><th>Puzzles</th><th class="n">Givens</th><th class="n">Tensor · numbers</th><th class="n">Tensor · all 4</th><th class="n">Tensor · R/C/B</th><th class="n">Shared patterns</th><th class="n">Matrix top 2</th><th class="n">Matrix top 3</th><th class="n">Lean OL</th><th class="n">Dancing Links</th><th class="n">MRV</th></tr>
+  <tr><td>9×9 hard, 1 answer</td><td class="n">28</td><td class="n"><b>80 µs</b></td><td class="n">0.23</td><td class="n">0.17</td><td class="n">0.13</td><td class="n">0.69</td><td class="n">0.66</td><td class="n">94 µs</td><td class="n">0.18</td><td class="n good">56 µs</td></tr>
+  <tr><td>9×9 random 20%</td><td class="n">16</td><td class="n">8.73</td><td class="n">20.7</td><td class="n">16.2</td><td class="n"><b>4.54</b></td><td class="n">60.0</td><td class="n">49.8</td><td class="n">4.71</td><td class="n">0.20</td><td class="n good">78 µs</td></tr>
+  <tr><td>9×9 random 34%</td><td class="n">28</td><td class="n">0.44</td><td class="n">1.42</td><td class="n">0.80</td><td class="n">1.22</td><td class="n">1.60</td><td class="n">1.57</td><td class="n"><b>0.24</b></td><td class="n">0.24</td><td class="n good">54 µs</td></tr>
+  <tr><td>16×16 hard, 1 answer</td><td class="n">108</td><td class="n">0.69</td><td class="n">0.50</td><td class="n">0.54</td><td class="n good">0.37</td><td class="n">16.0</td><td class="n">13.5</td><td class="n">1.08</td><td class="n">1.26</td><td class="n">3.73</td></tr>
+  <tr><td>16×16 random 40%</td><td class="n">102</td><td class="n">21.3</td><td class="n">58.8</td><td class="n">39.0</td><td class="n"><b>15.0</b></td><td class="n">not run</td><td class="n">not run</td><td class="n">47.4</td><td class="n good">1.40</td><td class="n">255 <span class="bad">(8/10)</span></td></tr>
+</table>
+<figure><img src="fig/f_tensor.png" style="width:100%"><figcaption><b>Figure 9.1.</b> The same medians on a log scale. The matrix engines were not run on 16×16 random 40%: building every row, column and box layer in full is too large on an open 16×16 board. MRV solved 8 of 10 there within its 5-million-step limit.</figcaption></figure>
+<h3>9.3 What the results show</h3>
+<ul>
+  <li><b>16×16 hard (one answer): option-layer engines are fastest.</b> Shared patterns 0.37 ms and tensor (all directions) 0.50 ms, against lean 1.08, Dancing Links 1.26 and MRV 3.73 ms.</li>
+  <li><b>Shared patterns is the best option-layer engine on the most open boards.</b> 9×9 random 20%: 4.54 ms against 8.73 ms for number layers built one at a time and 4.71 for lean; 16×16 random 40%: 15.0 ms against 21.3 (tensor) and 47.4 (lean). Building several numbers in one walk, and using support counts instead of cutting the lists again, pay off where the lists are large and overlap. At 9×9 random 34% it does not: 1.22 ms against 0.24 for lean and 0.44 for tensor number layers — the lists there are small, and setting up the counts costs more than it saves.</li>
+  <li><b>Classic search still wins on small or open boards.</b> On 9×9, MRV is fastest in every case (56 µs on hard puzzles): with many answers almost any guess works, and MRV guesses cheaply. On 16×16 random 40%, Dancing Links (1.40 ms) is about ten times faster than any option-layer engine — while MRV (255 ms, 2 of 10 unsolved) is slower than all of them.</li>
+  <li><b>More layers are not always better.</b> Tensor with all four directions is slower than number layers alone on 9×9 and on open 16×16: it builds more layers than it needs. Building the vertical layers in full (the matrix engines) is the slowest option everywhere — on 16×16 hard the full lists hold 6,000–21,000 options, and every pass multiplies all of them.</li>
+  <li><b>The matmul form fits a GPU, not a CPU.</b> Its two products are what graphics hardware does well; on the CPU they cost more than they save. A GPU version would only pay on large boards, where the start-up cost is small next to the work.</li>
+</ul>
+<p class="small">Limits: 10 puzzles per case, one machine, Node (V8) rather than the browser; sizes above 16×16 and other fills were not measured. Script: <code>report/tools/exp_tensor.mjs</code>; data: <code>report/data/tensor.json</code>; chart: <code>report/tools/f_tensor.py</code>.</p>
+</section>
+<section class="chap">
+<h2>10. Discussion, limits and related work</h2>
+<h3>10.1 What the experiments show</h3>
 <ul>
   <li><b>Guess-free solving is the main strength.</b> Across 1,066 logic puzzles of seven types, option layers solved 1,048 (98%) with no guess at all, and all of them correctly. All 500 9×9 Sudoku, including the hardest at 22 givens, needed no guess.</li>
   <li><b>Group checks matter.</b> Pairs alone left 37 of 500 Sudoku unfinished; the 3/4-number group check finished all of them.</li>
@@ -509,7 +540,7 @@ The full engine is for <b>explaining</b>: no guesses and a reason for every step
   <li><b>Speed depends on the engine, not the idea.</b> The full engine, written for display, is about 5× slower than Dancing Links on 9×9 and about 180× slower on 30×30. The lean engine — the same layers, cuts and ANDs on bit sets, with no step log and no pair or group check — had the fastest median on every board from 9×9 to 30×30 when it started from the fewest open cells.</li>
   <li><b>Explaining and speed pull in different directions.</b> The pair and group checks remove every guess but cost time; without them the lean engine guesses on about a quarter of hard 9×9 puzzles and still finishes first.</li>
 </ul>
-<h3>9.2 Limits</h3>
+<h3>10.2 Limits</h3>
 <ul>
   <li><b>Option lists can be large.</b> A 16×16 digit has millions of templates on an empty board. The thinnest-first rule avoids listing large layers, but a sparse, large board can still be slow (16×16 median 24 ms, with up to several thousand lists built).</li>
   <li><b>Star Battle with 2 stars</b> has many options per unit; the 10×10 2★ puzzles took about 1 s at the median, and up to 9 s.</li>
@@ -517,9 +548,9 @@ The full engine is for <b>explaining</b>: no guesses and a reason for every step
   <li><b>Browser timing</b> has a 0.1 ms step, and all runs used one machine. Only relative times should be read from the charts.</li>
   <li>The group check is exact for the units it looks at, but it does not look at every group of 3 or 4. A puzzle can exist that needs a guess; one 12×12 Sudoku did (3 guesses).</li>
 </ul>
-<h3>9.3 Related work</h3>
+<h3>10.3 Related work</h3>
 <p>The idea of listing whole placements of a digit is known in the Sudoku community as the <i>pattern overlay method</i> or <i>templates</i>. Exact cover and Dancing Links (Knuth, 2000) give the same set picture for search. Nonogram line solvers compute the overlap of all placements of a line by dynamic programming. Constraint programming uses <i>table constraints</i> (lists of allowed tuples) and <i>singleton arc consistency</i>, which is close to the probe rule. Lagrangian relaxation for lower bounds and large-neighbourhood search (Shaw, 1998) are standard in operations research. The contribution of this work is to join these ideas in one layered method, with thinnest-first building and group checks, and to show that the same units-options-pillars view carries across eight puzzles and into optimisation, while keeping every step explainable.</p>
-<h3>9.4 Future work</h3>
+<h3>10.4 Future work</h3>
 <ul>
   <li>Adding a cheap pair check to the lean engine only when it is about to guess, to keep its speed and remove most guesses.</li>
   <li>Choosing which groups of 3–4 units to check by a score, instead of in order.</li>
@@ -529,8 +560,8 @@ The full engine is for <b>explaining</b>: no guesses and a reason for every step
 </section>
 
 <section>
-<h2>10. Appendix: seeds, settings and how to reproduce</h2>
-<h3>10.1 Tools</h3>
+<h2>11. Appendix: seeds, settings and how to reproduce</h2>
+<h3>11.1 Tools</h3>
 <p>All experiments use the author's single-file HTML pages in <code>C:\Sudoku_shaimaa</code>. A Node.js script (Node 24) opens each page in headless Microsoft Edge through the Chrome DevTools Protocol, without any extra package. Before a page loads, <code>Math.random</code> is replaced by the seeded generator <i>mulberry32</i>, so <code>__seed(n)</code> makes every puzzle again exactly. Charts are drawn with Python (matplotlib). The scripts are in <code>report\tools</code>:</p>
 <table>
   <tr><th>Script</th><th>What it does</th><th>Output</th></tr>
@@ -543,7 +574,7 @@ The full engine is for <b>explaining</b>: no guesses and a reason for every step
   <tr><td>shots.mjs</td><td>Phone-size screenshots (390×844, 2× pixels).</td><td>shots/*.png</td></tr>
   <tr><td>charts.py</td><td>All figures and the numbers quoted in this report.</td><td>fig/*.png, data/_numbers.json</td></tr>
 </table>
-<h3>10.2 Seeds and settings</h3>
+<h3>11.2 Seeds and settings</h3>
 <table>
   <tr><th>Experiment</th><th>Seeds</th><th>Settings</th></tr>
   <tr><td>Sudoku by givens</td><td>2026 (one stream for all 500)</td><td>9×9, givens 22–40 in steps of 2, 50 each, unique</td></tr>
@@ -552,7 +583,7 @@ The full engine is for <b>explaining</b>: no guesses and a reason for every step
   <tr><td>Star Cost</td><td>9000 + 100·N + 10·K + k</td><td>random weights 1–9; exact budget 8 s; heuristics 3 s (cheapest-first), 6 s (lock); annealing 20,000 steps; Unstick 12 rounds</td></tr>
   <tr><td>Screenshots</td><td>3–51, fixed per page</td><td>390×844 viewport, device scale 2</td></tr>
 </table>
-<h3>10.3 How to reproduce</h3>
+<h3>11.3 How to reproduce</h3>
 <pre class="code">cd C:\Sudoku_shaimaa\report\tools
 node exp_sudoku.mjs
 node exp_puzzles.mjs            (all sections; or one name, e.g. killer)
