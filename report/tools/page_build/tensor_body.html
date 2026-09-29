@@ -1,0 +1,118 @@
+<body>
+<div class="wrap">
+  <h1>🧊 Tensor Layers</h1>
+  <div class="sub">The option-layer method on the whole N×N×N cube as one tensor: layers cut in four directions (numbers, rows, columns, boxes), watched in 3D and raced against the other methods · S. S. Soltan</div>
+
+  <div class="card">
+    <h2>Puzzle and method</h2>
+    <div class="row">
+      <select id="size" aria-label="Size"><option value="4">4×4</option><option value="6">6×6</option><option value="9" selected>9×9</option><option value="12">12×12</option><option value="16">16×16</option></select>
+      <select id="level" aria-label="Puzzle">
+        <option value="easy">Easy (one answer)</option><option value="medium">Medium (one answer)</option><option value="hard" selected>Hard (one answer)</option>
+        <option value="20">Random 20% of cells (many answers)</option><option value="25">Random 25% of cells</option><option value="30">Random 30% of cells</option><option value="34">Random 34% of cells</option><option value="40">Random 40% of cells</option><option value="50">Random 50% of cells</option>
+      </select>
+    </div>
+    <div class="row">
+      <select id="engine" aria-label="Engine">
+        <option value="tensor" selected>Tensor OL — layers chosen by the menus below</option>
+        <option value="shared">Shared number patterns — built together, cut by support counts (Start = how many numbers)</option>
+        <option value="m2">Matrix OL (matmul) — top 2 number layers + all vertical layers in full</option>
+        <option value="m3">Matrix OL (matmul) — top 3 number layers + all vertical layers in full</option>
+      </select>
+    </div>
+    <div class="row" id="tensorMenus">
+      <select id="dirs" aria-label="Layer directions">
+        <option value="1111" selected>Layers in all four directions</option>
+        <option value="1000">Number layers only (as lean OL)</option>
+        <option value="0111">Row, column and box layers only</option>
+        <option value="0000">No layers (tensor lines only)</option>
+      </select>
+      <select id="startK" aria-label="Layers built at the start"><option value="0">Start: no layer</option><option value="1">Start: top 1</option><option value="2" selected>Start: top 2</option><option value="3">Start: top 3</option><option value="4">Start: top 4</option><option value="6">Start: top 6</option><option value="9">Start: top 9</option></select>
+      <select id="cap" aria-label="Option cap"><option value="50">Cap 50</option><option value="200">Cap 200</option><option value="2000" selected>Cap 2,000</option><option value="20000">Cap 20,000</option><option value="300000">Cap 300,000</option></select>
+    </div>
+    <div class="row">
+      <input id="seed" inputmode="numeric" pattern="[0-9]*" placeholder="Seed (blank = random)" aria-label="Seed">
+      <button id="newBtn" class="primary">New puzzle</button>
+    </div>
+    <p class="note" id="info"></p>
+  </div>
+
+  <div class="card">
+    <h2>Watch it solve</h2>
+    <div class="row" style="margin-top:0">
+      <select id="speed" aria-label="Speed"><option value="slow">Slow</option><option value="normal" selected>Normal</option><option value="fast">Fast</option><option value="turbo">Turbo</option></select>
+      <select id="view" aria-label="View"><option value="both" selected>Cube + board</option><option value="cube">Cube only</option><option value="board">Board only</option></select>
+    </div>
+    <canvas id="cube3" class="cube3" aria-label="3D tensor: columns left to right, rows front to back, numbers bottom to top"></canvas>
+    <div id="cubeCtl" class="row cubectl">
+      <button id="vTop" class="mini">Top · numbers</button><button id="vFront" class="mini">Front · rows</button><button id="vSide" class="mini">Side · columns</button><button id="vTurn" class="mini">3D</button>
+    </div>
+    <div id="cubeCtl2" class="row cubectl"><label>Spread <input type="range" id="cubeSpread" min="0" max="2.5" step="0.1" value="0.6"></label><label><input type="checkbox" id="cubeAuto" checked> Auto-rotate</label><label><input type="checkbox" id="cubeDots" checked> Show possible points</label></div>
+    <div class="legend" id="legCube">
+      <span><i style="background:hsl(200 70% 42%);box-shadow:inset 0 0 0 1px rgba(0,0,0,.45)"></i>given</span>
+      <span><i style="background:hsl(200 70% 62%)"></i>placed</span>
+      <span><i style="background:hsl(200 70% 55%);border-radius:50%;opacity:.6"></i>still possible</span>
+      <span><b style="color:var(--accent)">▭</b> the layer or line in use</span>
+      <span><b style="color:var(--bad)">×</b> removed in this step</span>
+    </div>
+    <div id="board" class="board"></div>
+    <div class="ctl">
+      <button id="resetBtn">⏮ Reset</button>
+      <button id="backBtn">◀ Back</button>
+      <button id="playBtn" class="primary">▶ Play</button>
+      <button id="stepBtn">Step ▶|</button>
+      <button id="endBtn">⏭ End</button>
+    </div>
+    <div class="stats">
+      <div><b id="sPts">0</b><span>points left in the tensor</span></div>
+      <div><b id="sLeft">0</b><span>empty cells</span></div>
+      <div><b id="sBuilt">0</b><span>layers built N·R·C·B</span></div>
+      <div><b id="sGuess">0</b><span>guesses · depth now</span></div>
+    </div>
+    <div class="step"><div class="no" id="stepNo"></div><div id="stepText">Press ▶ Play or Step to watch.</div></div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="card">
+    <h2>Race on the same puzzles</h2>
+    <div class="row">
+      <select id="rSize" aria-label="Race size"><option value="4">4×4</option><option value="6">6×6</option><option value="9" selected>9×9</option><option value="12">12×12</option><option value="16">16×16</option></select>
+      <select id="rLevel" aria-label="Race puzzles"></select>
+      <select id="rCount" aria-label="How many"><option value="5">5 puzzles</option><option value="10" selected>10 puzzles</option><option value="20">20 puzzles</option><option value="30">30 puzzles</option></select>
+    </div>
+    <div class="methods" id="methods"></div>
+    <div class="row"><button id="raceBtn" class="primary">▶ Run the race</button><button id="raceStop" disabled>■ Stop</button></div>
+    <div class="bar"><div id="prog"></div></div>
+    <p class="note" id="rStatus">The tensor methods use the menus above (start, cap). All methods solve the same puzzles, made once before timing, after a warm-up. A seed in the box above makes the same puzzles again.</p>
+    <div class="scroll"><table id="rTbl"></table></div>
+    <p class="note" id="rNote"></p>
+  </div>
+
+  <div class="card">
+    <h2>How the tensor method works</h2>
+    <ol>
+      <li><b>The cube is one tensor.</b> A point (row, column, number) is true while that number can still go in that cell. The same tensor is kept in four views, and each view packs one line of the cube into a 32-bit word: a cell's numbers (the <b>pillar</b>), a number's columns in a row, its rows in a column, and its places in a box. Removing a point changes all four views at once.</li>
+      <li><b>Lines with one point.</b> Every rule of Sudoku says "exactly one point on each line". A line with no point is a dead end; a line with one point places it. On pillars this is a naked single; on the other three views it is a hidden single — one pass over the tensor finds both.</li>
+      <li><b>Layers in four directions.</b> A layer is a slice of the cube with its list of options. A <b>number</b> layer (horizontal slice) lists every way to place that number once in each row, column and box — the templates of the lean method. A <b>row</b>, <b>column</b> or <b>box</b> layer (vertical slices and prisms) lists every way to give its open cells different numbers.</li>
+      <li><b>Thinnest first, in any direction.</b> For each layer a size bound is worked out from the tensor (the product of the open points along its lines). The start builds the top 1–9 thinnest layers; when nothing changes, one more is built, the thinnest in any allowed direction. A layer with more options than the cap is left unbuilt, and tried again only when its bound has shrunk about 8 times.</li>
+      <li><b>Cut and AND / OR.</b> An option that uses a removed point is cut. A point used by no option is removed from the tensor (OR); a point used by every option is placed (AND). The same rule works for all four directions.</li>
+      <li><b>Guess last, on the smallest choice.</b> When nothing more can be done, guess on the built layer with the fewest options or on the tensor line with the fewest points, whichever is smaller; go back if it leads to a dead end.</li>
+    </ol>
+    <h2 style="margin-top:12px">The shared-patterns version</h2>
+    <ol>
+      <li><b>One build for several numbers.</b> A number layer's template is a pattern — one cell per row, column and box — and the pattern does not depend on the number. So the thinnest numbers (the Start menu: top 2, 3, …) are built in <b>one</b> walk over the patterns. Each pattern is kept once, with a <b>number mask</b>: the numbers every one of its cells still allows. A branch of the walk stops as soon as the mask is empty.</li>
+      <li><b>No re-cutting.</b> Each point keeps a <b>support count</b> — how many live patterns use it for its number — and each number keeps how many patterns are still live for it. When a point is removed, only the patterns through that cell are touched: they lose that number's bit and their cells' counts go down. Support 0 removes a point (OR); support equal to the number's live count places it (AND); a number with no live pattern is a dead end. The big list is never scanned again.</li>
+      <li><b>Undo instead of copy.</b> Every bit cleared is written to a trail; after a failed guess the trail is played back, so the list is shared by all guesses and never copied.</li>
+      <li>When nothing more follows, one more number is added to the shared set (a new walk), as the lean method adds a layer. A walk longer than the cap is dropped and tried again only when the numbers have shrunk about 8 times.</li>
+    </ol>
+    <h2 style="margin-top:12px">The matrix (matmul) version</h2>
+    <ol>
+      <li>The tensor is one flat 0/1 vector <b>x</b> of all N·N·N points. <b>A</b> is the fixed matrix of the 4·N² lines of the cube; the line sums <b>s = A·x</b> give the dead ends (0) and the singles (1) in one product.</li>
+      <li><b>Every row, column and box layer is built in full at the start</b> (all its options; a layer over 300,000 options waits until it shrinks). Only the <b>top 2 or 3</b> thinnest number layers are built, and no more later.</li>
+      <li>All the layers of one direction are stacked into one option × point matrix <b>M</b>. One pass is two products: <b>alive = (M·(1−x) = 0)</b> cuts every option that uses a removed point, and <b>count = aliveᵀ·M</b> counts how many live options use each point. Count 0 removes the point (OR); count equal to its layer's live options places it (AND).</li>
+      <li>Guess last on the smallest choice, as above; a guess on a layer just switches off the other rows of that layer in <b>alive</b>.</li>
+    </ol>
+    <p class="note">Row, column and box layers with AND / OR find every naked and hidden set in a unit (pairs, triples, …); number layers find the fish patterns (X-Wing, Swordfish, …). Using both directions sees both kinds of reason. Nothing here uses the language or move words; only small counters (layers built, guesses) are kept for the table.</p>
+  </div>
+</div>
+<div id="busy" class="busy hidden">Making a puzzle…</div>

@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Map Coloring Layers</title>
+<style>
+:root{
+  --bg:#f5f4ef; --surface:#ffffff; --ink:#1c1e23; --muted:#6a6e77; --line:#cfd2d8; --line-strong:#1c1e23;
+  --accent:#2455c7; --accent-ink:#fff; --btn:#e9e7e0; --btn-ink:#1c1e23; --ok:#2e9e57; --bad:#c42626; --blank:#f3f1ea;
+  --shadow:0 1px 2px rgba(0,0,0,.08),0 4px 14px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#131519; --surface:#1c1f25; --ink:#e7e8eb; --muted:#9aa0aa; --line:#383d46; --line-strong:#c9cdd4;
+    --accent:#6f98ff; --accent-ink:#0d1117; --btn:#2a2e36; --btn-ink:#e7e8eb; --blank:#262a31; --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  padding:max(12px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));-webkit-user-select:none;user-select:none}
+.wrap{max-width:620px;margin:0 auto}
+h1{font-size:20px;margin:0}
+.sub{font-size:12px;color:var(--muted);margin-bottom:6px}
+h2{font-size:15px;margin:0 0 6px}
+button,select{font:inherit;color:var(--btn-ink);background:var(--btn);border:0;border-radius:10px;padding:9px 12px;cursor:pointer;max-width:100%;min-width:0}
+select{appearance:none;-webkit-appearance:none}
+button:active{transform:scale(.97)}
+button.primary{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.row select{flex:1}
+.card{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:12px;margin-top:12px}
+.note{font-size:12.5px;color:var(--muted);margin:6px 0}
+#map{width:100%;max-width:560px;display:block;margin:8px auto 0;border-radius:8px;touch-action:manipulation;cursor:pointer}
+.palette{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.palette button{width:40px;height:40px;padding:0;border-radius:50%;border:3px solid transparent;font-weight:700;color:#1c1e23}
+.palette button.on{border-color:var(--ink)}
+.palette button.erase{background:var(--btn);color:var(--btn-ink)}
+.tools{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.msg{background:var(--bg);border-radius:10px;padding:8px 10px;margin-top:8px;min-height:44px;font-size:14px}
+.msg .no{font-size:11px;color:var(--muted)}
+.score{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.score div,.stats div{background:var(--bg);border-radius:10px;padding:6px 4px;text-align:center}
+.score b,.stats b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
+.score span,.stats span{font-size:10.5px;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.tries{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tries span{font-size:12.5px;font-weight:700;border-radius:8px;padding:4px 9px;background:var(--bg)}
+.tries span.no{color:var(--bad)} .tries span.yes{color:var(--ok)} .tries span.cur{outline:2px solid var(--accent)}
+.log{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;max-height:130px;overflow:auto}
+.log span{font:600 12px -apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);border-radius:6px;padding:3px 7px}
+.log span.back{color:var(--bad)}
+.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-left:3px;vertical-align:-1px;border:1px solid rgba(0,0,0,.3)}
+.words{font-size:12px;color:var(--muted);margin:6px 0 0}
+.sol{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.sol span{font:600 12px -apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);border-radius:6px;padding:3px 7px;font-variant-numeric:tabular-nums}
+.chk{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:5px}
+@media (max-width:560px){ #regions,#givens{flex:1 1 100%} }
+ol{padding-left:20px;margin:6px 0} li{margin:4px 0;font-size:14px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🗺️ Map Coloring Layers</h1>
+  <div class="sub">Color a map with the fewest colors — neighbours must differ · solved with option layers · S. S. Soltan</div>
+
+  <div class="card">
+    <div class="row">
+      <select id="regions" aria-label="Regions"><option value="10">10 regions</option><option value="16">16 regions</option><option value="25" selected>25 regions</option><option value="40">40 regions</option><option value="60">60 regions</option></select>
+      <select id="givens" aria-label="Given colors"><option value="0" selected>No given colors</option><option value="10">10% of regions given</option><option value="25">25% of regions given</option><option value="50">50% of regions given</option></select>
+      <button id="newBtn" class="primary">New map</button>
+      <label class="chk"><input type="checkbox" id="nums" checked> Region numbers</label>
+    </div>
+    <canvas id="map" aria-label="Map to color"></canvas>
+    <div class="palette" id="palette"></div>
+    <div class="score">
+      <div><b id="sUsed">0</b><span>colors you used</span></div>
+      <div><b id="sBest">–</b><span>fewest possible</span></div>
+      <div><b id="sLeft">0</b><span>regions left</span></div>
+    </div>
+    <div class="tools">
+      <button id="checkBtn">Check</button>
+      <button id="hintBtn">💡 Hint</button>
+      <button id="restartBtn">Restart</button>
+      <button id="countBtn">🔢 Count solutions</button>
+    </div>
+    <div class="msg"><div class="no" id="phase"></div><div id="text"></div></div>
+  </div>
+
+  <div class="card">
+    <h2>Watch the method find the fewest colors</h2>
+    <div class="row" style="margin-top:0">
+      <button id="solveBtn" class="primary">▶ Find the fewest colors</button>
+      <button id="stepBtn">Step ▶|</button>
+      <button id="backBtn">⏮ Back to my map</button>
+      <select id="speed" aria-label="Speed" style="flex:0 0 auto"><option value="slow">Slow</option><option value="normal" selected>Normal</option><option value="fast">Fast</option><option value="turbo">Turbo</option></select>
+    </div>
+    <div class="tries" id="tries"></div>
+    <div class="stats">
+      <div><b id="sLow">–</b><span>at least (touching group)</span></div>
+      <div><b id="sHigh">–</b><span>at most (quick greedy)</span></div>
+      <div><b id="sGuess">0 · 0</b><span>guesses · go-backs</span></div>
+      <div><b id="sProbe">0</b><span>all-together cuts</span></div>
+    </div>
+    <div id="log" class="log"></div>
+    <p class="words"><b>The solve as words:</b> <b>S</b>12=3 single (region 12 gets color 3) · <b>P</b>7≠1,3 group check (region 7 can't be 1 or 3) · <b>A</b>3≠4 all regions together · <b>G</b>5=2 guess · <b>↩</b>5 go back · <b>F</b> fixed touching group · <b>k=4</b> try 4 colors.</p>
+    <div id="solution" class="sol"></div>
+    <p class="note">While the method runs, each uncolored region shows dots for the colors it can still take. The region being worked on is outlined.</p>
+  </div>
+
+  <div class="card">
+    <h2>How it works — your layers on a map</h2>
+    <ol>
+      <li><b>Like Star Battle</b>: the map's regions are the units, and a border between two regions is where they meet — like a pillar. In Star Battle, stars in touching cells clash; here, the same color in touching regions clashes.</li>
+      <li><b>Option layers of a region</b>: the colors it can still take. Coloring a region removes that color from every neighbour (like a Sudoku number leaving its row, column and box).</li>
+      <li><b>Thinnest region first</b>: a region with one color left gets it (a single).</li>
+      <li><b>Group check</b>: three regions that all touch each other need three different colors — if their colors left add up to fewer, it is impossible; if two of them are left with the same two colors, the third can't use either.</li>
+      <li><b>All regions together</b>: when the cuts stop, try each color of a region on its own — if it leads straight to a region with no color left, that color is cut. Nothing is guessed.</li>
+      <li>Only then <b>guess</b> (trying colors already used before a new one — colors can be swapped, so a new color is only tried once) and go back if it fails.</li>
+      <li><b>Givens</b> (optional): some regions start with their color (number in a dark circle). They come from a best coloring, so the fewest number of colors stays the same.</li>
+      <li><b>The solve as words</b>: every step is written as a word — <b>S</b>12=3, <b>P</b>7≠1,3, <b>A</b>3≠4, <b>G</b>5=2, <b>↩</b>5 — using the region numbers on the map and the color numbers on the palette, so the language can be read against the map. At the end the solution is listed region by region.</li>
+      <li><b>🔢 Count solutions</b> counts every coloring that works for this map (with its givens), out of all the ways to paint it — the working ones are a tiny share. Each count has a time limit; if it runs out, the page says "at least".</li>
+      <li><b>Fewest colors</b>: the biggest group of regions that all touch each other needs that many colors (lower bound); a quick greedy coloring gives an upper bound. The method tries k colors from the lower bound up — the first k that works is the fewest, and every smaller k has been <b>proved impossible</b>. On a flat map the answer is never more than 4 (the Four Color Theorem).</li>
+    </ol>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const popc = m => { let k = 0; while (m) { m &= m - 1; k++; } return k; };
+const bitsOf = m => { const o = []; for (let c = 0; c < 16; c++) if ((m >> c) & 1) o.push(c); return o; };
+const PAL = ["#ef5350", "#42a5f5", "#66bb6a", "#ffca28", "#ab47bc", "#26c6da", "#ff8a65", "#a1887f"];
+const PALN = ["red", "blue", "green", "yellow", "purple", "teal", "orange", "brown"];
+
+/* ---------- a random map: Voronoi regions on a grid ---------- */
+function makeMap(Rn) {
+  const GW = 48, GH = 36, NC = GW * GH;
+  const seeds = []; let guard = 0;
+  const minD = Math.sqrt(NC / Rn) * 0.6;
+  while (seeds.length < Rn && guard++ < 5000) { const x = Math.random() * GW, y = Math.random() * GH; if (seeds.every(s => Math.hypot(s.x - x, s.y - y) > minD)) seeds.push({ x, y }); }
+  const owner = new Int16Array(NC);
+  for (let i = 0; i < NC; i++) { const x = i % GW + 0.5, y = ((i / GW) | 0) + 0.5; let b = 0, bd = Infinity; seeds.forEach((s, k) => { const d = Math.hypot(s.x - x, s.y - y); if (d < bd) { bd = d; b = k; } }); owner[i] = b; }
+  const n4 = i => { const x = i % GW, y = (i / GW) | 0, o = []; if (x > 0) o.push(i - 1); if (x < GW - 1) o.push(i + 1); if (y > 0) o.push(i - GW); if (y < GH - 1) o.push(i + GW); return o; };
+  // keep each region in one piece: stray bits join a neighbouring region
+  for (let pass = 0; pass < 3; pass++) {
+    const seen = new Uint8Array(NC);
+    for (let r = 0; r < seeds.length; r++) {
+      const comps = [];
+      for (let i = 0; i < NC; i++) if (owner[i] === r && !seen[i]) { const c = [], q = [i]; seen[i] = 1; while (q.length) { const x = q.pop(); c.push(x); for (const y of n4(x)) if (owner[y] === r && !seen[y]) { seen[y] = 1; q.push(y); } } comps.push(c); }
+      comps.sort((a, b) => b.length - a.length);
+      for (const c of comps.slice(1)) for (const x of c) { const nb = n4(x).find(y => owner[y] !== r); if (nb !== undefined) owner[x] = owner[nb]; }
+    }
+  }
+  const R = seeds.length, adjSet = [...Array(R)].map(() => new Set());
+  for (let i = 0; i < NC; i++) for (const j of n4(i)) if (owner[j] !== owner[i]) { adjSet[owner[i]].add(owner[j]); }
+  const adj = adjSet.map(s => [...s]);
+  const tri = [];
+  for (let a = 0; a < R; a++) for (const b of adj[a]) if (b > a) for (const c of adj[b]) if (c > b && adjSet[a].has(c)) tri.push([a, b, c]);
+  // a label point inside each region (the cell nearest its middle)
+  const label = [...Array(R)].map((_, r) => { let sx = 0, sy = 0, n = 0; for (let i = 0; i < NC; i++) if (owner[i] === r) { sx += i % GW; sy += (i / GW) | 0; n++; } const cx = sx / n, cy = sy / n; let b = -1, bd = Infinity; for (let i = 0; i < NC; i++) if (owner[i] === r) { const d = Math.hypot(i % GW - cx, ((i / GW) | 0) - cy); if (d < bd) { bd = d; b = i; } } return b; });
+  return { GW, GH, owner, R, adj, adjSet, tri, label };
+}
+
+/* ---------- bounds ---------- */
+function maxClique(G) {   // the biggest group of regions that all touch each other
+  let best = [];
+  const rec = (cl, cand) => {
+    if (cl.length > best.length) best = cl.slice();
+    if (cl.length + cand.length <= best.length) return;
+    for (let i = 0; i < cand.length; i++) { const v = cand[i]; rec([...cl, v], cand.slice(i + 1).filter(u => G.adjSet[v].has(u))); }
+  };
+  rec([], [...Array(G.R).keys()].sort((a, b) => G.adj[b].length - G.adj[a].length));
+  return best;
+}
+function greedy(G) {   // DSATUR: color the region that already sees the most colors first
+  const col = new Int8Array(G.R).fill(-1);
+  for (let step = 0; step < G.R; step++) {
+    let best = -1, bs = -1, bd = -1;
+    for (let r = 0; r < G.R; r++) if (col[r] < 0) { const s = new Set(G.adj[r].map(j => col[j]).filter(c => c >= 0)).size, d = G.adj[r].length; if (s > bs || (s === bs && d > bd)) { bs = s; bd = d; best = r; } }
+    const used = new Set(G.adj[best].map(j => col[j])); let c = 0; while (used.has(c)) c++; col[best] = c;
+  }
+  return { col, k: Math.max(...col) + 1 };
+}
+
+/* ---------- the option-layers solver for k colors ---------- */
+// mode: { emit, fix: regions to fix to colors 0,1,2… (a touching group), symmetry: try a new color only once, maxGuess, noProbe }
+function colorSolve(G, k, init, mode) {
+  const R = G.R, FULL = (1 << k) - 1, ev = [], MAXEV = 3000, st = { guesses: 0, back: 0, probes: 0, singles: 0 };
+  let result = null;
+  const copy = S => ({ col: S.col.slice(), cand: S.cand.slice() });
+  const snap = (S, focus, extra) => { if (!mode.emit) return; if (ev.length >= MAXEV && extra.kind !== "done" && extra.kind !== "none") { st.truncated = true; return; } ev.push({ ...extra, k, focus, col: S.col.slice(), cand: S.cand.slice(), st: { ...st } }); };
+  const assign = (S, r, c) => {
+    if (S.col[r] === c) return true;
+    if (S.col[r] >= 0 || !((S.cand[r] >> c) & 1)) return false;
+    S.col[r] = c; S.cand[r] = 1 << c;
+    for (const j of G.adj[r]) { if (S.col[j] === c) return false; if ((S.cand[j] >> c) & 1) { S.cand[j] &= ~(1 << c); if (!S.cand[j]) return false; } }
+    return true;
+  };
+  function propagate(S, quiet) {
+    for (;;) {
+      let changed = false;
+      for (let r = 0; r < R; r++) if (S.col[r] < 0) {
+        if (!S.cand[r]) return { fail: r };
+        if (popc(S.cand[r]) === 1) { const c = bitsOf(S.cand[r])[0]; if (!assign(S, r, c)) return { fail: r }; st.singles++; if (!quiet) snap(S, r, { kind: "single", region: r, color: c }); changed = true; break; }
+      }
+      if (changed) continue;
+      // group check: three regions that all touch each other
+      for (const t of G.tri) {
+        let u = 0; for (const x of t) u |= S.cand[x];
+        if (popc(u) < 3) return { fail: t[0], tri: t };
+        for (let a = 0; a < 3 && !changed; a++) for (let b = a + 1; b < 3 && !changed; b++) {
+          const x = t[a], y = t[b], z = t[3 - a - b];
+          if (S.col[x] < 0 && S.col[y] < 0 && S.cand[x] === S.cand[y] && popc(S.cand[x]) === 2 && S.col[z] < 0 && (S.cand[z] & S.cand[x])) {
+            S.cand[z] &= ~S.cand[x]; if (!S.cand[z]) return { fail: z };
+            if (!quiet) snap(S, z, { kind: "pair", region: z, pair: [x, y], colors: bitsOf(S.cand[x]) });
+            changed = true;
+          }
+        }
+        if (changed) break;
+      }
+      if (changed) continue;
+      if (S.col.every(c => c >= 0)) return { ok: true };
+      return { stuck: true };
+    }
+  }
+  function probeCut(S) {
+    const act = [...Array(R).keys()].filter(r => S.col[r] < 0 && popc(S.cand[r]) > 1).sort((a, b) => popc(S.cand[a]) - popc(S.cand[b]));
+    let work = 0;
+    for (const r of act) {
+      const cut = [];
+      for (const c of bitsOf(S.cand[r])) { if (++work > 1500) break; const X = copy(S); if (!assign(X, r, c) || propagate(X, true).fail !== undefined) cut.push(c); }
+      if (cut.length) { st.probes++; cut.forEach(c => S.cand[r] &= ~(1 << c)); snap(S, r, { kind: "probe", region: r, cut }); return true; }
+      if (work > 1500) break;
+    }
+    return false;
+  }
+  function solve(S) {
+    for (;;) {
+      const p = propagate(S, false);
+      if (p.fail !== undefined) { snap(S, p.fail, { kind: "fail", region: p.fail, tri: p.tri }); return false; }
+      if (p.ok) { result = S.col.slice(); snap(S, -1, { kind: "done" }); return true; }
+      if (mode.noProbe || !probeCut(S)) break;
+    }
+    // guess: the region with the fewest colors left (then the most neighbours)
+    let r = -1, bn = 99, bd = -1;
+    for (let x = 0; x < R; x++) if (S.col[x] < 0) { const n = popc(S.cand[x]), d = G.adj[x].length; if (n < bn || (n === bn && d > bd)) { bn = n; bd = d; r = x; } }
+    let opts = bitsOf(S.cand[r]);
+    if (mode.symmetry) { const used = new Set([...S.col].filter(c => c >= 0)); const fresh = opts.filter(c => !used.has(c)); opts = opts.filter(c => used.has(c)).concat(fresh.slice(0, 1)); }
+    for (let i = 0; i < opts.length; i++) {
+      if (mode.maxGuess && st.guesses >= mode.maxGuess) { st.aborted = true; return false; }
+      st.guesses++;
+      const X = copy(S);
+      if (!assign(X, r, opts[i])) { st.back++; continue; }
+      snap(X, r, { kind: "guess", region: r, color: opts[i], k2: i + 1, of: opts.length });
+      if (solve(X)) return true;
+      if (st.aborted) return false;
+      st.back++; snap(S, r, { kind: "back", region: r, color: opts[i] });
+    }
+    return false;
+  }
+  const S0 = { col: new Int8Array(R).fill(-1), cand: new Uint16Array(R).fill(FULL) };
+  for (let r = 0; r < R; r++) if (init && init[r] >= 0 && init[r] < k && !assign(S0, r, init[r])) return { ok: false, ev, st, bad: true };
+  if (mode.fix) { mode.fix.forEach((r, c) => { if (c < k) assign(S0, r, c); }); snap(S0, -1, { kind: "fix", regions: mode.fix.slice(0, k) }); }
+  const ok = solve(S0);
+  if (!ok && !st.aborted) snap(S0, -1, { kind: "none" });
+  return { ok, col: result, ev, st };
+}
+// fewest colors: try k from the lower bound up
+function optimize(G, emit, gv) {
+  const hasG = gv && gv.some(c => c >= 0), ng = hasG ? new Set([...gv].filter(c => c >= 0)).size : 0;
+  const clique = maxClique(G), low = Math.max(clique.length, ng), gr = greedy(G), tries = [];
+  let best = null;
+  for (let k = Math.max(1, low); k <= Math.max(gr.k, hasG ? PAL.length : 0); k++) {
+    // with given colors the colors are no longer all alike, so the touching group is not fixed
+    const t = colorSolve(G, k, hasG ? gv : null, { emit, fix: hasG ? null : clique, symmetry: true, maxGuess: 20000 });
+    tries.push({ k, ok: t.ok, aborted: !!t.st.aborted, ev: t.ev, st: t.st });
+    if (t.ok) { best = { k, col: t.col }; break; }
+    if (t.st.aborted) { best = { k: gr.k, col: gr.col, unsure: true }; break; }
+  }
+  if (!best) best = { k: gr.k, col: gr.col };
+  return { clique, low, high: gr.k, tries, best, ng };
+}
+
+/* ---------- state + drawing ---------- */
+let G = null, OPT = null, user = null, pen = 0, mode = "play", GV = null;
+// given colors: random regions taken from a best coloring; colors renumbered so the given ones are 1, 2, 3…
+function pickGivens() {
+  const n = Math.round(G.R * +$("givens").value / 100), pick = shuffle([...Array(G.R).keys()]).slice(0, n), map = new Map();
+  for (const r of pick) if (!map.has(OPT.best.col[r])) map.set(OPT.best.col[r], map.size);
+  for (let c = 0; c < OPT.best.k; c++) if (!map.has(c)) map.set(c, map.size);
+  OPT.best.col = Int8Array.from(OPT.best.col, c => map.get(c));
+  GV = new Int8Array(G.R).fill(-1); pick.forEach(r => GV[r] = OPT.best.col[r]);
+}
+const V = { snap: null, bad: null, hint: -1 };
+function newMap() {
+  G = makeMap(+$("regions").value);
+  OPT = optimize(G, false);
+  pickGivens(); user = Int8Array.from(GV); pen = 0; stop(); $("solution").innerHTML = ""; mode = "play"; V.snap = null; V.bad = null; V.hint = -1; A.ev = null; $("log").innerHTML = ""; $("tries").innerHTML = "";
+  $("sBest").textContent = OPT.best.k; $("sLow").textContent = OPT.low; $("sHigh").textContent = OPT.high;
+  buildPalette(); draw(); score();
+  const ng = [...GV].filter(c => c >= 0).length;
+  say("Your turn", `Color every region so that neighbours never share a color. Pick a color below, then tap regions.${ng ? ` ${ng} region${ng > 1 ? "s are" : " is"} already colored (number in a dark circle) and can't change.` : ""} Can you do it with <b>${OPT.best.k}</b> colors?`);
+}
+function buildPalette() {
+  const p = $("palette"); p.innerHTML = "";
+  const n = Math.max(OPT.best.k + 1, 4);
+  for (let c = 0; c < Math.min(n, PAL.length); c++) { const b = document.createElement("button"); b.style.background = PAL[c]; b.setAttribute("aria-label", PALN[c]); b.textContent = c + 1; if (c === pen) b.classList.add("on"); b.addEventListener("click", () => { pen = c; buildPalette(); }); p.appendChild(b); }
+  const e = document.createElement("button"); e.className = "erase" + (pen === -1 ? " on" : ""); e.textContent = "⌫"; e.setAttribute("aria-label", "erase"); e.addEventListener("click", () => { pen = -1; buildPalette(); }); p.appendChild(e);
+}
+function draw() {
+  const cv = $("map"), w = cv.clientWidth || 340, h = Math.round(w * G.GH / G.GW), dpr = window.devicePixelRatio || 1;
+  if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cv.style.height = h + "px"; }
+  const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const css = getComputedStyle(document.documentElement), col = n => css.getPropertyValue(n).trim();
+  const cs = w / G.GW, sn = mode === "solver" ? V.snap : null, colors = sn ? sn.col : user;
+  for (let i = 0; i < G.owner.length; i++) { const r = G.owner[i], c = colors[r]; ctx.fillStyle = c >= 0 ? PAL[c] : col("--blank"); ctx.fillRect((i % G.GW) * cs, ((i / G.GW) | 0) * cs, cs + 0.6, cs + 0.6); }
+  // borders
+  ctx.strokeStyle = col("--line-strong"); ctx.lineWidth = Math.max(1, cs * 0.12); ctx.beginPath();
+  for (let i = 0; i < G.owner.length; i++) { const x = i % G.GW, y = (i / G.GW) | 0; if (x < G.GW - 1 && G.owner[i + 1] !== G.owner[i]) { ctx.moveTo((x + 1) * cs, y * cs); ctx.lineTo((x + 1) * cs, (y + 1) * cs); } if (y < G.GH - 1 && G.owner[i + G.GW] !== G.owner[i]) { ctx.moveTo(x * cs, (y + 1) * cs); ctx.lineTo((x + 1) * cs, (y + 1) * cs); } }
+  ctx.stroke();
+  // outline: the focus region (solver) or regions in conflict / the hint (play)
+  const outline = (r, color, lw) => { ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.beginPath(); for (let i = 0; i < G.owner.length; i++) { if (G.owner[i] !== r) continue; const x = i % G.GW, y = (i / G.GW) | 0; if (x === 0 || G.owner[i - 1] !== r) { ctx.moveTo(x * cs, y * cs); ctx.lineTo(x * cs, (y + 1) * cs); } if (x === G.GW - 1 || G.owner[i + 1] !== r) { ctx.moveTo((x + 1) * cs, y * cs); ctx.lineTo((x + 1) * cs, (y + 1) * cs); } if (y === 0 || G.owner[i - G.GW] !== r) { ctx.moveTo(x * cs, y * cs); ctx.lineTo((x + 1) * cs, y * cs); } if (y === G.GH - 1 || G.owner[i + G.GW] !== r) { ctx.moveTo(x * cs, (y + 1) * cs); ctx.lineTo((x + 1) * cs, (y + 1) * cs); } } ctx.stroke(); };
+  if (sn && sn.focus >= 0) outline(sn.focus, col("--accent"), Math.max(2.5, cs * 0.35));
+  if (!sn && V.bad) V.bad.forEach(r => outline(r, col("--bad"), Math.max(2.5, cs * 0.35)));
+  if (!sn && V.hint >= 0) outline(V.hint, col("--ok"), Math.max(2.5, cs * 0.35));
+  // candidate dots (solver view)
+  if (sn) for (let r = 0; r < G.R; r++) if (sn.col[r] < 0) {
+    const i = G.label[r], x = (i % G.GW + 0.5) * cs, y = (((i / G.GW) | 0) + 0.5) * cs, cands = bitsOf(sn.cand[r]), d = Math.max(3, cs * 0.45);
+    cands.forEach((c, j) => { ctx.fillStyle = PAL[c]; ctx.beginPath(); ctx.arc(x + (j - (cands.length - 1) / 2) * d * 2.2, y + ($("nums").checked ? d * 1.2 : 0), d, 0, 7); ctx.fill(); ctx.strokeStyle = "rgba(0,0,0,.35)"; ctx.lineWidth = 1; ctx.stroke(); });
+  }
+  // region numbers (given regions: in a dark circle)
+  if ($("nums").checked) {
+    const fs = Math.max(9, cs * 1.15); ctx.font = `700 ${fs}px -apple-system,Segoe UI,Roboto,sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    for (let r = 0; r < G.R; r++) {
+      const i = G.label[r], x = (i % G.GW + 0.5) * cs, dotsBelow = sn && sn.col[r] < 0, y = (((i / G.GW) | 0) + 0.5) * cs - (dotsBelow ? Math.max(3, cs * 0.45) * 1.1 : 0), t = String(r + 1);
+      if (GV && GV[r] >= 0) { ctx.fillStyle = "rgba(20,22,26,.85)"; ctx.beginPath(); ctx.arc(x, y, fs * 0.72, 0, 7); ctx.fill(); ctx.fillStyle = "#fff"; ctx.fillText(t, x, y + 0.5); }
+      else { ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.strokeText(t, x, y + 0.5); ctx.fillStyle = "#1c1e23"; ctx.fillText(t, x, y + 0.5); }
+    }
+  }
+}
+function score() {
+  $("sUsed").textContent = new Set([...user].filter(c => c >= 0)).size;
+  $("sLeft").textContent = [...user].filter(c => c < 0).length;
+}
+function say(p, t) { $("phase").textContent = p; $("text").innerHTML = t; }
+const regionName = r => `region ${r + 1}`;
+const cn = c => `${PALN[c]} (${c + 1})`;   // color name with its number
+const sw = c => `<i class="sw" style="background:${PAL[c]}"></i>`;
+
+/* ---------- play ---------- */
+$("map").addEventListener("click", e => {
+  if (!G) return;
+  if (mode !== "play") { toPlay(); }
+  const rect = $("map").getBoundingClientRect(), cs = rect.width / G.GW, x = Math.floor((e.clientX - rect.left) / cs), y = Math.floor((e.clientY - rect.top) / cs);
+  if (x < 0 || y < 0 || x >= G.GW || y >= G.GH) return;
+  const r = G.owner[y * G.GW + x];
+  if (GV[r] >= 0) { say("Your turn", `Region ${r + 1}: its color is given and can't change.`); return; }
+  user[r] = pen; V.bad = null; V.hint = -1; draw(); score(); checkWin();
+});
+function conflicts() { const bad = new Set(); for (let r = 0; r < G.R; r++) if (user[r] >= 0) for (const j of G.adj[r]) if (user[j] === user[r]) { bad.add(r); bad.add(j); } return bad; }
+function checkWin() {
+  if ([...user].some(c => c < 0)) return;
+  const bad = conflicts(); if (bad.size) return;
+  const used = new Set(user).size;
+  say(used === OPT.best.k ? "🎉 Perfect!" : "✓ Colored", used === OPT.best.k ? `Every region is colored and no neighbours share a color — with only <b>${used}</b> colors, the fewest possible.` : `Every region is colored correctly with <b>${used}</b> colors. The fewest possible is <b>${OPT.best.k}</b> — can you save ${used - OPT.best.k}?`);
+}
+$("checkBtn").addEventListener("click", () => {
+  toPlay(); const bad = conflicts(); V.bad = bad.size ? bad : null; draw();
+  say("Check", bad.size ? `${bad.size} regions (red outline) share a color with a neighbour.` : `No clashes so far ✓ · ${[...user].filter(c => c < 0).length} regions left.`);
+  setTimeout(() => { V.bad = null; draw(); }, 2500);
+});
+$("restartBtn").addEventListener("click", () => { toPlay(); user = Int8Array.from(GV); V.bad = null; V.hint = -1; draw(); score(); say("Restarted", "Back to the start — only the given colors are left."); });
+$("hintBtn").addEventListener("click", () => {
+  toPlay();
+  const bad = conflicts(); if (bad.size) { V.bad = bad; draw(); say("💡 Hint", "Fix the clashes first (red outline)."); return; }
+  const k = Math.max(OPT.best.k, new Set([...user].filter(c => c >= 0)).size, Math.max(-1, ...user) + 1);
+  const t = colorSolve(G, k, user, { emit: true, maxGuess: 20000 });
+  if (!t.ok) { say("💡 Hint", `With the colors you have chosen, the map can't be finished with ${k} colors. Try recoloring a region (the greedy order may help: start from regions with many neighbours).`); return; }
+  const sure = t.ev.slice(0, (t.ev.findIndex(x => x.kind === "guess") + 1 || t.ev.length + 1) - 1);   // steps before the first guess are certain
+  const e = sure.find(x => x.kind === "single" && user[x.region] < 0);
+  let r, c, why;
+  if (e) { r = e.region; c = e.color; why = `Only <b>${PALN[c]}</b> is left for ${regionName(r)} — its neighbours already use the other colors.`; }
+  else { r = [...Array(G.R).keys()].filter(x => user[x] < 0).sort((a, b) => G.adj[b].length - G.adj[a].length)[0]; c = t.col[r]; why = `Nothing is forced yet. A good move: ${regionName(r)} (it has the most neighbours) → <b>${PALN[c]}</b>; this still leads to a coloring with ${k} colors.`; }
+  user[r] = c; V.hint = r; draw(); score(); say("💡 Hint", why + " (green)"); checkWin();
+});
+
+/* ---------- count the colorings that work ---------- */
+// fixed: colors already set (-1 = free). canonical: count colorings that differ only by swapping colors once
+// (colors must first appear in order 1, 2, 3… along the regions). Stops after budgetMs and reports "at least".
+function countColorings(k, fixed, canonical, budgetMs) {
+  const col = Int8Array.from(fixed), t0 = performance.now();
+  const free = canonical ? [...Array(G.R).keys()] : [...Array(G.R).keys()].filter(r => col[r] < 0).sort((a, b) => G.adj[b].length - G.adj[a].length);
+  if (canonical) { // visit regions so each one touches earlier ones (breadth-first from the busiest region)
+    const start = free.slice().sort((a, b) => G.adj[b].length - G.adj[a].length)[0], seen = new Uint8Array(G.R), order = [start]; seen[start] = 1;
+    for (let q = 0; q < order.length; q++) for (const j of G.adj[order[q]]) if (!seen[j]) { seen[j] = 1; order.push(j); }
+    for (let r = 0; r < G.R; r++) if (!seen[r]) order.push(r);
+    free.length = 0; free.push(...order);
+  }
+  let n = 0, nodes = 0, stopped = false;
+  const rec = (i, maxUsed) => {
+    if (stopped) return;
+    if ((++nodes & 8191) === 0 && performance.now() - t0 > budgetMs) { stopped = true; return; }
+    if (i === free.length) { n++; return; }
+    const r = free[i], top = canonical ? Math.min(k - 1, maxUsed + 1) : k - 1;
+    for (let c = 0; c <= top; c++) {
+      if (G.adj[r].some(j => col[j] === c)) continue;
+      col[r] = c; rec(i + 1, Math.max(maxUsed, c)); col[r] = -1;
+      if (stopped) return;
+    }
+  };
+  rec(0, -1);
+  return { n, done: !stopped, free: free.length, all: Math.pow(k, free.length) };
+}
+const big = x => x >= 1e15 ? x.toExponential(2).replace("e+", " × 10^") : Math.round(x).toLocaleString();
+const pct = (a, b) => { const p = 100 * a / b; return p >= 1 ? p.toFixed(1) + "%" : p.toPrecision(2) + "%"; };
+$("countBtn").addEventListener("click", () => {
+  toPlay();
+  say("🔢 Counting…", "Counting every coloring that works — one moment.");
+  setTimeout(() => {
+    const k = OPT.best.k, ng = [...GV].filter(c => c >= 0).length, lines = [];
+    const a = countColorings(k, GV, false, 2500);
+    const pre = a.done ? "" : "at least ";
+    lines.push(`<b>${k} colors${ng ? `, ${ng} given region${ng > 1 ? "s" : ""}` : ""}:</b> ${pre}<b>${a.n.toLocaleString()}</b> coloring${a.n === 1 ? "" : "s"} work out of <b>${big(a.all)}</b> ways to paint the ${a.free} ${ng ? "free " : ""}regions${a.done ? ` — ${pct(a.n, a.all)}, about 1 in ${big(a.all / Math.max(1, a.n))}` : " (too many to count them all here)"}.`);
+    if (!ng) { const c = countColorings(k, GV, true, 2500); lines.push(`Counting colorings that only swap colors as the same: ${c.done ? "" : "at least "}<b>${c.n.toLocaleString()}</b> truly different coloring${c.n === 1 ? "" : "s"}.`); }
+    else lines.push("(The givens fix which color is which, so swapping colors gives a different coloring.)");
+    const mine = [...user].some((c, r) => c >= 0 && GV[r] < 0);
+    if (mine) {
+      const bad = conflicts();
+      if (bad.size) lines.push("<b>From your colors:</b> 0 ways — some neighbours already share a color.");
+      else { const m = countColorings(Math.max(k, Math.max(...user) + 1), user, false, 2000); lines.push(`<b>From your current colors:</b> ${m.done ? "" : "at least "}<b>${m.n.toLocaleString()}</b> way${m.n === 1 ? "" : "s"} left to finish${m.n ? "" : " — you need to change a color"}.`); }
+    }
+    if (k + 1 <= PAL.length) { const b = countColorings(k + 1, GV, false, 1500); lines.push(`With <b>${k + 1}</b> colors instead: ${b.done ? "" : "at least "}<b>${b.n.toLocaleString()}</b> colorings work${b.done ? ` out of ${big(b.all)} (${pct(b.n, b.all)})` : ""} — one more color opens up many more solutions.`); }
+    say("🔢 Solutions", lines.join("<br>"));
+  }, 30);
+});
+
+/* ---------- the method, animated ---------- */
+const A = { ev: null, k: 0, timer: null, running: false };
+const SPEEDS = { slow: 1100, normal: 450, fast: 100, turbo: 0 };
+function toPlay() { stop(); mode = "play"; V.snap = null; draw(); $("solveBtn").textContent = "▶ Find the fewest colors"; }
+function stop() { if (A.timer) clearTimeout(A.timer); A.timer = null; A.running = false; }
+function prepareRun() {
+  const o = optimize(G, true, GV); $("solution").innerHTML = "";
+  A.ev = [{ kind: "bounds", clique: o.clique, low: o.low, high: o.high, k: 0, focus: -1, col: new Int8Array(G.R).fill(-1), cand: new Uint16Array(G.R), st: { guesses: 0, back: 0, probes: 0 } }];
+  for (const t of o.tries) { A.ev.push({ kind: "try", k: t.k, focus: -1, col: new Int8Array(G.R).fill(-1), cand: new Uint16Array(G.R).fill((1 << t.k) - 1), st: { guesses: 0, back: 0, probes: 0 } }); A.ev.push(...t.ev); }
+  A.o = o; A.k = 0; $("log").innerHTML = ""; mode = "solver";
+}
+function explain(e) {
+  const rn = e.region !== undefined ? regionName(e.region) : "";
+  switch (e.kind) {
+    case "bounds": return ["Bounds", `The biggest group of regions that all touch each other has <b>${e.clique.length}</b> regions (${e.clique.map(r => r + 1).join(", ")})${A.o && A.o.ng > e.clique.length ? `, and the given regions already use ${A.o.ng} colors` : ""}, so at least ${e.low} colors are needed. A quick greedy coloring uses <b>${e.high}</b>. The answer is between ${e.low} and ${e.high}.`];
+    case "try": return [`Try ${e.k} colors`, `Can the map be colored with ${e.k} colors? Every region starts with ${e.k} options (dots)${GV && GV.some(c => c >= 0) ? "; the given regions keep their colors" : ""}.`];
+    case "fix": return ["Fix the touching group", `Colors can be swapped freely, so the touching group (${e.regions.map(r => r + 1).join(", ")}) simply takes colors 1, 2, 3… — their neighbours lose those colors.`];
+    case "single": return ["Single", `${rn} has only one color left — <b>${cn(e.color)}</b>. Its neighbours lose ${cn(e.color)}.`];
+    case "pair": return ["Group check", `Regions ${e.pair[0] + 1} and ${e.pair[1] + 1} touch each other and ${rn}, and both are left with ${e.colors.map(cn).join(" and ")} — so ${rn} can't use either.`];
+    case "probe": return ["All regions together", `The cuts stopped. For ${rn}, the color${e.cut.length > 1 ? "s" : ""} ${e.cut.map(cn).join(", ")} lead${e.cut.length > 1 ? "" : "s"} straight to a region with no color left — cut. Nothing was guessed.`];
+    case "guess": return ["Guess", `The cuts stopped. ${rn} has the fewest colors left; try <b>${cn(e.color)}</b> (option ${e.k2} of ${e.of}${e.of > 1 ? " — colors already in use first, a new color only once" : ""}).`];
+    case "fail": return ["Contradiction", e.tri ? `Regions ${e.tri.map(r => r + 1).join(", ")} all touch each other but have fewer than 3 colors left between them.` : `${rn} has no color left.`];
+    case "back": return ["Go back", `Undo ${cn(e.color)} for ${rn} and try the next option.`];
+    case "none": return [`${e.k} colors: impossible`, `Every option ran into a contradiction — the map <b>cannot</b> be colored with ${e.k} colors. Proven, so try ${e.k + 1}.`];
+    case "done": return [`Solved with ${e.k} colors`, `Every region has a color and no neighbours match. ${e.k} colors is the <b>fewest possible</b>${A.o && A.o.tries.length > 1 ? ` — ${A.o.tries.filter(t => !t.ok).map(t => t.k).join(", ")} ${A.o.tries.length > 2 ? "were" : "was"} proven impossible` : A.o && e.k === A.o.low ? " — no map with this touching group can use fewer" : ""}.`];
+  }
+  return ["", ""];
+}
+function chip(e) {
+  // each step as a word: S12=3, P7≠1,3, A3≠4, G5=2, ↩5 …
+  const f = { try: () => `<b>k=${e.k}</b>`, fix: () => `<b>F</b> ${e.regions.map((r, c) => `${r + 1}=${c + 1}${sw(c)}`).join(" ")}`, single: () => `<b>S</b>${e.region + 1}=${e.color + 1}${sw(e.color)}`, pair: () => `<b>P</b>${e.region + 1}≠${e.colors.map(c => c + 1).join(",")}`, probe: () => `<b>A</b>${e.region + 1}≠${e.cut.map(c => c + 1).join(",")}`, guess: () => `<b>G</b>${e.region + 1}=${e.color + 1}${sw(e.color)}`, fail: () => "✗", back: () => `↩${e.region + 1}`, none: () => `✗ k=${e.k}`, done: () => `✓ k=${e.k}` }[e.kind];
+  const t = f && f();   // only the text for this kind of step is built
+  if (!t) return; const s = document.createElement("span"); s.innerHTML = t; if (["fail", "back", "none"].includes(e.kind)) s.className = "back";
+  const l = $("log"); l.appendChild(s); while (l.children.length > 250) l.removeChild(l.firstChild); l.scrollTop = l.scrollHeight;
+}
+function showEvent(e) {
+  V.snap = e; draw(); const [p, t] = explain(e); say(p, t);
+  if (e.kind === "done") {   // the solution in numbers, and how many words of each kind the successful try used
+    const tr = A.o.tries.find(x => x.ok), cnt = k => tr.ev.filter(x => x.kind === k).length;
+    $("solution").innerHTML = `<span><b>Solution (region=color):</b></span>` + [...e.col].map((c, r) => `<span>${r + 1}=${c + 1}${sw(c)}</span>`).join("") +
+      `<span><b>Words:</b> ${cnt("single")} S · ${cnt("pair")} P · ${cnt("probe")} A · ${cnt("guess")} G · ${cnt("back")} ↩</span>`;
+  }
+  $("sGuess").textContent = `${e.st.guesses} · ${e.st.back}`; $("sProbe").textContent = e.st.probes;
+  if (A.o) $("tries").innerHTML = A.o.tries.map(t => `<span class="${t.ok ? "yes" : "no"}${t.k === e.k ? " cur" : ""}">${t.k} colors: ${t.ok ? "✓ works" : t.aborted ? "? too long" : "✗ impossible"}</span>`).join("");
+}
+function tick(single) {
+  if (!A.ev || mode !== "solver") prepareRun();
+  const sp = SPEEDS[$("speed").value]; let e, n = 0;
+  do { e = A.ev[A.k++]; if (!e) break; chip(e); } while (sp === 0 && !single && ++n < 200 && A.k < A.ev.length);
+  if (!e) { stop(); $("solveBtn").textContent = "↺ Again"; return -1; }
+  showEvent(e);
+  if (A.k >= A.ev.length) { stop(); $("solveBtn").textContent = "↺ Again"; return -1; }
+  return ["try", "none", "guess", "back", "probe", "bounds"].includes(e.kind) ? Math.max(sp, 200) * 1.6 : sp;
+}
+function loop() { const w = tick(false); if (w < 0 || !A.running) return; A.timer = setTimeout(loop, w); }
+$("solveBtn").addEventListener("click", () => {
+  if (A.running) { stop(); $("solveBtn").textContent = "▶ Continue"; return; }
+  if (mode !== "solver" || !A.ev || A.k >= A.ev.length) A.ev = null;
+  A.running = true; $("solveBtn").textContent = "⏸ Pause"; loop();
+});
+$("stepBtn").addEventListener("click", () => { stop(); if (mode !== "solver" || (A.ev && A.k >= A.ev.length)) A.ev = null; tick(true); if (A.ev && A.k < A.ev.length) $("solveBtn").textContent = "▶ Continue"; });
+$("backBtn").addEventListener("click", () => { toPlay(); A.ev = null; say("Your turn", "Back to your own map — your colors are as you left them."); });
+
+/* ---------- setup ---------- */
+$("newBtn").addEventListener("click", newMap);
+$("regions").addEventListener("change", newMap);
+$("givens").addEventListener("change", () => { if (!G) return; toPlay(); A.ev = null; $("log").innerHTML = ""; $("tries").innerHTML = ""; $("solution").innerHTML = ""; pickGivens(); user = Int8Array.from(GV); V.bad = null; V.hint = -1; draw(); score(); const ng = [...GV].filter(c => c >= 0).length; say("Givens changed", ng ? `Same map — ${ng} region${ng > 1 ? "s are" : " is"} now given (number in a dark circle).` : "Same map — no given colors."); });
+$("nums").addEventListener("change", () => { if (G) draw(); });
+window.addEventListener("resize", () => { if (G) { $("map").width = 0; draw(); } });
+newMap();
+</script>
+</body>
+</html>

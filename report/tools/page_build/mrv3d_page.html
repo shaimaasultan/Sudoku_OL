@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>MRV in 3D</title>
+<style>
+:root{
+  --bg:#f5f4ef; --surface:#ffffff; --ink:#1c1e23; --muted:#6a6e77; --line:#cfd2d8; --line-strong:#1c1e23;
+  --accent:#2455c7; --accent-ink:#fff; --btn:#e9e7e0; --btn-ink:#1c1e23; --ok:#2e9e57; --bad:#c42626; --cellbg:#ffffff; --hi:#fff1c9;
+  --shadow:0 1px 2px rgba(0,0,0,.08),0 4px 14px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#131519; --surface:#1c1f25; --ink:#e7e8eb; --muted:#9aa0aa; --line:#383d46; --line-strong:#c9cdd4;
+    --accent:#6f98ff; --accent-ink:#0d1117; --btn:#2a2e36; --btn-ink:#e7e8eb; --cellbg:#1c1f25; --hi:#3a3420; --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:max(12px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));touch-action:manipulation}
+.wrap{max-width:620px;margin:0 auto}
+h1{font-size:20px;margin:0}
+.sub{font-size:12px;color:var(--muted);margin-bottom:6px}
+h2{font-size:15px;margin:0 0 6px}
+button,select{font:inherit;color:var(--btn-ink);background:var(--btn);border:0;border-radius:10px;padding:9px 12px;cursor:pointer;max-width:100%;min-width:0}
+select{appearance:none;-webkit-appearance:none}
+button:active{transform:scale(.97)}
+button.primary{background:var(--accent);color:var(--accent-ink);font-weight:600}
+button:disabled{opacity:.5}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.row select{flex:1}
+.card{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:12px;margin-top:12px}
+.note{font-size:12.5px;color:var(--muted);margin:6px 0}
+.cube3{width:100%;max-width:470px;aspect-ratio:1/1;display:block;margin:8px auto 0;border-radius:10px;background:var(--bg);touch-action:none;cursor:grab}
+.cube3:active{cursor:grabbing}
+.cubectl{justify-content:center;font-size:12px;color:var(--muted)}
+.cubectl label{display:flex;align-items:center;gap:5px}
+.cubectl input[type=range]{width:90px}
+.board{display:grid;width:100%;max-width:470px;aspect-ratio:1/1;margin:8px auto 0;border:2px solid var(--line-strong);border-radius:4px;overflow:hidden;background:var(--cellbg)}
+.board div{position:relative;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-width:0;min-height:0;font-variant-numeric:tabular-nums}
+.board div.br{border-right:2px solid var(--line-strong)} .board div.bb{border-bottom:2px solid var(--line-strong)}
+.board div.given{font-weight:800}
+.board div.placed{color:var(--accent);font-weight:600}
+.board div.pick{background:var(--hi);box-shadow:inset 0 0 0 3px var(--accent)}
+.board div.try{background:var(--hi);box-shadow:inset 0 0 0 3px var(--accent)}
+.board div.undo,.board div.dead{background:rgba(196,38,38,.18);box-shadow:inset 0 0 0 3px var(--bad)}
+.board div .cd{display:grid;width:100%;height:100%;font-size:var(--cfs);color:var(--muted);line-height:1;padding:1px}
+.board div .cd span{display:flex;align-items:center;justify-content:center}
+.board div .cnt{font-size:var(--cfs);color:var(--muted);font-weight:600}
+.ctl{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.ctl button{padding:8px 13px}
+.step{background:var(--bg);border-radius:10px;padding:8px 10px;margin-top:8px;min-height:56px;font-size:14px}
+.step .no{font-size:11px;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.stats div{background:var(--bg);border-radius:10px;padding:6px 4px;text-align:center}
+.stats b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
+.stats span{font-size:10.5px;color:var(--muted)}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-2px}
+.log{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;max-height:150px;overflow:auto}
+.log span{font:600 12px -apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);border-radius:6px;padding:3px 7px}
+.log span.back{color:var(--bad)} .log span.pick{color:var(--accent)}
+ol{padding-left:20px;margin:6px 0} li{margin:4px 0;font-size:14px}
+.busy{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:20;color:#fff;font-weight:600}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🧊 MRV in 3D</h1>
+  <div class="sub">Watch backtracking with the fewest-possible-numbers rule (MRV) solve a puzzle, step by step, in the cube of number slices · S. S. Soltan</div>
+
+  <div class="card">
+    <div class="row">
+      <select id="size" aria-label="Size"><option value="4">4×4</option><option value="6">6×6</option><option value="9" selected>9×9</option><option value="12">12×12</option><option value="16">16×16</option></select>
+      <select id="level" aria-label="Puzzle"><option value="easy">Easy (one answer)</option><option value="medium">Medium (one answer)</option><option value="hard" selected>Hard (one answer)</option><option value="r34">Random 34% of cells (many answers)</option></select>
+      <button id="newBtn" class="primary">New puzzle</button>
+    </div>
+    <p class="note" id="info"></p>
+  </div>
+
+  <div class="card">
+    <div class="row" style="margin-top:0">
+      <select id="speed" aria-label="Speed"><option value="slow">Slow</option><option value="normal" selected>Normal</option><option value="fast">Fast</option><option value="turbo">Turbo</option></select>
+      <select id="view" aria-label="View"><option value="both" selected>Cube + board</option><option value="cube">Cube only</option><option value="board">Board only</option></select>
+    </div>
+    <canvas id="cube3" class="cube3" aria-label="3D cube: one horizontal slice per number, one vertical pillar per cell"></canvas>
+    <div id="cubeCtl" class="row cubectl"><label>Spread slices <input type="range" id="cubeSpread" min="0" max="2.5" step="0.1" value="0.8"></label><label><input type="checkbox" id="cubeAuto" checked> Auto-rotate</label><label><input type="checkbox" id="cubeDots" checked> Show possible numbers</label></div>
+    <div class="legend" id="legCube">
+      <span><i style="background:hsl(200 70% 42%);box-shadow:inset 0 0 0 1px rgba(0,0,0,.45)"></i>given</span>
+      <span><i style="background:hsl(200 70% 62%)"></i>placed by MRV</span>
+      <span><i style="background:hsl(200 70% 55%);border-radius:50%;opacity:.6"></i>still possible</span>
+      <span><b style="color:var(--accent)">|</b> the cell MRV picked (big dots = its possible numbers)</span>
+      <span><b style="color:var(--bad)">|</b> dead end / going back</span>
+    </div>
+    <div id="board" class="board"></div>
+    <div class="ctl">
+      <button id="resetBtn">⏮ Reset</button>
+      <button id="backBtn">◀ Back</button>
+      <button id="playBtn" class="primary">▶ Play</button>
+      <button id="stepBtn">Step ▶|</button>
+      <button id="endBtn">⏭ End</button>
+    </div>
+    <div class="stats">
+      <div><b id="sTried">0</b><span>numbers tried</span></div>
+      <div><b id="sBack">0</b><span>go-backs ↩</span></div>
+      <div><b id="sDepth">0</b><span>placed by MRV now</span></div>
+      <div><b id="sLeft">0</b><span>empty cells</span></div>
+    </div>
+    <div class="step"><div class="no" id="stepNo"></div><div id="stepText">Press ▶ Play or Step to watch MRV.</div></div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="card">
+    <h2>How MRV works</h2>
+    <ol>
+      <li><b>Pick the tightest cell.</b> Look at every empty cell and count the numbers it can still take (not already in its row, column or box). Pick the cell with the fewest — the <b>minimum remaining values</b>. In the cube this cell is a <b>pillar</b> through all the number slices; its possible numbers are the big dots on the pillar.</li>
+      <li><b>Try its numbers, smallest first.</b> Put the number in the cell (a block appears in that number's slice) and go on to the next tightest cell.</li>
+      <li><b>Dead end.</b> If some empty cell has no number left, the last choices were wrong: the pillar turns red.</li>
+      <li><b>Go back.</b> Take the last number out (red block) and try the next number in that cell; if none is left, go back one more cell.</li>
+      <li>Stop when every cell is filled. MRV proves nothing in advance — it tries, and backs up when a try fails.</li>
+    </ol>
+    <p class="note">This is the same MRV used on the Speed and Few Givens pages (same cell choice, numbers tried smallest first), here recording each step so it can be replayed. A puzzle with one answer makes MRV go back when an early try was wrong; a random 34% puzzle has many answers, so almost every try works.</p>
+  </div>
+</div>
+<div id="busy" class="busy hidden">Making a puzzle…</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+/*ENGINES*/
+const SYMBOLS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const sym = v => v > 0 ? SYMBOLS[v] : "";
+const hue = d => Math.round((d - 1) * 360 / N);
+const rc = i => `r${((i / N) | 0) + 1}c${i % N + 1}`;
+const bitsList = m => { const o = []; for (let v = 1; v <= N; v++) if ((m >> v) & 1) o.push(v); return o; };
+
+/* ---------- MRV, recording every step (same choices as mrvSolve on the Speed page) ---------- */
+function mrvTrace(p, maxEv = 30000) {
+  const NC = N * N, g = Int8Array.from(p), rm = new Int32Array(N), cm = new Int32Array(N), bm = new Int32Array(N), full = (1 << (N + 1)) - 2;
+  const box = i => boxOf((i / N) | 0, i % N);
+  for (let i = 0; i < NC; i++) if (g[i]) { const b = 1 << g[i]; rm[(i / N) | 0] |= b; cm[i % N] |= b; bm[box(i)] |= b; }
+  const ev = []; let nodes = 0, tried = 0, backs = 0, depth = 0, aborted = false, truncated = false;
+  const snap = (e, force) => { if (ev.length >= maxEv && !force) { truncated = true; return; } ev.push({ ...e, g: g.slice(), tried, backs, depth }); };
+  snap({ kind: "start" });
+  const rec = () => {
+    if (++nodes > 5e6) { aborted = true; return false; }
+    let best = -1, bc = 99, mask = 0;
+    for (let i = 0; i < NC; i++) if (!g[i]) { const m = full & ~(rm[(i / N) | 0] | cm[i % N] | bm[box(i)]), k = popc(m); if (k < bc) { bc = k; best = i; mask = m; if (k < 2) break; } }
+    if (best < 0) return true;
+    if (!bc) { snap({ kind: "dead", cell: best }); return false; }
+    snap({ kind: "pick", cell: best, mask, n: bc });
+    const r = (best / N) | 0, c = best % N, bx = box(best);
+    for (let v = 1; v <= N; v++) if (mask & (1 << v)) {
+      const b = 1 << v; g[best] = v; rm[r] |= b; cm[c] |= b; bm[bx] |= b; tried++; depth++;
+      snap({ kind: "try", cell: best, v, n: bc });
+      if (rec()) return true;
+      g[best] = 0; rm[r] &= ~b; cm[c] &= ~b; bm[bx] &= ~b; backs++; depth--;
+      snap({ kind: "undo", cell: best, v });
+      if (aborted) return false;
+    }
+    return false;
+  };
+  const ok = rec();
+  snap({ kind: ok ? "done" : "fail" }, true);
+  return { ev, ok, tried, backs, truncated, aborted };
+}
+
+/* ---------- state ---------- */
+let P = null, T = null;
+const V = { k: 0, timer: null, running: false };
+function makeOne() {
+  const n = +$("size").value, level = $("level").value;
+  setSize(n);
+  const sol = randomSolution();
+  let p;
+  if (level === "r34") { p = new Array(n * n).fill(0); shuffle([...Array(n * n).keys()]).slice(0, Math.round(n * n * 0.34)).forEach(i => p[i] = sol[i]); }
+  else p = carve(sol, level);
+  return { p, sol, n, level };
+}
+function newPuzzle() {
+  stop(); $("busy").classList.remove("hidden");
+  setTimeout(() => {
+    P = makeOne(); T = mrvTrace(P.p); V.k = 0;
+    $("busy").classList.add("hidden");
+    const giv = P.p.filter(Boolean).length;
+    $("info").innerHTML = `${P.n}×${P.n}, ${giv} givens (${Math.round(100 * giv / (P.n * P.n))}%) — ${P.level === "r34" ? "random cells, many answers" : "exactly one answer"}. MRV finished in <b>${T.tried.toLocaleString()}</b> numbers tried and <b>${T.backs.toLocaleString()}</b> go-backs${T.truncated ? ` (only the first ${(T.ev.length - 1).toLocaleString()} steps are kept for the replay; the last step shows the finished grid)` : ""}${T.aborted ? " — it stopped at its 5-million-step limit" : ""}.`;
+    $("log").innerHTML = ""; layout(); show();
+  }, 30);
+}
+
+/* ---------- board ---------- */
+function layout() {
+  const n = P.n, [br, bc] = boxShape(n), el = $("board");
+  el.style.gridTemplateColumns = `repeat(${n},1fr)`;
+  el.style.fontSize = `min(${n > 9 ? 2.8 : 4.4}vw, ${n > 9 ? 15 : 24}px)`;
+  el.style.setProperty("--cfs", `min(${n > 9 ? 1.6 : 2.2}vw, ${n > 9 ? 8 : 10}px)`);
+  el.innerHTML = [...Array(n * n).keys()].map(i => { const r = (i / n) | 0, c = i % n; return `<div class="${(c + 1) % bc === 0 && c < n - 1 ? "br" : ""}${(r + 1) % br === 0 && r < n - 1 ? " bb" : ""}"></div>`; }).join("");
+}
+function candMasks(g) {
+  const n = P.n, NN = n * n, full = (1 << (n + 1)) - 2, rm = new Int32Array(n), cm = new Int32Array(n), bm = new Int32Array(n), out = new Int32Array(NN);
+  for (let i = 0; i < NN; i++) if (g[i]) { const b = 1 << g[i]; rm[(i / n) | 0] |= b; cm[i % n] |= b; bm[boxOf((i / n) | 0, i % n)] |= b; }
+  for (let i = 0; i < NN; i++) if (!g[i]) out[i] = full & ~(rm[(i / n) | 0] | cm[i % n] | bm[boxOf((i / n) | 0, i % n)]);
+  return out;
+}
+function drawBoard(e) {
+  const n = P.n, cells = $("board").children, cand = candMasks(e.g), side = Math.ceil(Math.sqrt(n));
+  for (let i = 0; i < n * n; i++) {
+    const el = cells[i], v = e.g[i], given = !!P.p[i];
+    let cls = el.className.replace(/\b(given|placed|pick|try|undo|dead)\b/g, "").trim();
+    if (v) cls += given ? " given" : " placed";
+    if (e.cell === i) cls += " " + e.kind;
+    el.className = cls.trim();
+    if (v) el.textContent = sym(v);
+    else if (e.kind === "undo" && e.cell === i) el.innerHTML = `<span style="color:var(--bad);text-decoration:line-through">${sym(e.v)}</span>`;
+    else if (n <= 9) el.innerHTML = `<div class="cd" style="grid-template-columns:repeat(${side},1fr)">${[...Array(n)].map((_, k) => `<span>${(cand[i] >> (k + 1)) & 1 ? sym(k + 1) : ""}</span>`).join("")}</div>`;
+    else el.innerHTML = `<span class="cnt">${popc(cand[i]) || "✗"}</span>`;
+  }
+}
+
+/* ---------- cube (same projection and drawing style as the Option Layers page) ---------- */
+const C3 = { yaw: -0.65, pitch: 0.5, spread: 0.8, auto: true, dots: true, drag: null, raf: 0, dirty: true };
+function cubeDraw() {
+  const cv = $("cube3"), w = cv.clientWidth; if (!w || !P) return;
+  const dpr = window.devicePixelRatio || 1;
+  if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(w * dpr); }
+  const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const css = getComputedStyle(document.documentElement), col = s => css.getPropertyValue(s).trim();
+  ctx.fillStyle = col("--bg"); ctx.fillRect(0, 0, w, w);
+  const n = P.n, NN = n * n, e = T.ev[V.k], g = e.g, cand = candMasks(g);
+  const u = w * 0.5 / n, gap = u * (1 + C3.spread), half = (n - 1) / 2;
+  const cy = Math.cos(C3.yaw), sy = Math.sin(C3.yaw), cp = Math.cos(C3.pitch), sp = Math.sin(C3.pitch), F = w * 2.2;
+  const proj = (x, y, z) => { const X = x * cy - z * sy, Z1 = x * sy + z * cy, Y = y * cp - Z1 * sp, Z = y * sp + Z1 * cp, s = F / (F + Z); return [w / 2 + X * s, w / 2 - Y * s, Z, s]; };
+  const focus = e.cell != null ? e.cell : -1, bad = e.kind === "dead" || e.kind === "undo";
+  const items = [];
+  for (let i = 0; i < NN; i++) {
+    const x = (i % n - half) * u, z = (((i / n) | 0) - half) * u;
+    for (let d = 1; d <= n; d++) {
+      const placed = g[i] === d, removed = e.kind === "undo" && i === focus && d === e.v, possible = !g[i] && ((cand[i] >> d) & 1);
+      if (!placed && !removed && !(possible && (C3.dots || i === focus))) continue;
+      const [px, py, pz, s] = proj(x, (d - 1 - half) * gap, z);
+      items.push({ px, py, pz, s, d, i, placed, removed, possible, given: placed && !!P.p[i] });
+    }
+  }
+  // cube frame
+  const ex = (half + 0.6) * u, ey = half * gap + u * 0.6, corners = [];
+  for (const a of [-1, 1]) for (const b of [-1, 1]) for (const c of [-1, 1]) corners.push(proj(a * ex, b * ey, c * ex));
+  ctx.strokeStyle = col("--line"); ctx.lineWidth = 1;
+  for (let a = 0; a < 8; a++) for (let b = a + 1; b < 8; b++) if ([1, 2, 4].includes(a ^ b)) { ctx.beginPath(); ctx.moveTo(corners[a][0], corners[a][1]); ctx.lineTo(corners[b][0], corners[b][1]); ctx.stroke(); }
+  // the pillar of the cell MRV is working on
+  if (focus >= 0) {
+    const x = (focus % n - half) * u, z = (((focus / n) | 0) - half) * u, a = proj(x, -half * gap - u * 0.5, z), b = proj(x, half * gap + u * 0.5, z);
+    ctx.strokeStyle = bad ? col("--bad") : col("--accent"); ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke();
+  }
+  items.sort((a, b) => b.pz - a.pz);
+  for (const it of items) {
+    const h = hue(it.d), size = u * 0.72 * it.s, onPillar = it.i === focus;
+    ctx.globalAlpha = focus >= 0 && !onPillar && !it.placed ? 0.35 : 1;
+    if (it.removed) {
+      ctx.globalAlpha = 1; ctx.strokeStyle = col("--bad"); ctx.lineWidth = 2.5; ctx.strokeRect(it.px - size / 2, it.py - size / 2, size, size);
+    } else if (it.placed) {
+      ctx.fillStyle = `hsl(${h} 70% ${it.given ? 42 : 62}%)`; ctx.fillRect(it.px - size / 2, it.py - size / 2, size, size);
+      if (it.given) { ctx.strokeStyle = "rgba(0,0,0,.45)"; ctx.lineWidth = 1; ctx.strokeRect(it.px - size / 2, it.py - size / 2, size, size); }
+      if (onPillar && e.kind === "try") { ctx.strokeStyle = col("--accent"); ctx.lineWidth = 2.5; const g2 = size * 1.3; ctx.strokeRect(it.px - g2 / 2, it.py - g2 / 2, g2, g2); }
+    } else {
+      ctx.fillStyle = `hsl(${h} 70% 55%)`; ctx.globalAlpha *= onPillar ? 0.95 : 0.5;
+      ctx.beginPath(); ctx.arc(it.px, it.py, Math.max(1.2, u * (onPillar ? 0.26 : 0.1) * it.s), 0, 7); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+  // slice labels: how many of this number are placed
+  ctx.font = `600 ${Math.max(9, u * 0.7)}px -apple-system,Segoe UI,Roboto,sans-serif`; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  for (let d = 1; d <= n; d++) {
+    const [px, py] = proj(ex + u * 0.9, (d - 1 - half) * gap, -ex); let k = 0; for (let i = 0; i < NN; i++) if (g[i] === d) k++;
+    ctx.fillStyle = `hsl(${hue(d)} 70% 45%)`; ctx.fillText(`${sym(d)} ${k === n ? "✓" : k + "/" + n}`, px - u * 0.35, py);
+  }
+}
+function cubeLoop() {
+  if ($("view").value === "board") { C3.raf = 0; return; }
+  if (C3.auto && !C3.drag && !document.hidden) { C3.yaw += 0.0035; C3.dirty = true; }
+  if (C3.dirty) { C3.dirty = false; cubeDraw(); }
+  C3.raf = requestAnimationFrame(cubeLoop);
+}
+function setView() {
+  const v = $("view").value;
+  ["cube3", "cubeCtl", "legCube"].forEach(id => $(id).classList.toggle("hidden", v === "board"));
+  $("board").classList.toggle("hidden", v === "cube");
+  if (v !== "board" && !C3.raf) C3.raf = requestAnimationFrame(cubeLoop);
+  C3.dirty = true;
+}
+
+/* ---------- replay ---------- */
+function explain(e) {
+  const nm = e.cell != null ? rc(e.cell) : "";
+  switch (e.kind) {
+    case "start": return ["Start", `The givens are placed. Every empty cell shows the numbers it can still take. MRV will now pick the empty cell with the fewest.`];
+    case "pick": return ["Pick the tightest cell", `<b>${nm}</b> has the fewest possible numbers: <b>${bitsList(e.mask).map(sym).join(", ")}</b> (${e.n}). ${e.n === 1 ? "Only one choice — it is forced." : "MRV will try them from the smallest."}`];
+    case "try": return ["Try a number", `Put <b>${sym(e.v)}</b> in <b>${nm}</b>${e.n > 1 ? ` (one of ${e.n} choices)` : " (the only choice)"} and move on.`];
+    case "dead": return ["Dead end", `<b>${nm}</b> has no number left — an earlier try was wrong. MRV goes back.`];
+    case "undo": return ["Go back", `Take <b>${sym(e.v)}</b> out of <b>${nm}</b> and try the next number there (or go back further if none is left).`];
+    case "done": return ["Solved", `Every cell is filled: <b>${T.tried.toLocaleString()}</b> numbers tried, <b>${T.backs.toLocaleString()}</b> go-backs.`];
+    case "fail": return ["Stopped", T.aborted ? "MRV reached its 5-million-step limit." : "No answer exists for these givens."];
+  }
+}
+const chip = e => { const nm = e.cell != null ? rc(e.cell) : ""; switch (e.kind) {
+  case "pick": return [`${nm} {${bitsList(e.mask).map(sym).join(",")}}`, "pick"];
+  case "try": return [`${nm}=${sym(e.v)}`, ""];
+  case "dead": return [`✗ ${nm}`, "back"];
+  case "undo": return [`↩ ${nm}`, "back"];
+  case "done": return ["✓ solved", ""];
+  default: return null; } };
+function show(addChip) {
+  const e = T.ev[V.k];
+  drawBoard(e); C3.dirty = true;
+  $("sTried").textContent = e.tried.toLocaleString(); $("sBack").textContent = e.backs.toLocaleString(); $("sDepth").textContent = e.depth; $("sLeft").textContent = e.g.filter(v => !v).length;
+  const [ph, tx] = explain(e); $("stepNo").textContent = `Step ${V.k} of ${T.ev.length - 1} · ${ph}`; $("stepText").innerHTML = tx;
+  if (addChip) { const c = chip(e); if (c) { const s = document.createElement("span"); s.textContent = c[0]; if (c[1]) s.className = c[1]; const l = $("log"); l.appendChild(s); while (l.children.length > 250) l.removeChild(l.firstChild); l.scrollTop = l.scrollHeight; } }
+}
+const SPEEDS = { slow: 900, normal: 350, fast: 70, turbo: 0 };
+function stop() { if (V.timer) clearTimeout(V.timer); V.timer = null; V.running = false; $("playBtn").textContent = "▶ Play"; }
+function tick() {
+  if (!V.running) return;
+  const turbo = $("speed").value === "turbo", batch = turbo ? Math.max(1, Math.ceil(T.ev.length / 400)) : 1;
+  for (let b = 0; b < batch && V.k < T.ev.length - 1; b++) { V.k++; if (batch === 1 || b >= batch - 3) show(true); }
+  if (batch > 1) show(false);
+  if (V.k >= T.ev.length - 1) { stop(); return; }
+  V.timer = setTimeout(tick, turbo ? 16 : SPEEDS[$("speed").value]);
+}
+$("playBtn").onclick = () => { if (!T) return; if (V.running) { stop(); return; } if (V.k >= T.ev.length - 1) { V.k = 0; $("log").innerHTML = ""; } V.running = true; $("playBtn").textContent = "⏸ Pause"; tick(); };
+$("stepBtn").onclick = () => { if (!T) return; stop(); if (V.k < T.ev.length - 1) { V.k++; show(true); } };
+$("backBtn").onclick = () => { if (!T) return; stop(); if (V.k > 0) { V.k--; const l = $("log"); if (l.lastChild) l.removeChild(l.lastChild); show(false); } };
+$("resetBtn").onclick = () => { if (!T) return; stop(); V.k = 0; $("log").innerHTML = ""; show(false); };
+$("endBtn").onclick = () => { if (!T) return; stop(); V.k = T.ev.length - 1; show(true); };
+$("newBtn").onclick = newPuzzle;
+$("view").addEventListener("change", setView);
+$("cubeSpread").addEventListener("input", e => { C3.spread = +e.target.value; C3.dirty = true; });
+$("cubeAuto").addEventListener("change", e => { C3.auto = e.target.checked; });
+$("cubeDots").addEventListener("change", e => { C3.dots = e.target.checked; C3.dirty = true; });
+{
+  const cv = $("cube3");
+  cv.addEventListener("pointerdown", e => { C3.drag = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener("pointermove", e => {
+    if (!C3.drag) return;
+    C3.yaw += (e.clientX - C3.drag.x) * 0.01; C3.pitch = Math.max(-1.4, Math.min(1.4, C3.pitch + (e.clientY - C3.drag.y) * 0.01));
+    C3.drag = { x: e.clientX, y: e.clientY }; C3.dirty = true;
+  });
+  ["pointerup", "pointercancel"].forEach(t => cv.addEventListener(t, () => { C3.drag = null; }));
+  window.addEventListener("resize", () => { C3.dirty = true; });
+}
+setView(); newPuzzle();
+</script>
+</body>
+</html>

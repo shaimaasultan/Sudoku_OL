@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Queens Layers</title>
+<style>
+:root{
+  --bg:#f5f4ef; --surface:#ffffff; --ink:#1c1e23; --muted:#6a6e77; --line:#cfd2d8; --line-strong:#1c1e23;
+  --accent:#2455c7; --accent-ink:#fff; --btn:#e9e7e0; --btn-ink:#1c1e23; --ok:#2e9e57; --bad:#c42626;
+  --star:#2455c7; --sq1:#f1e6d2; --sq2:#dcc6a3; --given:#1c1e23;
+  --shadow:0 1px 2px rgba(0,0,0,.08),0 4px 14px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#131519; --surface:#1c1f25; --ink:#e7e8eb; --muted:#9aa0aa; --line:#383d46; --line-strong:#c9cdd4;
+    --accent:#6f98ff; --accent-ink:#0d1117; --btn:#2a2e36; --btn-ink:#e7e8eb; --star:#8fb0ff; --sq1:#3a3226; --sq2:#2a241b; --given:#f3f0ea;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  padding:max(12px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));-webkit-user-select:none;user-select:none}
+.wrap{max-width:620px;margin:0 auto}
+h1{font-size:20px;margin:0}
+.sub{font-size:12px;color:var(--muted);margin-bottom:6px}
+h2{font-size:15px;margin:0 0 6px}
+button,select{font:inherit;color:var(--btn-ink);background:var(--btn);border:0;border-radius:10px;padding:9px 12px;cursor:pointer;max-width:100%;min-width:0}
+select{appearance:none;-webkit-appearance:none}
+button:active{transform:scale(.97)}
+button.primary{background:var(--accent);color:var(--accent-ink);font-weight:600}
+button.on{background:var(--accent);color:var(--accent-ink)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.row select{flex:1}
+.card{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:12px;margin-top:12px}
+.note{font-size:12.5px;color:var(--muted);margin:6px 0}
+.rule{font-size:13.5px;margin:4px 0 0}
+/* board */
+.boardbox{display:flex;justify-content:center;margin-top:8px}
+.board{display:grid;border:3px solid var(--line-strong);border-radius:4px;overflow:hidden;touch-action:none}
+.board .c{position:relative;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--line);border-bottom:1px solid var(--line);cursor:pointer;font-size:var(--sfs);line-height:1}
+.board .c::before{content:"";position:absolute;inset:0;background:var(--accent);opacity:var(--h,0);pointer-events:none}
+.board .c.rr{border-right:3px solid var(--line-strong)} .board .c.rb{border-bottom:3px solid var(--line-strong)}
+.board .c.star::after{content:"♛";color:var(--star);position:relative;text-shadow:0 1px 1px rgba(0,0,0,.2)}
+.board .c.g.star::after{color:var(--given)}
+.board .c.x::after{content:"·";color:var(--muted);position:relative;font-size:1.3em;font-weight:700}
+.board .c.fc{box-shadow:inset 0 0 0 2px var(--accent)}
+.board .c.bad{box-shadow:inset 0 0 0 3px var(--bad)}
+.board .c.hint{box-shadow:inset 0 0 0 3px var(--ok)}
+.board .c.new{animation:pop .45s}
+@keyframes pop{40%{transform:scale(1.2)}}
+.units{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px}
+.units span{font-size:12px;font-weight:700;border-radius:7px;padding:3px 7px;background:var(--bg);color:var(--muted);font-variant-numeric:tabular-nums}
+.units span small{font-weight:500;margin-left:3px}
+.units span.cur{outline:2px solid var(--accent);color:var(--ink)}
+.units span.ok{color:var(--ok)}
+.tools{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.tools button{padding:8px 13px}
+.msg{background:var(--bg);border-radius:10px;padding:8px 10px;margin-top:8px;min-height:44px;font-size:14px}
+.msg .no{font-size:11px;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.stats div{background:var(--bg);border-radius:10px;padding:6px 4px;text-align:center}
+.stats b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
+.stats span{font-size:10.5px;color:var(--muted)}
+.log{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;max-height:130px;overflow:auto}
+.log span{font:600 12px -apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);border-radius:6px;padding:3px 7px}
+.log span.back{color:var(--bad)}
+ol{padding-left:20px;margin:6px 0} li{margin:4px 0;font-size:14px}
+@media (max-width:560px){ #size,#givens{flex:1 1 100%} }
+.hidden{display:none!important}
+.busy{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:20;color:#fff;font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>♛ Queens Layers</h1>
+  <div class="sub">N-Queens solved with option layers: build every option of the thinnest rows and columns, AND, cut, lock · S. S. Soltan</div>
+
+  <div class="card">
+    <div class="row">
+      <select id="size" aria-label="Size"><option value="6">6×6 · 6 queens</option><option value="8" selected>8×8 · 8 queens</option><option value="10">10×10 · 10 queens</option><option value="12">12×12 · 12 queens</option><option value="16">16×16 · 16 queens</option><option value="20">20×20 · 20 queens</option><option value="30">30×30 · 30 queens</option></select>
+      <select id="givens" aria-label="Given queens"></select>
+      <button id="newBtn" class="primary">New puzzle</button>
+    </div>
+    <p class="rule" id="rule"></p>
+    <p class="note" id="info"></p>
+    <div class="boardbox"><div id="board" class="board"></div></div>
+    <div class="tools">
+      <button id="toolStar" class="on">♛ Queen</button>
+      <button id="toolMark">· Mark empty</button>
+      <button id="checkBtn">Check</button>
+      <button id="hintBtn">💡 Hint</button>
+      <button id="restartBtn">Restart</button>
+    </div>
+    <div class="msg"><div class="no" id="phase"></div><div id="text"></div></div>
+  </div>
+
+  <div class="card">
+    <h2>Watch the method</h2>
+    <div class="row" style="margin-top:0">
+      <button id="solveBtn" class="primary">▶ Show the method</button>
+      <button id="stepBtn">Step ▶|</button>
+      <button id="backBtn">⏮ Back to my game</button>
+      <select id="speed" aria-label="Speed" style="flex:0 0 auto"><option value="slow">Slow</option><option value="normal" selected>Normal</option><option value="fast">Fast</option><option value="turbo">Turbo</option></select>
+    </div>
+    <div class="units" id="units"></div>
+    <div class="stats">
+      <div><b id="sUnits">0</b><span>units built</span></div>
+      <div><b id="sBuilt">0</b><span>options built</span></div>
+      <div><b id="sLocked">0</b><span>units locked 🔒</span></div>
+      <div><b id="sGuess">0 · 0</b><span>guesses · go-backs</span></div>
+    </div>
+    <div id="log" class="log"></div>
+    <p class="note">The chips are the units — rows (R) and columns (C) — with the number of options each still has (– = not built yet, ✓ = locked). The unit being worked on is outlined on the board; its cells are shaded by the share of its options that put a queen there.</p>
+  </div>
+
+  <div class="card">
+    <h2>How it works — the same method as your Sudoku layers</h2>
+    <ol>
+      <li><b>Units</b>: every row and every column must hold exactly one queen, and no two queens may attack each other — not in the same row, column or diagonal. A unit here is like a number's layer in Sudoku; each cell is shared by one row and one column, like a pillar, and the diagonals work like the Sudoku box: a queen blocks them.</li>
+      <li><b>Givens</b>: a few queens are already placed (dark) so that exactly one solution is left.</li>
+      <li><b>Option layers of a unit</b>: every free cell where its queen can still go.</li>
+      <li><b>Thinnest units first</b>: start with the 2 units that have the fewest options; when the cuts stop, open the next thinnest unit.</li>
+      <li><b>Cut</b> options that use a cell already known to be empty.</li>
+      <li><b>AND</b>: if a unit has one cell left, the queen goes there and every cell it attacks becomes empty; a cell in <b>no</b> option is empty.</li>
+      <li><b>🔒 Lock</b> a unit when one option is left.</li>
+      <li><b>All units together</b>: if every unit is built and the cuts stop, test each option of the unlocked units on its own — if assuming it makes some unit lose all its options, it is cut. Nothing is guessed.</li>
+      <li>Only if even that stops: <b>guess</b> and go back if it fails.</li>
+    </ol>
+  </div>
+</div>
+<div id="busy" class="busy hidden">Making a puzzle with one solution…</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const LETTERS = "ABCDEFGHIJKLMNOP";
+
+/* ---------- geometry ---------- */
+function geo(N) {
+  const nb = [], n4 = [];
+  for (let i = 0; i < N * N; i++) {
+    const r = (i / N) | 0, c = i % N, a = [], b = [];
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+      if (!dr && !dc) continue; const rr = r + dr, cc = c + dc;
+      if (rr >= 0 && rr < N && cc >= 0 && cc < N && (!dr || !dc)) b.push(rr * N + cc);
+    }
+    for (let j = 0; j < N * N; j++) if (j !== i && attacks(i, j, N)) a.push(j);   // every cell a queen here attacks
+    nb.push(a); n4.push(b);
+  }
+  return { nb, n4 };
+}
+const attacks = (a, b, N) => { const dr = Math.abs(((a / N) | 0) - ((b / N) | 0)), dc = Math.abs(a % N - b % N); return !dr || !dc || dr === dc; };
+const touching = attacks;
+
+/* ---------- the option-layers solver ---------- */
+// P = { N, K: 1 }; init: 1 = queen, 0 = empty, -1 = unknown; mode = { emit, limit, maxGuess, noProbe }
+function sbSolve(P, init, mode) {
+  const N = P.N, K = P.K, NC = N * N, G = geo(N);
+  const units = [];
+  for (let r = 0; r < N; r++) units.push({ name: `Row ${r + 1}`, short: `R${r + 1}`, cells: [...Array(N).keys()].map(c => r * N + c) });
+  for (let c = 0; c < N; c++) units.push({ name: `Column ${c + 1}`, short: `C${c + 1}`, cells: [...Array(N).keys()].map(r => r * N + c) });
+  const U = units.length, ev = [], MAXEV = 4000, sols = [];
+  const st = { built: 0, listed: 0, guesses: 0, back: 0, probes: 0 };
+  const copy = S => ({ cell: S.cell.slice(), T: S.T.slice(), done: S.done.slice() });
+  const snap = (S, focus, extra) => {
+    if (!mode.emit) return;
+    if (ev.length >= MAXEV && extra.kind !== "done") { st.truncated = true; return; }   // always keep the final step
+    const counts = units.map((_, u) => S.done[u] ? -2 : S.T[u] ? S.T[u].length : -1);
+    let heat = null;
+    if (focus >= 0 && S.T[focus] && S.T[focus].length) { heat = new Map(); for (const o of S.T[focus]) for (const i of o) heat.set(i, (heat.get(i) || 0) + 1 / S.T[focus].length); }
+    ev.push({ ...extra, focus, cell: S.cell.slice(), counts, heat, st: { ...st } });
+  };
+  // a queen also empties every cell it attacks; false if it attacks another queen
+  const setStar = (S, i, nc) => { if (S.cell[i] === 0) return false; if (S.cell[i] === 1) return true; S.cell[i] = 1; nc && nc.push(i); for (const j of G.nb[i]) { if (S.cell[j] === 1) return false; if (S.cell[j] < 0) { S.cell[j] = 0; nc && nc.push(j); } } return true; };
+  function enumUnit(S, u) {
+    const cells = units[u].cells, stars = cells.filter(i => S.cell[i] === 1), cand = cells.filter(i => S.cell[i] < 0), need = K - stars.length, out = [];
+    if (need < 0) return out;
+    for (let a = 0; a < stars.length; a++) for (let b = a + 1; b < stars.length; b++) if (touching(stars[a], stars[b], N)) return out;
+    if (need === 0) { out.push(stars.slice()); return out; }
+    for (let a = 0; a < cand.length; a++) {
+      if (need === 1) { out.push([...stars, cand[a]]); continue; }
+      for (let b = a + 1; b < cand.length; b++) if (!touching(cand[a], cand[b], N)) out.push([...stars, cand[a], cand[b]]);
+    }
+    return out;
+  }
+  function build(S, u, why) { S.T[u] = enumUnit(S, u); st.built++; st.listed += S.T[u].length; snap(S, u, { kind: "build", unit: u, n: S.T[u].length, why }); }
+  const valid = (S, u, o) => { for (const i of o) if (S.cell[i] === 0) return false; for (const i of units[u].cells) if (S.cell[i] === 1 && !o.includes(i)) return false; return true; };
+  function propagate(S, allowBuild, quiet) {
+    for (;;) {
+      let changed = false;
+      // 1) cut options that use an empty cell or miss a placed star
+      for (let u = 0; u < U; u++) if (S.T[u]) {
+        const before = S.T[u].length, keep = S.T[u].filter(o => valid(S, u, o));
+        if (keep.length !== before) { S.T[u] = keep; changed = true; if (!quiet) snap(S, u, { kind: "cut", unit: u, before, after: keep.length }); if (!keep.length) return { fail: u }; }
+      }
+      if (changed) continue;
+      // 2) lock a unit with one option left
+      for (let u = 0; u < U; u++) if (S.T[u] && S.T[u].length === 1) {
+        const o = S.T[u][0], nc = [];
+        for (const i of o) if (!setStar(S, i, nc)) return { fail: u };
+        for (const i of units[u].cells) if (S.cell[i] < 0) { S.cell[i] = 0; nc.push(i); }
+        S.T[u] = null; S.done[u] = 1;
+        if (!quiet) snap(S, u, { kind: "lock", unit: u, cells: nc });
+        changed = true; break;
+      }
+      if (changed) continue;
+      // 3) a unit that has all its stars: its other cells are empty
+      for (let u = 0; u < U; u++) if (!S.done[u]) {
+        const cells = units[u].cells, n = cells.filter(i => S.cell[i] === 1).length;
+        if (n > K) return { fail: u };
+        if (n === K) { const nc = cells.filter(i => S.cell[i] < 0); if (nc.length) { nc.forEach(i => S.cell[i] = 0); if (!quiet) snap(S, u, { kind: "full", unit: u, cells: nc }); changed = true; break; } }
+      }
+      if (changed) continue;
+      // 4) AND: a star in every option; a cell in no option
+      for (let u = 0; u < U; u++) if (S.T[u]) {
+        const cnt = new Map(); for (const o of S.T[u]) for (const i of o) cnt.set(i, (cnt.get(i) || 0) + 1);
+        const nc = [], stars = [];
+        for (const i of units[u].cells) if (S.cell[i] < 0) { const k = cnt.get(i) || 0; if (k === S.T[u].length) stars.push(i); else if (!k) { S.cell[i] = 0; nc.push(i); } }
+        for (const i of stars) if (!setStar(S, i, nc)) return { fail: u };
+        if (nc.length) { if (!quiet) snap(S, u, { kind: "and", unit: u, cells: nc, stars, n: S.T[u].length }); changed = true; break; }
+      }
+      if (changed) continue;
+      if (S.cell.every(v => v >= 0)) { for (let u = 0; u < U; u++) if (units[u].cells.filter(i => S.cell[i] === 1).length !== K) return { fail: u }; return { ok: true }; }
+      if (!allowBuild) return { stuck: true };
+      // 5) open the next thinnest unit
+      let best = -1, bc = Infinity;
+      for (let u = 0; u < U; u++) if (!S.T[u] && !S.done[u]) { const n = enumUnit(S, u).length; if (n < bc) { bc = n; best = u; } }
+      if (best < 0) return { stuck: true };
+      if (bc === 0) return { fail: best };
+      build(S, best, "stuck");
+    }
+  }
+  const WORKCAP = N >= 20 ? 30 * U * U / 2 : 2000;   // bigger boards need more trials before giving up
+  const T0 = performance.now(), PROBE_MS = 700;   // boards with many solutions: stop testing all units together after a while and let guessing work
+  function probeCut(S) {
+    if (performance.now() - T0 > PROBE_MS) return false;
+    const act = [...Array(U).keys()].filter(u => S.T[u] && S.T[u].length > 1).sort((a, b) => S.T[a].length - S.T[b].length);
+    let work = 0;
+    for (const u of act) {
+      const before = S.T[u].length, keep = [];
+      for (const o of S.T[u]) {
+        if (++work > WORKCAP || (work % 64 === 0 && performance.now() - T0 > PROBE_MS)) { work = WORKCAP + 1; keep.push(o); continue; }
+        const X = copy(S); X.T[u] = [o];
+        if (propagate(X, false, true).fail !== undefined) st.probes++; else keep.push(o);
+      }
+      if (keep.length !== before) { S.T[u] = keep; snap(S, u, { kind: "probe", unit: u, before, after: keep.length }); return true; }
+      if (work > WORKCAP) break;
+    }
+    return false;
+  }
+  function solve(S) {
+    for (;;) {
+      const r = propagate(S, true, false);
+      if (r.fail !== undefined) { snap(S, r.fail, { kind: "fail", unit: r.fail }); return; }
+      if (r.ok) { sols.push(S.cell.slice()); snap(S, -1, { kind: "done" }); return; }
+      if (mode.noProbe || !probeCut(S)) break;
+    }
+    const act = [...Array(U).keys()].filter(u => S.T[u] && S.T[u].length > 1).sort((a, b) => S.T[a].length - S.T[b].length);
+    if (!act.length) return;
+    const u = act[0], opts = S.T[u].slice();
+    for (let k = 0; k < opts.length; k++) {
+      if (sols.length >= mode.limit || st.aborted) return;
+      if (mode.maxGuess && st.guesses >= mode.maxGuess) { st.aborted = true; return; }
+      st.guesses++;
+      const X = copy(S); X.T[u] = [opts[k]];
+      snap(X, u, { kind: "guess", unit: u, k: k + 1, of: opts.length });
+      solve(X);
+      if (sols.length >= mode.limit) return;
+      st.back++; snap(S, u, { kind: "back", unit: u, k: k + 1 });
+    }
+  }
+  const S0 = { cell: new Int8Array(NC).fill(-1), T: new Array(U).fill(null), done: new Uint8Array(U) };
+  for (let i = 0; i < NC; i++) if (init[i] === 1 && !setStar(S0, i)) return { ev, sols, st, units, bad: true };
+  for (let i = 0; i < NC; i++) if (init[i] === 0) { if (S0.cell[i] === 1) return { ev, sols, st, units, bad: true }; S0.cell[i] = 0; }
+  snap(S0, -1, { kind: "start" });
+  const order = [...Array(U).keys()].map(u => ({ u, n: enumUnit(S0, u).length })).sort((a, b) => a.n - b.n);
+  for (const { u } of order.slice(0, 2)) build(S0, u, "start");
+  solve(S0);
+  return { ev, sols, st, units };
+}
+
+/* ---------- making puzzles ---------- */
+function placeQueens(N) {   // a random solution: start anywhere, then keep moving a queen that is attacked to its least-attacked column
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const col = new Int32Array(N), cc = new Int32Array(N), d1 = new Int32Array(2 * N), d2 = new Int32Array(2 * N);
+    const add = (r, c, k) => { cc[c] += k; d1[r + c] += k; d2[r - c + N] += k; };
+    const hits = (r, c) => cc[c] + d1[r + c] + d2[r - c + N];
+    for (let r = 0; r < N; r++) {   // greedy start
+      let best = [], bv = Infinity;
+      for (let c = 0; c < N; c++) { const h = hits(r, c); if (h < bv) { bv = h; best = [c]; } else if (h === bv) best.push(c); }
+      col[r] = best[Math.floor(Math.random() * best.length)]; add(r, col[r], 1);
+    }
+    for (let step = 0; step < 50 * N + 2000; step++) {
+      const bad = []; for (let r = 0; r < N; r++) if (hits(r, col[r]) > 3) bad.push(r);
+      if (!bad.length) return [...Array(N).keys()].map(r => r * N + col[r]);
+      const r = bad[Math.floor(Math.random() * bad.length)]; add(r, col[r], -1);
+      let best = [], bv = Infinity;
+      for (let c = 0; c < N; c++) { const h = hits(r, c); if (h < bv) { bv = h; best = [c]; } else if (h === bv) best.push(c); }
+      col[r] = best[Math.floor(Math.random() * best.length)]; add(r, col[r], 1);
+    }
+  }
+  return null;
+}
+function makePuzzle(N, budgetMs, want) {
+  const t0 = performance.now(), NC = N * N;
+  const count = gv => sbSolve({ N, K: 1 }, gv, { emit: false, limit: 2, maxGuess: N > 12 ? 1500 : 3000, noProbe: true });
+  const isUnique = gv => { const t = count(gv); return { t, ok: !t.st.aborted && t.sols.length === 1 }; };
+  while (performance.now() - t0 < budgetMs) {
+    const queens = placeQueens(N); if (!queens) continue;
+    const sol = new Int8Array(NC); queens.forEach(i => sol[i] = 1);
+    const gv = new Int8Array(NC).fill(-1);
+    if (want !== "auto") {   // a chosen number of given queens (the puzzle may then have many solutions)
+      shuffle(queens.slice()).slice(0, want).forEach(i => gv[i] = 1);
+      const u = isUnique(gv);
+      return { P: { N, K: 1, givens: gv }, sol, unique: u.ok, unknown: u.t.st.aborted };
+    }
+    // auto: add given queens until only one solution is left (when the check runs out of time, add one more), then drop the ones not needed
+    let ok = false;
+    for (let it = 0; it < N && performance.now() - t0 < budgetMs; it++) {
+      const u = isUnique(gv);
+      if (u.ok) { ok = true; break; }
+      const other = u.t.sols.find(x => x.some((v, i) => v !== sol[i]));
+      const pool = queens.filter(i => gv[i] !== 1 && (!other || other[i] !== 1));
+      const pick = shuffle(pool.length ? pool : queens.filter(i => gv[i] !== 1))[0];
+      if (pick === undefined) break;
+      gv[pick] = 1;
+    }
+    if (!ok) continue;
+    for (const i of shuffle(queens.filter(j => gv[j] === 1))) { if (performance.now() - t0 > budgetMs * 1.5) break; gv[i] = -1; if (!isUnique(gv).ok) gv[i] = 1; }
+    return { P: { N, K: 1, givens: gv }, sol, unique: true };
+  }
+  return null;
+}
+
+/* ---------- state + board ---------- */
+let P = null, SOL = null, user = null, mode = "play", tool = 1;
+const V = { cells: [], snap: null, hint: -1, bad: null };
+function newPuzzle() {
+  const N = +$("size").value, K = 1;
+  $("busy").classList.remove("hidden");
+  setTimeout(() => {
+    const want = $("givens").value === "auto" ? "auto" : +$("givens").value;
+    const m = makePuzzle(N, N >= 20 ? 12000 : 6000, want);
+    $("busy").classList.add("hidden");
+    if (!m) { say("Sorry", "Couldn't make a puzzle — press New puzzle again."); return; }
+    P = m.P; SOL = m.sol; P.unique = m.unique;
+    user = Int8Array.from(P.givens); stop(); mode = "play"; V.snap = null; V.hint = -1; V.bad = null; A.ev = null; $("log").innerHTML = ""; $("units").innerHTML = "";
+    const ng = [...P.givens].filter(v => v === 1).length;
+    $("rule").innerHTML = `Place <b>${N} queens</b>: one in every row and every column, and no two on the same diagonal. ${ng ? "The dark queens are given." : "No queens are given — the classic N-Queens puzzle."}`;
+    $("info").textContent = `${N}×${N} · ${ng} given queen${ng === 1 ? "" : "s"} · ${m.unique ? "one solution ✓" : m.unknown ? "too many solutions to check — any correct board counts" : "more than one solution — any correct board counts"}`;
+    layout(); render(); say("Your turn", "Tap a cell to place a queen (♛) or mark it empty (·). Use 💡 Hint to see the method's next step.");
+  }, 30);
+}
+function layout() {
+  const N = P.N, b = $("board"), avail = Math.min(480, b.parentElement.clientWidth || 340);
+  const cs = Math.max(9, Math.min(52, Math.floor((avail - 6) / N)));
+  b.style.gridTemplateColumns = `repeat(${N}, ${cs}px)`; b.style.gridTemplateRows = `repeat(${N}, ${cs}px)`; b.style.setProperty("--sfs", Math.round(cs * 0.62) + "px");
+  b.innerHTML = ""; V.cells = [];
+  for (let i = 0; i < N * N; i++) {
+    const e = document.createElement("div"), r = (i / N) | 0, c = i % N; e.className = "c"; e.dataset.i = i;
+    e.style.backgroundColor = (r + c) % 2 ? "var(--sq2)" : "var(--sq1)";
+    if (P.givens[i] === 1) e.classList.add("g");
+    if (c === N - 1) e.style.borderRight = "0"; if (r === N - 1) e.style.borderBottom = "0";
+    b.appendChild(e); V.cells.push(e);
+  }
+}
+function render() {
+  const N = P.N, sn = mode === "solver" ? V.snap : null, state = sn ? sn.cell : user;
+  const focusCells = sn && sn.focus >= 0 ? new Set(A.units[sn.focus].cells) : null, newSet = new Set(sn && sn.cells ? sn.cells : []);
+  for (let i = 0; i < N * N; i++) {
+    const e = V.cells[i], v = state[i];
+    e.classList.toggle("star", v === 1); e.classList.toggle("x", v === 0);
+    e.classList.toggle("fc", !!(focusCells && focusCells.has(i)));
+    e.style.setProperty("--h", sn && sn.heat && v < 0 ? (0.08 + 0.5 * (sn.heat.get(i) || 0)).toFixed(2) * (sn.heat.get(i) ? 1 : 0) : 0);
+    e.classList.toggle("bad", !!(V.bad && V.bad.has(i)));
+    e.classList.toggle("hint", V.hint === i && mode === "play");
+    if (newSet.has(i)) { e.classList.remove("new"); void e.offsetWidth; e.classList.add("new"); }
+  }
+  // unit chips (method view)
+  if (sn) $("units").innerHTML = A.units.map((u, k) => { const n = sn.counts[k]; return `<span class="${k === sn.focus ? "cur" : ""}${n === -2 ? " ok" : ""}">${u.short}<small>${n === -2 ? "✓" : n < 0 ? "–" : n}</small></span>`; }).join("");
+}
+function say(p, t) { $("phase").textContent = p; $("text").innerHTML = t; }
+
+/* ---------- play ---------- */
+let paint = null;
+function cellAt(e) { const el = document.elementFromPoint(e.clientX, e.clientY); return el && el.classList && el.classList.contains("c") && el.parentElement === $("board") ? +el.dataset.i : -1; }
+function applyPaint(i) { if (i < 0 || !paint || mode !== "play" || P.givens[i] === 1) return; if (paint.v === 1 && tool === 1 && paint.done.size) return; if (paint.done.has(i)) return; paint.done.add(i); user[i] = paint.v; V.hint = -1; V.bad = null; render(); checkWin(); }
+$("board").addEventListener("pointerdown", e => { const i = cellAt(e); if (i < 0 || mode !== "play") return; e.preventDefault(); paint = { v: user[i] === tool ? -1 : tool, done: new Set() }; applyPaint(i); });
+$("board").addEventListener("pointermove", e => { if (paint && tool === 0) applyPaint(cellAt(e)); });   // drag only for marks
+["pointerup", "pointercancel"].forEach(t => window.addEventListener(t, () => { paint = null; }));
+function unitCells() { const N = P.N, out = []; for (let r = 0; r < N; r++) out.push([...Array(N).keys()].map(c => r * N + c)); for (let c = 0; c < N; c++) out.push([...Array(N).keys()].map(r => r * N + c)); return out; }
+function checkWin() {
+  const N = P.N, stars = [...user.keys()].filter(i => user[i] === 1);
+  if (stars.length !== N * P.K) return;
+  for (let a = 0; a < stars.length; a++) for (let b = a + 1; b < stars.length; b++) if (touching(stars[a], stars[b], N)) return;
+  if (!unitCells().every(cs => cs.filter(i => user[i] === 1).length === P.K)) return;
+  for (let i = 0; i < user.length; i++) if (user[i] < 0) user[i] = 0;
+  render(); say("🎉 Solved!", "Every row and column has its queen, and no two queens attack each other.");
+}
+$("toolStar").addEventListener("click", () => { tool = 1; $("toolStar").classList.add("on"); $("toolMark").classList.remove("on"); });
+$("toolMark").addEventListener("click", () => { tool = 0; $("toolMark").classList.add("on"); $("toolStar").classList.remove("on"); });
+$("restartBtn").addEventListener("click", () => { toPlay(); user = Int8Array.from(P.givens); V.hint = -1; V.bad = null; render(); say("Restarted", "The board is empty again."); });
+$("checkBtn").addEventListener("click", () => {
+  toPlay();
+  if (!P.unique) { say("Check", "This puzzle may have more than one solution, so single cells can't be checked."); return; }
+  const bad = new Set(); for (let i = 0; i < user.length; i++) if (user[i] >= 0 && user[i] !== SOL[i]) bad.add(i);
+  V.bad = bad; render();
+  say("Check", bad.size ? `${bad.size} cell${bad.size > 1 ? "s are" : " is"} wrong (red).` : "Everything you marked so far is right ✓");
+  setTimeout(() => { V.bad = null; render(); }, 2500);
+});
+const rcName = i => `r${((i / P.N) | 0) + 1}c${i % P.N + 1}`;
+$("hintBtn").addEventListener("click", () => {
+  toPlay();
+  if (P.unique) { const w = [...user.keys()].find(i => user[i] >= 0 && user[i] !== SOL[i]); if (w !== undefined) { V.bad = new Set([w]); render(); say("💡 Hint", `${rcName(w)} is wrong — undo it first.`); return; } }
+  const t = sbSolve(P, user, { emit: true, limit: 1 });
+  // prefer a new star; otherwise a new empty cell
+  const sure = t.ev.slice(0, (t.ev.findIndex(x => x.kind === "guess") + 1 || t.ev.length + 1) - 1);   // only steps before the first guess are certain
+  const evs = sure.filter(x => x.cells && ["and", "lock", "full"].includes(x.kind) && x.cells.some(i => user[i] < 0));
+  if (!evs.length) {
+    const g = t.ev.find(x => x.kind === "guess");
+    if (g && t.sols.length) { const o = t.units[g.unit].cells.filter(i => user[i] < 0 && t.sols[0][i] === 1)[0]; if (o !== undefined) { user[o] = 1; V.hint = o; render(); checkWin(); say("💡 Hint", `Nothing is certain here — more than one board fits. The method has to choose: ${t.units[g.unit].name} has ${g.of} options; a queen at ${rcName(o)} (green) leads to a solution.`); return; } }
+    say("💡 Hint", t.sols.length ? "Nothing new to find — the puzzle is complete." : "Your cells don't fit the rules any more — check them."); return;
+  }
+  const e = evs[0], newStar = e.cells.find(i => user[i] < 0 && e.cell[i] === 1), i = newStar !== undefined ? newStar : e.cells.find(j => user[j] < 0), v = e.cell[i], un = t.units[e.unit].name;
+  user[i] = v; V.hint = i; render(); checkWin();
+  const what = v === 1 ? "a <b>queen</b>" : "<b>empty</b>";
+  say("💡 Hint", e.kind === "lock" ? `${un} has only one cell left for its queen, so ${rcName(i)} is ${what} (green).`
+    : e.kind === "full" ? `${un} already has its queen, so ${rcName(i)} is ${what} (green).`
+    : v === 1 ? `All ${e.n} options of ${un} put its queen at ${rcName(i)} — so it is a <b>queen</b> (green).`
+    : e.stars && e.stars.length && G0().nb[i].some(j => e.stars.includes(j)) ? `${un} must put its queen where it attacks ${rcName(i)}, so ${rcName(i)} is <b>empty</b> (green).`
+    : `No option of ${un} uses ${rcName(i)}, so it is <b>empty</b> (green).`);
+});
+const G0 = () => geo(P.N);
+
+/* ---------- the method, animated ---------- */
+const A = { ev: null, k: 0, timer: null, running: false, units: null };
+const SPEEDS = { slow: 1100, normal: 420, fast: 90, turbo: 0 };
+function toPlay() { stop(); mode = "play"; V.snap = null; $("units").innerHTML = ""; render(); $("solveBtn").textContent = "▶ Show the method"; }
+function stop() { if (A.timer) clearTimeout(A.timer); A.timer = null; A.running = false; }
+function prepareRun() { const t = sbSolve(P, P.givens, { emit: true, limit: 1 }); A.ev = t.ev; A.units = t.units; A.k = 0; $("log").innerHTML = ""; mode = "solver"; }
+function explain(e) {
+  const un = e.unit !== undefined && e.unit >= 0 ? A.units[e.unit].name : "", K = P.K;
+  switch (e.kind) {
+    case "start": return ["Start", `The given queens are placed and every cell they attack is empty. Every row and column is a unit that needs one queen; each unit's options are counted and the 2 thinnest are built first.`];
+    case "build": return [e.why === "stuck" ? "Open the next thinnest unit" : "Build option layers", `${un}: <b>${e.n}</b> free cell${e.n === 1 ? "" : "s"} where its queen can still go. ${e.why === "stuck" ? "The cuts stopped, so this unit — now the thinnest — is added." : "It is one of the 2 thinnest units."}`];
+    case "cut": return ["Cut by known cells", `${un}: options that use an empty cell are cut: <b>${e.before} → ${e.after}</b>.`];
+    case "and": return ["AND · certain cells", `All ${e.n} options of ${un} agree: ${e.stars.length ? `a queen at ${e.stars.map(rcName).join(", ")} (every cell it attacks becomes empty)` : ""}${e.stars.length && e.cells.length > e.stars.length ? "; " : ""}${e.cells.length > e.stars.length ? `cells no option uses are empty` : ""}.`];
+    case "full": return ["Full unit", `${un} already has its queen — its other ${e.cells.length} free cell${e.cells.length > 1 ? "s are" : " is"} empty.`];
+    case "lock": return ["🔒 Locked", `${un} has one option left — its queen is placed (every cell it attacks becomes empty) and its list is dropped. It is never visited again.`];
+    case "probe": return ["All units together", `Every unit is built and the cuts stopped. ${un}: ${e.before - e.after} option${e.before - e.after > 1 ? "s" : ""}, when assumed one at a time, made another unit lose all its options — cut (<b>${e.before} → ${e.after}</b>). Nothing was guessed.`];
+    case "guess": return ["Guess", `The cuts stopped. ${un} has the fewest options (${e.of}); try option ${e.k} of ${e.of}.`];
+    case "fail": return ["Contradiction", `${un} has no cell left for its queen — the last guess was wrong.`];
+    case "back": return ["Go back", `Undo guess ${e.k} for ${un} and try the next option.`];
+    case "done": return ["Solved", `All queens are placed. ${e.st.listed.toLocaleString()} options were built for ${e.st.built} of ${2 * P.N} units; ${e.st.guesses ? `${e.st.guesses} guess${e.st.guesses > 1 ? "es" : ""}` : "<b>no guessing</b>"}.`];
+  }
+  return ["", ""];
+}
+function chip(e) {
+  const nm = e.unit >= 0 && A.units[e.unit] ? A.units[e.unit].short : "";
+  const t = { build: `${e.why === "stuck" ? "+ " : ""}${nm}: ${e.n}`, cut: `${nm}: ${e.before}→${e.after}`, and: `${nm}: ${e.stars && e.stars.length ? "★" : ""}+${e.cells ? e.cells.length : 0}`, full: `${nm} full`, lock: `🔒 ${nm}`, probe: `${nm}: ${e.before}→${e.after} (all units)`, guess: `? ${nm} ${e.k}/${e.of}`, fail: "✗", back: `↩ ${nm}`, done: "✓ solved" }[e.kind];
+  if (!t) return; const s = document.createElement("span"); s.textContent = t; if (e.kind === "fail" || e.kind === "back") s.className = "back";
+  const l = $("log"); l.appendChild(s); while (l.children.length > 250) l.removeChild(l.firstChild); l.scrollTop = l.scrollHeight;
+}
+function showEvent(e) {
+  V.snap = e; render(); const [p, t] = explain(e); say(p, t);
+  $("sUnits").textContent = `${e.st.built}/${2 * P.N}`; $("sBuilt").textContent = e.st.listed.toLocaleString();
+  $("sLocked").textContent = String(e.counts.filter(x => x === -2).length); $("sGuess").textContent = `${e.st.guesses} · ${e.st.back}`;
+}
+function tick(single) {
+  if (!A.ev || mode !== "solver") prepareRun();
+  const sp = SPEEDS[$("speed").value]; let e, n = 0;
+  do { e = A.ev[A.k++]; if (!e) break; chip(e); } while (sp === 0 && !single && ++n < 200 && A.k < A.ev.length);
+  if (!e) { stop(); $("solveBtn").textContent = "↺ Again"; return -1; }
+  showEvent(e);
+  if (A.k >= A.ev.length) { stop(); $("solveBtn").textContent = "↺ Again"; return -1; }
+  return ["lock", "guess", "back", "probe"].includes(e.kind) ? Math.max(sp, 200) * 1.4 : sp;
+}
+function loop() { const w = tick(false); if (w < 0 || !A.running) return; A.timer = setTimeout(loop, w); }
+$("solveBtn").addEventListener("click", () => {
+  if (A.running) { stop(); $("solveBtn").textContent = "▶ Continue"; return; }
+  if (mode !== "solver" || !A.ev || A.k >= A.ev.length) A.ev = null;
+  A.running = true; $("solveBtn").textContent = "⏸ Pause"; loop();
+});
+$("stepBtn").addEventListener("click", () => { stop(); if (mode !== "solver" || (A.ev && A.k >= A.ev.length)) A.ev = null; tick(true); if (A.ev && A.k < A.ev.length) $("solveBtn").textContent = "▶ Continue"; });
+$("backBtn").addEventListener("click", () => { toPlay(); A.ev = null; say("Your turn", "Back to your own game — your cells are as you left them."); });
+
+/* ---------- setup ---------- */
+$("newBtn").addEventListener("click", newPuzzle);
+function fillGivens() {
+  const N = +$("size").value, keep = $("givens").value;
+  $("givens").innerHTML = `<option value="auto">Givens: fewest for one solution</option>` + [...Array(N).keys()].map(k => `<option value="${k}">${k} given queen${k === 1 ? "" : "s"}${k === 0 ? " (empty board)" : ""}</option>`).join("");
+  $("givens").value = keep && (keep === "auto" || +keep < N) ? keep : "auto";
+}
+fillGivens();
+$("size").addEventListener("change", () => { fillGivens(); newPuzzle(); });
+$("givens").addEventListener("change", newPuzzle);
+window.addEventListener("resize", () => { if (P) { layout(); render(); } });
+newPuzzle();
+</script>
+</body>
+</html>

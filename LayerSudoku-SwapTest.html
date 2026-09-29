@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Swap Test</title>
+<style>
+:root{
+  --bg:#f5f4ef; --surface:#fff; --ink:#1c1e23; --muted:#6a6e77; --line:#d9dbe0; --accent:#2455c7; --accent-ink:#fff;
+  --btn:#e9e7e0; --btn-ink:#1c1e23; --ok:#2e9e57; --bad:#c42626;
+  --s1:#8a8f99; --s2:#2455c7; --s3:#d9822b; --w1:#2e9e57; --w2:#2455c7; --w3:#8a4fd6; --w4:#d9822b;
+  --shadow:0 1px 2px rgba(0,0,0,.08),0 4px 14px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#131519; --surface:#1c1f25; --ink:#e7e8eb; --muted:#9aa0aa; --line:#383d46; --accent:#6f98ff; --accent-ink:#0d1117;
+    --btn:#2a2e36; --btn-ink:#e7e8eb; --s1:#9aa0aa; --s2:#6f98ff; --s3:#f0a04b; --w1:#4cc27a; --w2:#6f98ff; --w3:#b184f0; --w4:#f0a04b; --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:max(12px,env(safe-area-inset-top)) 16px 28px}
+.wrap{max-width:760px;margin:0 auto}
+h1{font-size:20px;margin:0 0 2px}
+.sub{font-size:12.5px;color:var(--muted);margin-bottom:10px}
+.card{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:12px;margin-top:12px}
+h2{font-size:15px;margin:0 0 6px}
+p{margin:6px 0}
+.note{font-size:12.5px;color:var(--muted)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+label{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center}
+select,button{font:inherit;color:var(--btn-ink);background:var(--btn);border:0;border-radius:10px;padding:8px 11px;cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-ink);font-weight:600}
+button:disabled{opacity:.5}
+.prog{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:8px}
+.prog i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;margin:6px 0}
+.legend span::before{content:"";display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px;background:var(--c)}
+.bars{display:grid;gap:10px;margin-top:6px}
+.metric b{font-size:13px}
+.bar{display:flex;align-items:center;gap:8px;margin:3px 0;font-size:12.5px;font-variant-numeric:tabular-nums}
+.bar .lab{width:92px;color:var(--muted);flex-shrink:0}
+.bar .track{flex:1;height:14px;background:var(--bg);border-radius:4px;overflow:hidden}
+.bar .fill{height:100%;border-radius:4px}
+.bar .val{width:78px;text-align:right}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;font-size:12.5px;min-width:640px;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{font-size:11px;color:var(--muted);font-weight:600}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+td.win{font-weight:700;color:var(--ok)}
+.tag{font-size:10.5px;font-weight:700;border-radius:4px;padding:1px 5px;background:var(--bg)}
+.verdict{font-size:14.5px;line-height:1.5}
+.hidden{display:none}
+h1.t2{font-size:18px;margin:26px 0 2px}
+table.words{min-width:560px}
+table.words td:nth-child(2),table.words th:nth-child(2){text-align:left}
+.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔬 Swap Test</h1>
+  <div class="sub">Does it help to keep swapping even if it breaks what's already done? · Home-grid line moves · S. S. Soltan</div>
+
+  <div class="card">
+    <h2>The question</h2>
+    <p class="note">Every run starts from the <b>same static home grid</b> and uses the move language: swap 2 rows/columns, swap bands/stacks (3 rows with 3 rows), rotate 3 rows/columns, turn; numbers are renamed to fit (renaming isn't counted as a move). Three strategies race on the same puzzles:</p>
+    <div class="legend">
+      <span style="--c:var(--s1)"><b>Keep placed</b> — never break a given already in place</span>
+      <span style="--c:var(--s2)"><b>Break allowed</b> — take any combination that raises the total</span>
+      <span style="--c:var(--s3)"><b>Break + risk</b> — also accept some worse moves to escape dead ends</span>
+    </div>
+    <div class="row">
+      <label>Size <select id="size"><option value="6">6×6</option><option value="9" selected>9×9</option></select></label>
+      <label>Puzzles per family <select id="count"><option>5</option><option selected>10</option><option>20</option></select></label>
+      <label>Combination length <select id="depth"><option value="1">1 move</option><option value="2" selected>up to 2 moves</option><option value="3">up to 3 moves (slow)</option></select></label>
+      <label>Risk budget <select id="budget"><option value="10000">10,000 moves</option><option value="40000" selected>40,000 moves</option><option value="150000">150,000 moves</option></select></label>
+    </div>
+    <div class="row"><button id="run" class="primary">▶ Run the test</button><span class="note" id="status"></span></div>
+    <div class="prog"><i id="prog"></i></div>
+  </div>
+
+  <div id="out" class="hidden">
+    <div class="card">
+      <h2>Answer</h2>
+      <div class="verdict" id="verdict"></div>
+    </div>
+    <div class="card">
+      <h2>Averages</h2>
+      <div class="bars" id="bars"></div>
+      <p class="note">Givens matched = givens showing their number after the best renaming. Cells correct = cells (of all N×N) equal to the true solution. Moves = line moves made (renaming not counted).</p>
+    </div>
+    <div class="card">
+      <h2>Every puzzle</h2>
+      <div class="scroll"><table id="tbl"></table></div>
+    </div>
+  </div>
+
+  <h1 class="t2">🔬 Test 2 · Local swap words</h1>
+  <div class="sub">Swap two numbers in one place only, instead of everywhere · from the static home grid</div>
+  <div class="card">
+    <h2>The words</h2>
+    <p class="note">Start from the home grid, pin the givens (and, with Logic first, every cell logic can prove), then keep using one word until no row, column or box repeats a number. Swaps that make things worse are sometimes kept, to escape dead ends.</p>
+    <div class="legend">
+      <span style="--c:var(--w1)"><b>3⇄7 in box k</b> — Colour mode (boxes always stay valid)</span>
+      <span style="--c:var(--w2)"><b>3⇄7 in row i</b> — rows always stay valid</span>
+      <span style="--c:var(--w3)"><b>3⇄7 in column j</b> — columns always stay valid</span>
+      <span style="--c:var(--w4)"><b>3⇄7 in row i + column j</b> — your cross word: the 3 at (i,j) becomes 7, and row i and column j each stay valid</span>
+    </div>
+    <div class="row">
+      <label>Size <select id="w_size"><option value="6">6×6</option><option value="9" selected>9×9</option></select></label>
+      <label>Puzzles <select id="w_fam"><option value="varied" selected>Varied</option><option value="classic">Classic</option></select></label>
+      <label>How many <select id="w_count"><option>3</option><option selected>6</option><option>10</option></select></label>
+      <label>Try limit per puzzle <select id="w_budget"><option value="500000">0.5 million</option><option value="2000000" selected>2 million</option><option value="6000000">6 million</option></select></label>
+    </div>
+    <div class="row"><button id="w_run" class="primary">▶ Run test 2</button><span class="note" id="w_status"></span></div>
+    <div class="prog"><i id="w_prog"></i></div>
+  </div>
+  <div id="w_out" class="hidden">
+    <div class="card">
+      <h2>Answer</h2>
+      <div class="verdict" id="w_verdict"></div>
+    </div>
+    <div class="card">
+      <h2>Results</h2>
+      <div class="bars" id="w_bars"></div>
+      <div class="scroll" style="margin-top:10px"><table class="words" id="w_tbl"></table></div>
+      <p class="note">Tries = swaps attempted (for the cross word, attempts that would move a pinned cell count too). Time = computing time on this device. Repeats left = repeated numbers still in rows, columns and boxes when the try limit ran out (0 = solved).</p>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+let N = 9, BR = 3, BC = 3;
+function boxShape(n) { let best = null; for (let r = 1; r <= n; r++) if (n % r === 0) { const c = n / r; if (r <= c) { const d = Math.abs(r - Math.sqrt(n)); if (!best || d < best[0]) best = [d, r, c]; } } return [best[1], best[2]]; }
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const boxOf = (r, c) => Math.floor(r / BR) * (N / BC) + Math.floor(c / BC);
+const home = (r, c) => (r * BC + Math.floor(r / BR) + c) % N + 1;
+
+/* ---------- puzzles (with their true solution) ---------- */
+function countSolutions(p, limit, budget) {
+  const g = p.slice(), rm = new Int32Array(N), cm = new Int32Array(N), bm = new Int32Array(N), full = (1 << (N + 1)) - 2;
+  for (let i = 0; i < N * N; i++) if (g[i]) { const b = 1 << g[i], r = (i / N) | 0, c = i % N; if ((rm[r] | cm[c] | bm[boxOf(r, c)]) & b) return 0; rm[r] |= b; cm[c] |= b; bm[boxOf(r, c)] |= b; }
+  let count = 0, nodes = 0;
+  (function rec() {
+    if (count >= limit || ++nodes > budget) return;
+    let best = -1, bc = 99, bmask = 0;
+    for (let i = 0; i < N * N; i++) if (!g[i]) { const r = (i / N) | 0, c = i % N, m = full & ~(rm[r] | cm[c] | bm[boxOf(r, c)]); let k = 0, x = m; while (x) { x &= x - 1; k++; } if (k < bc) { bc = k; best = i; bmask = m; if (k < 2) break; } }
+    if (best < 0) { count++; return; }
+    const r = (best / N) | 0, c = best % N, b0 = boxOf(r, c);
+    for (let d = 1; d <= N; d++) if (bmask & (1 << d)) { const b = 1 << d; g[best] = d; rm[r] |= b; cm[c] |= b; bm[b0] |= b; rec(); g[best] = 0; rm[r] &= ~b; cm[c] &= ~b; bm[b0] &= ~b; if (count >= limit) return; }
+  })();
+  return nodes > budget ? -1 : count;
+}
+function carve(sol) {
+  const p = sol.slice(), target = Math.round(N * N * 0.34), pairs = [];
+  for (let i = 0; i <= (N * N - 1) / 2; i++) pairs.push([i, N * N - 1 - i]);
+  let clues = N * N;
+  for (const [a, b] of shuffle(pairs)) {
+    if (clues <= target) break;
+    const va = p[a], vb = p[b]; p[a] = 0; p[b] = 0;
+    if (countSolutions(p, 2, 20000) === 1) clues -= a === b ? 1 : 2; else { p[a] = va; p[b] = vb; }
+  }
+  return p;
+}
+function classicSolution() {
+  const nb = N / BR, ns = N / BC;
+  const ro = shuffle([...Array(nb).keys()]).flatMap(b => shuffle([...Array(BR).keys()]).map(k => b * BR + k));
+  const co = shuffle([...Array(ns).keys()]).flatMap(s => shuffle([...Array(BC).keys()]).map(k => s * BC + k));
+  const rl = shuffle([...Array(N).keys()].map(i => i + 1)), turn = BR === BC && Math.random() < 0.5, sol = [];
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) sol.push(rl[(turn ? home(co[c], ro[r]) : home(ro[r], co[c])) - 1]);
+  return sol;
+}
+function variedSolution() {
+  const g = new Array(N * N).fill(0), rm = new Int32Array(N), cm = new Int32Array(N), bm = new Int32Array(N), full = (1 << (N + 1)) - 2;
+  const rec = () => {
+    let best = -1, bc = 99, bmask = 0;
+    for (let i = 0; i < N * N; i++) if (!g[i]) { const r = (i / N) | 0, c = i % N, m = full & ~(rm[r] | cm[c] | bm[boxOf(r, c)]); let k = 0, x = m; while (x) { x &= x - 1; k++; } if (k < bc) { bc = k; best = i; bmask = m; if (k < 2) break; } }
+    if (best < 0) return true; if (!bc) return false;
+    const r = (best / N) | 0, c = best % N, b0 = boxOf(r, c), ds = []; for (let d = 1; d <= N; d++) if (bmask & (1 << d)) ds.push(d);
+    for (const d of shuffle(ds)) { const b = 1 << d; g[best] = d; rm[r] |= b; cm[c] |= b; bm[b0] |= b; if (rec()) return true; g[best] = 0; rm[r] &= ~b; cm[c] &= ~b; bm[b0] &= ~b; }
+    return false;
+  };
+  rec(); return g;
+}
+
+/* ---------- positions and the move language ---------- */
+function moveLanguage() {
+  const L = [], nb = N / BR, ns = N / BC, pairs = n => { const o = []; for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) o.push([i, j]); return o; };
+  for (let b = 0; b < nb; b++) for (const [i, j] of pairs(BR)) L.push({ t: "row", a: b * BR + i, b: b * BR + j });
+  for (let q = 0; q < ns; q++) for (const [i, j] of pairs(BC)) L.push({ t: "col", a: q * BC + i, b: q * BC + j });
+  for (const [i, j] of pairs(nb)) L.push({ t: "band", a: i, b: j });
+  for (const [i, j] of pairs(ns)) L.push({ t: "stack", a: i, b: j });
+  const cyc = (t, first, n) => { const f = [...Array(n).keys()].map(k => first + k); L.push({ t, list: f }, { t, list: f.slice().reverse() }); };
+  if (BR >= 3) for (let b = 0; b < nb; b++) cyc("rcyc", b * BR, BR);
+  if (BC >= 3) for (let q = 0; q < ns; q++) cyc("ccyc", q * BC, BC);
+  if (nb >= 3) cyc("bcyc", 0, nb);
+  if (ns >= 3) cyc("scyc", 0, ns);
+  if (BR === BC) L.push({ t: "turn" });
+  return L;
+}
+function applyPos(st, m) {
+  if (m.t === "turn") return { t: !st.t, R: st.C.slice(), C: st.R.slice() };
+  const R = st.R.slice(), C = st.C.slice();
+  const cycle = (arr, L, size) => { const old = arr.slice(); L.forEach((g, k) => { const to = L[(k + 1) % L.length]; for (let o = 0; o < size; o++) arr[to * size + o] = old[g * size + o]; }); };
+  if (m.t === "row") [R[m.a], R[m.b]] = [R[m.b], R[m.a]];
+  else if (m.t === "col") [C[m.a], C[m.b]] = [C[m.b], C[m.a]];
+  else if (m.t === "band") for (let o = 0; o < BR; o++) [R[m.a * BR + o], R[m.b * BR + o]] = [R[m.b * BR + o], R[m.a * BR + o]];
+  else if (m.t === "stack") for (let o = 0; o < BC; o++) [C[m.a * BC + o], C[m.b * BC + o]] = [C[m.b * BC + o], C[m.a * BC + o]];
+  else if (m.t === "rcyc") cycle(R, m.list, 1);
+  else if (m.t === "ccyc") cycle(C, m.list, 1);
+  else if (m.t === "bcyc") cycle(R, m.list, BR);
+  else if (m.t === "scyc") cycle(C, m.list, BC);
+  return { t: st.t, R, C };
+}
+const homeAt = (st, r, c) => st.t ? home(st.C[c], st.R[r]) : home(st.R[r], st.C[c]);
+const posKey = st => (st.t ? "T" : "") + st.R.join(",") + "|" + st.C.join(",");
+const startPos = () => ({ t: false, R: [...Array(N).keys()], C: [...Array(N).keys()] });
+
+/* ---------- best renaming (assignment problem, Hungarian method) ---------- */
+function bestRenaming(st, givens) {
+  const w = [...Array(N + 1)].map(() => new Int32Array(N + 1));
+  for (const [r, c, v] of givens) w[homeAt(st, r, c)][v]++;
+  // maximise sum w[hv][v] over a bijection hv -> v  (min-cost with cost = -w)
+  const n = N, INF = 1e9, u = new Float64Array(n + 1), vv = new Float64Array(n + 1), p = new Int32Array(n + 1), way = new Int32Array(n + 1);
+  for (let i = 1; i <= n; i++) {
+    p[0] = i; let j0 = 0; const minv = new Float64Array(n + 1).fill(INF), used = new Uint8Array(n + 1);
+    do {
+      used[j0] = 1; const i0 = p[j0]; let delta = INF, j1 = 0;
+      for (let j = 1; j <= n; j++) if (!used[j]) {
+        const cur = -w[i0][j] - u[i0] - vv[j];
+        if (cur < minv[j]) { minv[j] = cur; way[j] = j0; }
+        if (minv[j] < delta) { delta = minv[j]; j1 = j; }
+      }
+      for (let j = 0; j <= n; j++) { if (used[j]) { u[p[j]] += delta; vv[j] -= delta; } else minv[j] -= delta; }
+      j0 = j1;
+    } while (p[j0] !== 0);
+    do { const j1 = way[j0]; p[j0] = p[j1]; j0 = j1; } while (j0);
+  }
+  const ren = new Int32Array(N + 1); for (let j = 1; j <= n; j++) ren[p[j]] = j;
+  let matched = 0; for (let hv = 1; hv <= N; hv++) matched += w[hv][ren[hv]];
+  return { ren, matched };
+}
+function evaluate(st, givens, sol) {
+  const { ren, matched } = bestRenaming(st, givens);
+  let correct = 0; for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (ren[homeAt(st, r, c)] === sol[r * N + c]) correct++;
+  return { matched, correct };
+}
+
+/* ---------- strategy 1: keep placed (never break) ---------- */
+function mapFor(st, cells) {
+  const fwd = new Int16Array(N + 1), back = new Int16Array(N + 1);
+  for (const [r, c, v] of cells) { const hv = homeAt(st, r, c); if (!fwd[hv] && !back[v]) { fwd[hv] = v; back[v] = hv; } else if (fwd[hv] !== v || back[v] !== hv) return null; }
+  return { fwd, back };
+}
+function addable(st, placed, remaining) {
+  const m = mapFor(st, placed); if (!m) return null; const out = [];
+  for (const g of remaining) { const [r, c, v] = g, hv = homeAt(st, r, c); if ((m.fwd[hv] === v && m.back[v] === hv) || (!m.fwd[hv] && !m.back[v])) { if (!m.fwd[hv]) { m.fwd[hv] = v; m.back[v] = hv; } out.push(g); } }
+  return out;
+}
+function keepPlaced(givens, sol, L, D) {
+  let st = startPos(), placed = [], remaining = givens.slice(), moves = 0;
+  const first = addable(st, placed, remaining); placed.push(...first); remaining = remaining.filter(g => !first.includes(g));
+  while (remaining.length) {
+    let best = null, frontier = [{ st, d: 0 }]; const seen = new Set([posKey(st)]);
+    for (let depth = 1; depth <= D && !best; depth++) {
+      const next = [];
+      for (const node of frontier) for (const m of L) {
+        const s2 = applyPos(node.st, m), k = posKey(s2); if (seen.has(k)) continue; seen.add(k);
+        next.push({ st: s2, d: depth });
+        const add = addable(s2, placed, remaining);
+        if (add && add.length && (!best || add.length > best.add.length)) best = { st: s2, add, d: depth };
+      }
+      frontier = next;
+    }
+    if (!best) break;
+    st = best.st; moves += best.d; placed.push(...best.add); remaining = remaining.filter(g => !best.add.includes(g));
+  }
+  return { ...evaluate(st, givens, sol), moves };
+}
+
+/* ---------- strategy 2: break allowed, keep improving the total ---------- */
+function breakAllowed(givens, sol, L, D) {
+  let st = startPos(), cur = bestRenaming(st, givens).matched, moves = 0;
+  for (let guard = 0; guard < 200; guard++) {
+    let best = null, frontier = [{ st }]; const seen = new Set([posKey(st)]);
+    for (let depth = 1; depth <= D; depth++) {
+      const next = [];
+      for (const node of frontier) for (const m of L) {
+        const s2 = applyPos(node.st, m), k = posKey(s2); if (seen.has(k)) continue; seen.add(k);
+        next.push({ st: s2 });
+        const sc = bestRenaming(s2, givens).matched;
+        if (sc > cur && (!best || sc > best.sc)) best = { st: s2, sc, d: depth };
+      }
+      frontier = next;
+      if (best) break; // shortest combination that improves the total
+    }
+    if (!best) break;
+    st = best.st; cur = best.sc; moves += best.d;
+    if (cur === givens.length) break;
+  }
+  return { ...evaluate(st, givens, sol), moves };
+}
+
+/* ---------- strategy 3: break allowed + sometimes accept worse (annealing) ---------- */
+function breakWithRisk(givens, sol, L, budget) {
+  let st = startPos(), cur = bestRenaming(st, givens).matched, best = { st, sc: cur }, T = 1.5, made = 0;
+  for (let it = 0; it < budget && best.sc < givens.length; it++) {
+    const s2 = applyPos(st, L[(Math.random() * L.length) | 0]), sc = bestRenaming(s2, givens).matched;
+    if (sc >= cur || Math.random() < Math.exp((sc - cur) / T)) { st = s2; cur = sc; made++; if (sc > best.sc) best = { st, sc }; }
+    T = Math.max(0.05, T * (1 - 4 / budget));
+  }
+  return { ...evaluate(best.st, givens, sol), moves: made };
+}
+
+/* ---------- run ---------- */
+const STRATS = [["keep", "Keep placed", "--s1"], ["brk", "Break allowed", "--s2"], ["risk", "Break + risk", "--s3"]];
+$("run").addEventListener("click", () => {
+  N = +$("size").value; [BR, BC] = boxShape(N);
+  const count = +$("count").value, D = +$("depth").value, budget = +$("budget").value, L = moveLanguage();
+  const jobs = [];
+  for (let k = 0; k < count; k++) jobs.push("classic"); for (let k = 0; k < count; k++) jobs.push("varied");
+  const results = []; let i = 0;
+  $("run").disabled = true; $("out").classList.add("hidden");
+  const step = () => {
+    if (i >= jobs.length) { $("run").disabled = false; $("status").textContent = `Done: ${jobs.length} puzzles.`; show(results, D, budget); return; }
+    const fam = jobs[i], sol = fam === "classic" ? classicSolution() : variedSolution(), p = carve(sol);
+    const givens = []; for (let x = 0; x < N * N; x++) if (p[x]) givens.push([(x / N) | 0, x % N, p[x]]);
+    const t0 = performance.now();
+    const res = { fam, givens: givens.length,
+      keep: keepPlaced(givens, sol, L, D), brk: breakAllowed(givens, sol, L, D), risk: breakWithRisk(givens, sol, L, budget) };
+    res.ms = Math.round(performance.now() - t0);
+    results.push(res); i++;
+    $("status").textContent = `Puzzle ${i} of ${jobs.length} (${fam})…`;
+    $("prog").style.width = `${Math.round(100 * i / jobs.length)}%`;
+    setTimeout(step, 0);
+  };
+  $("status").textContent = "Starting…"; $("prog").style.width = "0"; setTimeout(step, 30);
+});
+
+function show(results, D, budget) {
+  $("out").classList.remove("hidden");
+  const fams = ["classic", "varied"], avg = (arr, f) => arr.reduce((a, r) => a + f(r), 0) / Math.max(1, arr.length);
+  // bars
+  let h = "";
+  for (const fam of fams) {
+    const rs = results.filter(r => r.fam === fam), G = avg(rs, r => r.givens);
+    h += `<div class="metric"><b>${fam === "classic" ? "Classic puzzles" : "Varied puzzles"}</b> <span class="note">(${rs.length} puzzles, avg ${G.toFixed(1)} givens)</span>`;
+    for (const [metric, lab, max, fmt] of [
+      ["matched", "Givens matched", G, v => `${v.toFixed(1)} / ${G.toFixed(0)}`],
+      ["correct", "Cells correct", N * N, v => `${v.toFixed(1)} / ${N * N}`],
+      ["solved", "Fully solved", rs.length, v => `${v} / ${rs.length}`],
+    ]) {
+      h += `<div class="note" style="margin-top:6px">${lab}</div>`;
+      for (const [key, name, col] of STRATS) {
+        const v = metric === "solved" ? rs.filter(r => r[key].correct === N * N).length : avg(rs, r => r[key][metric]);
+        h += `<div class="bar"><span class="lab">${name}</span><span class="track"><span class="fill" style="display:block;width:${Math.min(100, 100 * v / max)}%;background:var(${col})"></span></span><span class="val">${fmt(v)}</span></div>`;
+      }
+    }
+    h += `<div class="note" style="margin-top:6px">Average moves: ${STRATS.map(([k, n]) => `${n} ${avg(rs, r => r[k].moves).toFixed(0)}`).join(" · ")}</div></div>`;
+  }
+  $("bars").innerHTML = h;
+  // table
+  let t = `<tr><th>#</th><th>Family</th><th>Givens</th>${STRATS.map(([, n]) => `<th>${n}<br>givens · cells · moves</th>`).join("")}</tr>`;
+  results.forEach((r, i) => {
+    const bestCells = Math.max(...STRATS.map(([k]) => r[k].correct));
+    t += `<tr><td>${i + 1}</td><td><span class="tag">${r.fam}</span></td><td>${r.givens}</td>` +
+      STRATS.map(([k]) => `<td class="${r[k].correct === bestCells ? "win" : ""}">${r[k].matched} · ${r[k].correct}${r[k].correct === N * N ? " ✓" : ""} · ${r[k].moves}</td>`).join("") + "</tr>";
+  });
+  $("tbl").innerHTML = t;
+  // verdict
+  const c = results.filter(r => r.fam === "classic"), v = results.filter(r => r.fam === "varied");
+  const cells = (rs, k) => avg(rs, r => r[k].correct), solved = (rs, k) => rs.filter(r => r[k].correct === N * N).length;
+  const gainC = cells(c, "brk") - cells(c, "keep"), gainV = cells(v, "brk") - cells(v, "keep");
+  const gainCR = cells(c, "risk") - cells(c, "keep"), gainVR = cells(v, "risk") - cells(v, "keep");
+  const sign = x => (x >= 0 ? "+" : "") + x.toFixed(1);
+  $("verdict").innerHTML =
+    `<p><b>Classic puzzles:</b> allowing breaks changed cells correct by <b>${sign(gainC)}</b> (greedy) and <b>${sign(gainCR)}</b> (with risk) compared with keeping placed givens. Fully solved: keep ${solved(c, "keep")}/${c.length}, break ${solved(c, "brk")}/${c.length}, break + risk ${solved(c, "risk")}/${c.length}.</p>` +
+    `<p><b>Varied puzzles:</b> cells correct changed by <b>${sign(gainV)}</b> (greedy) and <b>${sign(gainVR)}</b> (with risk). Fully solved: ${solved(v, "keep")}, ${solved(v, "brk")}, ${solved(v, "risk")} of ${v.length} — line moves from the home grid can't reach these solutions, so more givens matched doesn't mean the rest of the grid is right.</p>` +
+    `<p class="note">Settings: combinations up to ${D} move${D > 1 ? "s" : ""}, risk budget ${budget.toLocaleString()} moves. Run again for a new set of random puzzles.</p>`;
+}
+
+/* =========================================================
+   Test 2 · local swap words
+   ========================================================= */
+const WORDS = [["box", "3⇄7 in box k", "--w1"], ["row", "3⇄7 in row i", "--w2"], ["col", "3⇄7 in column j", "--w3"], ["cross", "3⇄7 in row i + column j", "--w4"]];
+function logicSingles(p) { // cells logic can prove (naked + hidden singles), repeated until nothing changes
+  const g = p.slice(), out = [], full = (1 << (N + 1)) - 2, units = [];
+  for (let r = 0; r < N; r++) units.push([...Array(N).keys()].map(c => r * N + c));
+  for (let c = 0; c < N; c++) units.push([...Array(N).keys()].map(r => r * N + c));
+  for (let b = 0; b < N; b++) { const u = []; for (let i = 0; i < N * N; i++) if (boxOf((i / N) | 0, i % N) === b) u.push(i); units.push(u); }
+  const peers = [...Array(N * N)].map((_, i) => units.filter(u => u.includes(i)).flat());
+  const cand = i => { let used = 0; for (const j of peers[i]) used |= 1 << g[j]; return full & ~used; };
+  for (let changed = true; changed;) {
+    changed = false;
+    for (let i = 0; i < N * N; i++) if (!g[i]) { const m = cand(i); if (m && !(m & (m - 1))) { g[i] = Math.log2(m); out.push([i, g[i]]); changed = true; } }
+    for (const u of units) for (let v = 1; v <= N; v++) {
+      if (u.some(i => g[i] === v)) continue;
+      const spots = u.filter(i => !g[i] && (cand(i) & (1 << v)));
+      if (spots.length === 1) { g[spots[0]] = v; out.push([spots[0], v]); changed = true; }
+    }
+  }
+  return out;
+}
+function makeSearch(puz, word, logic) {
+  const NN = N * N, g = new Int8Array(NN), fixed = new Uint8Array(NN), fixVal = new Int8Array(NN);
+  const R = new Int8Array(NN), C = new Int8Array(NN), Bx = new Int8Array(NN);
+  const rows = [...Array(N)].map(() => []), cols = [...Array(N)].map(() => []), boxes = [...Array(N)].map(() => []);
+  for (let i = 0; i < NN; i++) { R[i] = (i / N) | 0; C[i] = i % N; Bx[i] = boxOf(R[i], C[i]); rows[R[i]].push(i); cols[C[i]].push(i); boxes[Bx[i]].push(i); g[i] = home(R[i], C[i]); }
+  for (let i = 0; i < NN; i++) if (puz[i]) { fixed[i] = 1; fixVal[i] = puz[i]; }
+  if (logic) for (const [i, v] of logicSingles(puz)) { fixed[i] = 1; fixVal[i] = v; }
+  // pin with the word's own kind of swap: inside the box, row or column
+  const pinUnit = i => word === "box" ? boxes[Bx[i]] : word === "col" ? cols[C[i]] : rows[R[i]];
+  for (let i = 0; i < NN; i++) if (fixed[i] && g[i] !== fixVal[i]) { const j = pinUnit(i).find(k => g[k] === fixVal[i]); [g[i], g[j]] = [g[j], g[i]]; }
+  // counts per unit: rows 0..N-1, columns N..2N-1, boxes 2N..3N-1
+  const cnt = new Int16Array(3 * N * (N + 1)); let cost = 0;
+  const U = i => [R[i], N + C[i], 2 * N + Bx[i]];
+  for (let i = 0; i < NN; i++) for (const u of U(i)) cnt[u * (N + 1) + g[i]]++;
+  for (let u = 0; u < 3 * N; u++) for (let v = 1; v <= N; v++) if (!cnt[u * (N + 1) + v]) cost++;
+  const setv = (i, v) => {
+    const old = g[i];
+    for (const u of U(i)) {
+      const a = u * (N + 1);
+      if (--cnt[a + old] === 0) cost++;
+      if (cnt[a + v]++ === 0) cost--;
+    }
+    g[i] = v;
+  };
+  const freeIn = list => list.map(u => u.filter(i => !fixed[i])).filter(u => u.length >= 2);
+  const groups = word === "box" ? freeIn(boxes) : word === "col" ? freeIn(cols) : freeIn(rows);
+  const freeRow = rows.map(u => u.filter(i => !fixed[i]));
+  const freeAll = []; for (let i = 0; i < NN; i++) if (!fixed[i] && freeRow[R[i]].length >= 2) freeAll.push(i);
+  const st = { tries: 0, T: 0.6, best: cost, stuck: 0, get cost() { return cost; }, g, done: false };
+  const touched = [], olds = [];
+  st.run = maxTries => {
+    for (let t = 0; t < maxTries; t++) {
+      if (!cost) { st.done = true; return; }
+      if (!groups.length) { st.done = true; return; }
+      st.tries++;
+      touched.length = 0; olds.length = 0;
+      if (word === "cross") {
+        const p1 = freeAll[(Math.random() * freeAll.length) | 0], fr = freeRow[R[p1]];
+        let p2 = fr[(Math.random() * fr.length) | 0]; if (p2 === p1) continue;
+        const a = g[p1], b = g[p2]; if (a === b) continue;
+        touched.push(p1, p2); olds.push(a, b);
+        let blocked = false;
+        for (const q of cols[C[p1]]) if (q !== p1 && g[q] === b) { if (fixed[q]) { blocked = true; break; } touched.push(q); olds.push(b); }
+        if (blocked) continue;
+        setv(p1, b); setv(p2, a); for (let k = 2; k < touched.length; k++) setv(touched[k], a);
+      } else {
+        const grp = groups[(Math.random() * groups.length) | 0];
+        const p1 = grp[(Math.random() * grp.length) | 0], p2 = grp[(Math.random() * grp.length) | 0];
+        if (p1 === p2 || g[p1] === g[p2]) continue;
+        touched.push(p1, p2); olds.push(g[p1], g[p2]);
+        setv(p1, olds[1]); setv(p2, olds[0]);
+      }
+      const d = cost - st.before;
+      // accept if not worse, sometimes if worse
+      if (d <= 0 || Math.random() < Math.exp(-d / st.T)) {
+        if (cost < st.best) { st.best = cost; st.stuck = 0; } else st.stuck++;
+        st.before = cost;
+      } else {
+        for (let k = touched.length - 1; k >= 0; k--) setv(touched[k], olds[k]);
+        st.stuck++;
+      }
+      st.T = Math.max(0.05, st.T * 0.99995);
+      if (st.stuck > 40000) { st.T = 0.6; st.stuck = 0; st.best = cost; }
+    }
+  };
+  st.before = cost;
+  return st;
+}
+
+$("w_run").addEventListener("click", () => {
+  N = +$("w_size").value; [BR, BC] = boxShape(N);
+  const fam = $("w_fam").value, count = +$("w_count").value, budget = +$("w_budget").value;
+  $("w_run").disabled = true; $("w_out").classList.add("hidden"); $("w_status").textContent = "Making puzzles…"; $("w_prog").style.width = "0";
+  setTimeout(() => {
+    const pz = []; for (let k = 0; k < count; k++) { const sol = fam === "classic" ? classicSolution() : variedSolution(); pz.push({ sol, p: carve(sol) }); }
+    const jobs = []; for (const logic of [false, true]) for (const [w] of WORDS) for (let k = 0; k < count; k++) jobs.push({ w, logic, k });
+    const res = []; let j = 0, cur = null, ms = 0;
+    const CHUNK = 150000;
+    const tick = () => {
+      if (!cur) {
+        if (j >= jobs.length) { $("w_run").disabled = false; $("w_status").textContent = `Done: ${count} ${fam} puzzles × 8 runs.`; wShow(res, count, fam, budget); return; }
+        const jb = jobs[j]; cur = { jb, s: makeSearch(pz[jb.k].p, jb.w, jb.logic) }; ms = 0;
+      }
+      const t0 = performance.now();
+      cur.s.run(Math.min(CHUNK, budget - cur.s.tries));
+      ms += performance.now() - t0;
+      if (cur.s.done || cur.s.tries >= budget) {
+        const sol = pz[cur.jb.k].sol, ok = cur.s.cost === 0 && Array.from(cur.s.g).every((v, i) => v === sol[i]);
+        res.push({ ...cur.jb, solved: ok, tries: cur.s.tries, ms, left: cur.s.cost });
+        cur = null; j++;
+        $("w_prog").style.width = `${Math.round(100 * j / jobs.length)}%`;
+        $("w_status").textContent = `Run ${j} of ${jobs.length}…`;
+      }
+      setTimeout(tick, 0);
+    };
+    tick();
+  }, 30);
+});
+
+function wShow(res, count, fam, budget) {
+  $("w_out").classList.remove("hidden");
+  const rows = [];
+  for (const logic of [false, true]) for (const [w, name, col] of WORDS) {
+    const rs = res.filter(r => r.w === w && r.logic === logic), n = rs.length;
+    rows.push({ w, name, col, logic, solved: rs.filter(r => r.solved).length, n,
+      ms: rs.reduce((a, r) => a + r.ms, 0) / n, tries: rs.reduce((a, r) => a + r.tries, 0) / n, left: rs.reduce((a, r) => a + r.left, 0) / n });
+  }
+  const maxMs = Math.max(...rows.map(r => r.ms), 1);
+  let h = "";
+  for (const logic of [false, true]) {
+    h += `<div class="metric"><b>${logic ? "With Logic first" : "Without logic"}</b>`;
+    h += `<div class="note" style="margin-top:4px">Puzzles solved</div>`;
+    for (const r of rows.filter(x => x.logic === logic)) h += `<div class="bar"><span class="lab" style="width:150px">${r.name}</span><span class="track"><span class="fill" style="display:block;width:${100 * r.solved / r.n}%;background:var(${r.col})"></span></span><span class="val">${r.solved} / ${r.n}</span></div>`;
+    h += `<div class="note" style="margin-top:4px">Average time per puzzle</div>`;
+    for (const r of rows.filter(x => x.logic === logic)) h += `<div class="bar"><span class="lab" style="width:150px">${r.name}</span><span class="track"><span class="fill" style="display:block;width:${100 * r.ms / maxMs}%;background:var(${r.col})"></span></span><span class="val">${r.ms < 1000 ? Math.round(r.ms) + " ms" : (r.ms / 1000).toFixed(1) + " s"}</span></div>`;
+    h += `</div>`;
+  }
+  $("w_bars").innerHTML = h;
+  $("w_tbl").innerHTML = `<tr><th>Logic</th><th>Word</th><th>Solved</th><th>Avg tries</th><th>Avg time</th><th>Repeats left</th></tr>` +
+    rows.map(r => `<tr><td>${r.logic ? "yes" : "no"}</td><td><span class="sw" style="background:var(${r.col})"></span>${r.name}</td><td>${r.solved}/${r.n}</td><td>${Math.round(r.tries).toLocaleString()}</td><td>${r.ms < 1000 ? Math.round(r.ms) + " ms" : (r.ms / 1000).toFixed(1) + " s"}</td><td>${r.left.toFixed(1)}</td></tr>`).join("");
+  // verdict
+  const rank = rows.slice().sort((a, b) => b.solved - a.solved || a.ms - b.ms);
+  const best = rank[0], noLogic = rows.filter(r => !r.logic).sort((a, b) => b.solved - a.solved || a.ms - b.ms);
+  const cross = rows.filter(r => r.w === "cross"), box = rows.filter(r => r.w === "box");
+  const fmt = r => `${r.solved}/${r.n} solved, ${r.ms < 1000 ? Math.round(r.ms) + " ms" : (r.ms / 1000).toFixed(1) + " s"} per puzzle`;
+  $("w_verdict").innerHTML =
+    `<p><b>Best overall:</b> ${best.name}${best.logic ? " with Logic first" : ""} — ${fmt(best)}.</p>` +
+    `<p><b>Without logic:</b> ${noLogic.map(r => `${r.name}: ${r.solved}/${r.n}`).join(" · ")}.</p>` +
+    `<p><b>Your cross word</b> (row i + column j): ${fmt(cross[0])} without logic, ${fmt(cross[1])} with Logic first. ` +
+    `Colour mode (box): ${fmt(box[0])} without logic, ${fmt(box[1])} with Logic first.</p>` +
+    `<p class="note">${count} ${fam} ${N}×${N} puzzles, try limit ${budget.toLocaleString()} per puzzle. Every word can reach any family (each one can rearrange its unit freely); they differ in how smoothly the search moves.</p>`;
+}
+</script>
+</body>
+</html>

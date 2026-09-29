@@ -1,0 +1,30 @@
+killer 6 30 OL ms 2.7 guesses 0 BT ms 0.6 BT nodes 338 ok true
+killer 9 30 OL ms 487.6 guesses 0 BT ms 567.2 BT nodes 170156 ok true
+== killer done in 49 s
+kenken 5 30 OL ms 0.9 guesses 0 BT ms 0.1 ok true
+kenken 6 30 OL ms 11.1 guesses 0 BT ms 1.7 ok true
+kenken 7 20 OL ms 89.1 guesses 0 BT ms 12.7 ok true
+== kenken done in 8 s
+star 6 1 30 OL ms 1.4 guesses 0 BT ms 0.1 ok true
+star 8 1 30 OL ms 18.4 guesses 4 BT ms 0.8 ok true
+star 10 2 11 OL ms 2010.0 guesses 0 BT ms 511.5 ok true
+== starbattle done in 109 s
+queens 8 30 givens 2.7 OL ms 0.4 guesses 0 BT ms 0.0 ok true
+queens 12 30 givens 4.4 OL ms 1.7 guesses 7 BT ms 0.3 ok true
+queens 16 20 givens 6.8 OL ms 7.7 guesses 16 BT ms 6.6 ok true
+queens 20 15 givens 9.7 OL ms 12.1 guesses 3 BT ms 69.3 ok true
+queens 30 10 givens 17.1 OL ms 62.9 guesses 3 BT ms 330.1 ok true
+== queens done in 17 s
+nono 10 0.58 40 OL ms 0.4 OL guesses 0 DP ms 0.3 DP guesses 0 ok true
+nono 15 0.58 30 OL ms 1.4 OL guesses 0 DP ms 0.9 DP guesses 8 ok true
+nono 20 0.58 25 OL ms 2.1 OL guesses 0 DP ms 1.4 DP guesses 0 ok true
+nono 15 0.45 25 OL ms 6.7 OL guesses 0 DP ms 20.3 DP guesses 1341 ok true
+nono 20 0.68 25 OL ms 1.1 OL guesses 0 DP ms 0.7 DP guesses 0 ok true
+== nonogram done in 3 s
+map 10 30 opt 333343334443333343344343433444 greedy worse 0 opt ms 0.3
+map 16 30 opt 444344444444444444444443443444 greedy worse 0 opt ms 0.6
+map 25 30 opt 444444444443444444444444444444 greedy worse 0 opt ms 1.8
+map 40 20 opt 44444444444444444444 greedy worse 2 opt ms 6.7
+map 60 20 opt 44444444444444444444 greedy worse 1 opt ms 21.3
+== map done in 2 s
+finished

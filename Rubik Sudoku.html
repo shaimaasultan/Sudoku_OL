@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Rubik Sudoku</title>
+<style>
+:root{
+  --bg:#f5f4ef; --surface:#ffffff; --ink:#1c1e23; --muted:#6a6e77; --line:#cfd2d8; --line-strong:#1c1e23;
+  --accent:#2455c7; --accent-ink:#fff; --btn:#e9e7e0; --btn-ink:#1c1e23; --plastic:#1b1c20; --ok:#2e9e57; --bad:#c42626;
+  --shadow:0 1px 2px rgba(0,0,0,.08),0 4px 14px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#131519; --surface:#1c1f25; --ink:#e7e8eb; --muted:#9aa0aa; --line:#383d46; --line-strong:#c9cdd4;
+    --accent:#6f98ff; --accent-ink:#0d1117; --btn:#2a2e36; --btn-ink:#e7e8eb; --plastic:#050608; --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  padding:max(12px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));touch-action:manipulation;-webkit-user-select:none;user-select:none}
+.wrap{max-width:620px;margin:0 auto}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+h1{font-size:20px;margin:0}
+.sub{font-size:12px;color:var(--muted)}
+h2{font-size:15px;margin:18px 0 6px}
+button,select{font:inherit;color:var(--btn-ink);background:var(--btn);border:0;border-radius:10px;padding:9px 12px;cursor:pointer}
+select{appearance:none;-webkit-appearance:none}
+button:active{transform:scale(.97)}
+button.primary{background:var(--accent);color:var(--accent-ink);font-weight:600}
+button.on{background:var(--accent);color:var(--accent-ink)}
+button:disabled{opacity:.4}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.row select{flex:1;min-width:0}
+.card{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:12px;margin-top:12px}
+.note{font-size:12.5px;color:var(--muted);margin:6px 0}
+.msg{font-size:14px;margin:6px 0}
+.msg.bad{color:var(--bad)} .msg.ok{color:var(--ok)}
+
+/* puzzle editor */
+.pgrid{display:grid;width:100%;max-width:420px;aspect-ratio:1/1;margin:6px auto 0;border:2px solid var(--line-strong);border-radius:4px;overflow:hidden;background:var(--surface)}
+.pgrid div{display:flex;align-items:center;justify-content:center;border-right:1px solid var(--line);border-bottom:1px solid var(--line);font-size:var(--pfs);font-weight:700;cursor:pointer;min-width:0;min-height:0}
+.pgrid div.br{border-right:2px solid var(--line-strong)} .pgrid div.bb{border-bottom:2px solid var(--line-strong)}
+.pgrid div.lc{border-right:0} .pgrid div.lr{border-bottom:0}
+.pgrid div.sel{background:#c9dbff;color:#1c1e23}
+.pad{display:grid;gap:6px;margin-top:8px}
+.pad button{height:42px;padding:0;font-size:19px;background:var(--surface);box-shadow:var(--shadow);color:var(--accent)}
+
+/* Rubik board */
+.rboard{position:relative;width:100%;max-width:460px;aspect-ratio:1/1;margin:8px auto 0;background:var(--plastic);border-radius:12px;padding:6px}
+.rinner{position:relative;width:100%;height:100%}
+.tile{position:absolute;display:flex;align-items:center;justify-content:center;border-radius:5px;font-weight:800;color:#15161a;
+  transition:top .5s cubic-bezier(.3,.7,.3,1),left .5s cubic-bezier(.3,.7,.3,1),background-color .35s;box-shadow:inset 0 -2px 0 rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.35);font-size:var(--rfs)}
+.tile.moving{z-index:3;box-shadow:0 0 0 3px #fff,0 4px 14px rgba(0,0,0,.5)}
+.tile.flash{animation:flash .6s}
+@keyframes flash{40%{transform:scale(1.18)}}
+.noanim .tile{transition:none}
+.ghost{position:absolute;pointer-events:none;display:flex;align-items:flex-start;justify-content:flex-end;padding:2px 4px;font-size:var(--gfs);font-weight:700;color:#fff;z-index:4;text-shadow:0 0 3px #000}
+.ghost.hit{box-shadow:inset 0 0 0 3px var(--ok);border-radius:5px}
+.ghost.miss{box-shadow:inset 0 0 0 3px var(--bad);border-radius:5px}
+.frame{position:absolute;pointer-events:none;border:2px solid rgba(255,255,255,.55);border-radius:6px;z-index:5}
+.hlrow{position:absolute;pointer-events:none;border:3px solid #ffd43b;border-radius:7px;z-index:6;transition:all .3s}
+
+.movelist{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.movelist span{font:600 12.5px ui-monospace,Menlo,Consolas,monospace;background:var(--bg);border-radius:6px;padding:4px 7px;cursor:pointer}
+.movelist span.done{opacity:.55}
+.movelist span.cur{background:#ffd43b;color:#111;opacity:1}
+.step{background:var(--bg);border-radius:10px;padding:8px 10px;margin-top:8px;min-height:56px;font-size:14px}
+.step .no{font-size:11px;color:var(--muted)}
+.ctl{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.ctl button{padding:8px 13px}
+ol{padding-left:20px;margin:6px 0} li{margin:4px 0;font-size:14px}
+table.notation{border-collapse:collapse;font-size:13px;width:100%}
+table.notation td{padding:4px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+table.notation td:first-child{font:600 13px ui-monospace,Menlo,Consolas,monospace;white-space:nowrap}
+/* colour mode */
+.cstats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.cstats div{background:var(--bg);border-radius:10px;padding:6px 4px;text-align:center}
+.cstats b{display:block;font-size:18px;font-variant-numeric:tabular-nums}
+.cstats span{font-size:10.5px;color:var(--muted)}
+.tile.conf{box-shadow:inset 0 0 0 2px #ff2d2d}
+.tile.pin::after,.tile.lpin::after{content:"";position:absolute;top:9%;left:9%;width:20%;height:20%;border-radius:50%}
+.tile.pin::after{background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.tile.lpin::after{background:#15161a;box-shadow:0 0 0 1.5px #fff}
+.tile.hot{z-index:3;box-shadow:0 0 0 3px #ffd43b,0 4px 12px rgba(0,0,0,.5)}
+.quick .tile{transition-duration:.12s}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+label.chk{display:flex;align-items:center;gap:6px;font-size:13.5px}
+.busy{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:20;color:#fff;font-weight:600}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1>🧩 Rubik Sudoku</h1><div class="sub">Solve by systematic moves from the home grid · S. S. Soltan</div></div>
+  </header>
+
+  <div class="card">
+    <div class="row">
+      <select id="size" aria-label="Size"><option value="4">4×4</option><option value="6">6×6</option><option value="9" selected>9×9</option><option value="12">12×12</option><option value="16">16×16</option></select>
+      <select id="level" aria-label="Clues"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select>
+      <button id="newBtn" class="primary">New classic puzzle</button>
+    </div>
+    <div class="row"><button id="newVariedBtn">New varied puzzle</button><span class="note">Varied puzzles can't be solved by Rubik moves — try Colour mode.</span></div>
+    <div class="row">
+      <button id="editBtn">✎ Enter my own</button>
+      <button id="clearBtn">Clear</button>
+      <span class="note" id="clueCount"></span>
+    </div>
+    <div id="pgrid" class="pgrid"></div>
+    <div id="pad" class="pad hidden"></div>
+    <div class="row" style="justify-content:center;margin-top:10px"><button id="solveBtn" class="primary">🔍 Find the moves</button></div>
+    <p id="findMsg" class="msg"></p>
+  </div>
+
+  <div id="animCard" class="card hidden">
+    <h2 style="margin-top:0">Moves from the home grid</h2>
+    <p class="note">Tiles start as your home grid <b>(r·b + ⌊r/a⌋ + c) mod N + 1</b>. Each move keeps every row, column and box valid — like turning a Rubik's cube. White corner numbers are the puzzle's givens.</p>
+    <div id="rboard" class="rboard"><div id="rinner" class="rinner"></div></div>
+    <div class="ctl">
+      <button id="aReset" aria-label="Start">⏮</button>
+      <button id="aPrev" aria-label="Back">◀</button>
+      <button id="aPlay" class="primary">▶ Play</button>
+      <button id="aNext" aria-label="Next">▶|</button>
+      <select id="aSpeed" aria-label="Speed"><option value="1400">Slow</option><option value="800" selected>Normal</option><option value="350">Fast</option></select>
+    </div>
+    <div class="step"><div class="no" id="stepNo"></div><div id="stepText"></div></div>
+    <div id="moveList" class="movelist"></div>
+  </div>
+
+  <div id="colCard" class="card">
+    <h2 style="margin-top:0">🎨 Colour mode — the anti-Rubik solve</h2>
+    <p class="note">Numbers become colours. Every puzzle starts from the <b>same home grid</b> (each box already holds one of each colour). Givens are pinned, logic pins what it can prove, then colours are swapped <b>inside boxes</b> until no row or column repeats a colour — the opposite of a Rubik's cube, where each face ends up one colour.</p>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="cLogic" checked> Logic first</label>
+      <label class="chk"><input type="checkbox" id="cNums"> Show numbers</label>
+      <select id="cSpeed" aria-label="Speed" style="flex:0 0 auto"><option value="slow">Slow</option><option value="normal" selected>Normal</option><option value="fast">Fast</option><option value="turbo">Turbo</option></select>
+    </div>
+    <div id="cboard" class="rboard"><div id="cinner" class="rinner"></div></div>
+    <div class="ctl">
+      <button id="cReset">⏮ Reset</button>
+      <button id="cPlay" class="primary">▶ Start</button>
+      <button id="cStep">Step ▶|</button>
+    </div>
+    <div class="cstats">
+      <div><b id="cScore">–</b><span>repeats</span></div>
+      <div><b id="cPinned">0</b><span>pinned</span></div>
+      <div><b id="cKept">0</b><span>swaps kept</span></div>
+      <div><b id="cTried">0</b><span>swaps tried</span></div>
+    </div>
+    <div class="step"><div class="no" id="cPhase"></div><div id="cText"></div></div>
+    <p class="note">⚪ white pin = given · ⚫ dark pin = proved by logic · red outline = colour repeats in its row or column.</p>
+  </div>
+
+  <div class="card">
+    <h2 style="margin-top:0">The systematic move method</h2>
+    <ol>
+      <li><b>Start from the home grid.</b> Row 1 is 1…N; each next row shifts by the box width, and each new band shifts by one more.</li>
+      <li><b>Turn the cube?</b> (square boxes only) Decide whether rows and columns are exchanged.</li>
+      <li><b>Order the bands and the rows inside each band.</b> Try the band for slot 1 and the order of its rows; keep it only if the givens it touches can still be matched with one consistent renaming of the numbers.</li>
+      <li><b>Order the stacks and the columns inside each stack</b> the same way, one slot at a time, alternating with the bands. A wrong choice is thrown away as soon as two givens disagree.</li>
+      <li><b>Rename the numbers.</b> Each given tells you which home number becomes which puzzle number (like repainting the colours of a Rubik's cube). Do it as number swaps.</li>
+      <li><b>Done.</b> The moved and renamed home grid is the solution. For a puzzle with one solution it must be the answer.</li>
+    </ol>
+    <table class="notation">
+      <tr><td>T</td><td>Turn the cube — rows ⇄ columns</td></tr>
+      <tr><td>B1↔B3</td><td>Swap two bands (groups of rows)</td></tr>
+      <tr><td>R2↔R3</td><td>Swap two rows inside the same band</td></tr>
+      <tr><td>S1↔S2</td><td>Swap two stacks (groups of columns)</td></tr>
+      <tr><td>C4↔C6</td><td>Swap two columns inside the same stack</td></tr>
+      <tr><td>3⇄7</td><td>Swap two numbers everywhere</td></tr>
+    </table>
+    <p class="note"><b>Why not every puzzle?</b> These moves never leave the "family" of the home grid. Sudoku has about 5.47 billion essentially different solutions, so a puzzle whose solution comes from another family has no move sequence — solve it with the layer or cube method in the game instead.</p>
+  </div>
+</div>
+<div id="busy" class="busy hidden">Working…</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const SYMBOLS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const sym = v => v > 0 ? SYMBOLS[v] : "";
+function boxShape(N) { let best = null; for (let r = 1; r <= N; r++) if (N % r === 0) { const c = N / r; if (r <= c) { const d = Math.abs(r - Math.sqrt(N)); if (!best || d < best[0]) best = [d, r, c]; } } return [best[1], best[2]]; }
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+function perms(n) { if (n === 1) return [[0]]; const out = []; for (const p of perms(n - 1)) for (let i = 0; i <= p.length; i++) out.push([...p.slice(0, i), n - 1, ...p.slice(i)]); return out; }
+const hue = (d, N) => Math.round((d - 1) * 360 / N);
+
+let N = 9, BR = 3, BC = 3, puzzle = new Array(81).fill(0), editing = false, sel = -1;
+
+/* ---------- geometry & a small solver (for making puzzles with one solution) ---------- */
+function geo() { [BR, BC] = boxShape(N); }
+const boxOf = (r, c) => Math.floor(r / BR) * (N / BC) + Math.floor(c / BC);
+function countSolutions(p, limit, budget) {
+  const g = p.slice(), rm = new Int32Array(N), cm = new Int32Array(N), bm = new Int32Array(N), full = (1 << (N + 1)) - 2;
+  for (let i = 0; i < N * N; i++) if (g[i]) { const b = 1 << g[i], r = (i / N) | 0, c = i % N; if ((rm[r] | cm[c] | bm[boxOf(r, c)]) & b) return 0; rm[r] |= b; cm[c] |= b; bm[boxOf(r, c)] |= b; }
+  let count = 0, nodes = 0;
+  (function rec() {
+    if (count >= limit || ++nodes > budget) return;
+    let best = -1, bc = 99, bmask = 0;
+    for (let i = 0; i < N * N; i++) if (!g[i]) { const r = (i / N) | 0, c = i % N, m = full & ~(rm[r] | cm[c] | bm[boxOf(r, c)]); let k = 0, x = m; while (x) { x &= x - 1; k++; } if (k < bc) { bc = k; best = i; bmask = m; if (k < 2) break; } }
+    if (best < 0) { count++; return; }
+    const r = (best / N) | 0, c = best % N, b0 = boxOf(r, c);
+    for (let d = 1; d <= N; d++) if (bmask & (1 << d)) {
+      const b = 1 << d; g[best] = d; rm[r] |= b; cm[c] |= b; bm[b0] |= b; rec();
+      g[best] = 0; rm[r] &= ~b; cm[c] &= ~b; bm[b0] &= ~b; if (count >= limit) return;
+    }
+  })();
+  return nodes > budget ? -1 : count;
+}
+const home = (r, c) => (r * BC + Math.floor(r / BR) + c) % N + 1;
+
+// A classic-family puzzle: scramble the home grid with moves, then remove clues while the solution stays unique
+function classicPuzzle(level) {
+  const nb = N / BR, ns = N / BC;
+  const rowOrder = shuffle([...Array(nb).keys()]).flatMap(b => shuffle([...Array(BR).keys()]).map(k => b * BR + k));
+  const colOrder = shuffle([...Array(ns).keys()]).flatMap(s => shuffle([...Array(BC).keys()]).map(k => s * BC + k));
+  const relabel = shuffle([...Array(N).keys()].map(i => i + 1));
+  const turn = BR === BC && Math.random() < 0.5;
+  const sol = [];
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const hr = rowOrder[r], hc = colOrder[c];
+    sol.push(relabel[(turn ? home(hc, hr) : home(hr, hc)) - 1]);
+  }
+  return carve(sol, level);
+}
+// any family: random fill, fewest-options cell first
+function variedPuzzle(level) {
+  const g = new Array(N * N).fill(0), rm = new Int32Array(N), cm = new Int32Array(N), bm = new Int32Array(N), full = (1 << (N + 1)) - 2;
+  let nodes = 0;
+  const rec = () => {
+    if (++nodes > 200000) return false;
+    let best = -1, bc = 99, bmask = 0;
+    for (let i = 0; i < N * N; i++) if (!g[i]) { const r = (i / N) | 0, c = i % N, m = full & ~(rm[r] | cm[c] | bm[boxOf(r, c)]); let k = 0, x = m; while (x) { x &= x - 1; k++; } if (k < bc) { bc = k; best = i; bmask = m; if (k < 2) break; } }
+    if (best < 0) return true;
+    if (!bc) return false;
+    const r = (best / N) | 0, c = best % N, b0 = boxOf(r, c), ds = [];
+    for (let d = 1; d <= N; d++) if (bmask & (1 << d)) ds.push(d);
+    for (const d of shuffle(ds)) { const b = 1 << d; g[best] = d; rm[r] |= b; cm[c] |= b; bm[b0] |= b; if (rec()) return true; g[best] = 0; rm[r] &= ~b; cm[c] &= ~b; bm[b0] &= ~b; }
+    return false;
+  };
+  return rec() ? carve(g, level) : classicPuzzle(level);
+}
+function carve(sol, level) {
+  const ratio = { easy: 0.5, medium: 0.4, hard: 0.32 }[level], target = Math.round(N * N * ratio), p = sol.slice();
+  const budget = N <= 9 ? 20000 : 4000;
+  let clues = N * N;
+  const pairs = []; for (let i = 0; i <= (N * N - 1) / 2; i++) pairs.push([i, N * N - 1 - i]);
+  for (const [a, b] of shuffle(pairs)) {
+    if (clues <= target) break;
+    const va = p[a], vb = p[b]; p[a] = 0; p[b] = 0;
+    if (countSolutions(p, 2, budget) === 1) clues -= a === b ? 1 : 2; else { p[a] = va; p[b] = vb; }
+  }
+  return p;
+}
+
+/* ---------- finding the moves ---------- */
+// Search band slots and stack slots alternately; prune as soon as the givens can't share one number renaming.
+function findMoves(p) {
+  const nb = N / BR, ns = N / BC, PR = perms(BR), PC = perms(BC);
+  const givens = []; for (let i = 0; i < N * N; i++) if (p[i]) givens.push([(i / N) | 0, i % N, p[i]]);
+  const byRow = [...Array(N)].map(() => []); for (const g of givens) byRow[g[0]].push(g);
+  for (const turn of BR === BC ? [false, true] : [false]) {
+    const H = turn ? (r, c) => home(c, r) : home;
+    const rowSrc = new Int16Array(N).fill(-1), colSrc = new Int16Array(N).fill(-1);
+    const fwd = new Int16Array(N + 1), back = new Int16Array(N + 1);
+    const usedB = new Uint8Array(nb), usedS = new Uint8Array(ns);
+    let nodes = 0;
+    // assign and check, with an undo log
+    const check = (cells, log) => {
+      for (const [r, c, v] of cells) {
+        if (rowSrc[r] < 0 || colSrc[c] < 0) continue;
+        const hv = H(rowSrc[r], colSrc[c]);
+        if (fwd[hv] === 0 && back[v] === 0) { fwd[hv] = v; back[v] = hv; log.push(hv, v); }
+        else if (fwd[hv] !== v || back[v] !== hv) return false;
+      }
+      return true;
+    };
+    const undo = log => { for (let k = 0; k < log.length; k += 2) { fwd[log[k]] = 0; back[log[k + 1]] = 0; } };
+    const slots = []; for (let k = 0; k < Math.max(nb, ns); k++) { if (k < nb) slots.push(["band", k]); if (k < ns) slots.push(["stack", k]); }
+    const rec = si => {
+      if (++nodes > 400000) return false;
+      if (si === slots.length) return true;
+      const [kind, k] = slots[si];
+      if (kind === "band") {
+        for (let b = 0; b < nb; b++) if (!usedB[b]) for (const pr of PR) {
+          usedB[b] = 1; for (let j = 0; j < BR; j++) rowSrc[k * BR + j] = b * BR + pr[j];
+          const log = [], cells = []; for (let j = 0; j < BR; j++) cells.push(...byRow[k * BR + j]);
+          if (check(cells, log) && rec(si + 1)) return true;
+          undo(log); usedB[b] = 0; for (let j = 0; j < BR; j++) rowSrc[k * BR + j] = -1;
+        }
+      } else {
+        for (let s = 0; s < ns; s++) if (!usedS[s]) for (const pc of PC) {
+          usedS[s] = 1; for (let j = 0; j < BC; j++) colSrc[k * BC + j] = s * BC + pc[j];
+          const log = [], cells = givens.filter(g => Math.floor(g[1] / BC) === k);
+          if (check(cells, log) && rec(si + 1)) return true;
+          undo(log); usedS[s] = 0; for (let j = 0; j < BC; j++) colSrc[k * BC + j] = -1;
+        }
+      }
+      return false;
+    };
+    if (rec(0)) {
+      const map = Array.from(fwd), free = []; for (let v = 1; v <= N; v++) if (!back[v]) free.push(v);
+      for (let hv = 1; hv <= N; hv++) if (!map[hv]) map[hv] = free.shift();
+      return { turn, rows: Array.from(rowSrc), cols: Array.from(colSrc), map, nodes };
+    }
+  }
+  return null;
+}
+
+// Turn the arrangement into a list of simple moves (swaps), in a fixed systematic order
+function moveList(sol) {
+  const moves = [], nb = N / BR, ns = N / BC;
+  if (sol.turn) moves.push({ t: "turn" });
+  const cur = [...Array(N).keys()]; // cur[pos] = home row now at pos
+  for (let k = 0; k < nb; k++) {
+    const want = Math.floor(sol.rows[k * BR] / BR);
+    const j = [...Array(nb).keys()].find(q => Math.floor(cur[q * BR] / BR) === want);
+    if (j !== k) { moves.push({ t: "band", a: k, b: j }); for (let x = 0; x < BR; x++) [cur[k * BR + x], cur[j * BR + x]] = [cur[j * BR + x], cur[k * BR + x]]; }
+  }
+  for (let p = 0; p < N; p++) {
+    const q = cur.indexOf(sol.rows[p]);
+    if (q !== p) { moves.push({ t: "row", a: p, b: q }); [cur[p], cur[q]] = [cur[q], cur[p]]; }
+  }
+  const cc = [...Array(N).keys()];
+  for (let k = 0; k < ns; k++) {
+    const want = Math.floor(sol.cols[k * BC] / BC);
+    const j = [...Array(ns).keys()].find(q => Math.floor(cc[q * BC] / BC) === want);
+    if (j !== k) { moves.push({ t: "stack", a: k, b: j }); for (let x = 0; x < BC; x++) [cc[k * BC + x], cc[j * BC + x]] = [cc[j * BC + x], cc[k * BC + x]]; }
+  }
+  for (let p = 0; p < N; p++) {
+    const q = cc.indexOf(sol.cols[p]);
+    if (q !== p) { moves.push({ t: "col", a: p, b: q }); [cc[p], cc[q]] = [cc[q], cc[p]]; }
+  }
+  const now = [...Array(N + 1).keys()]; // now[homeValue] = value shown
+  for (let t = 1; t <= N; t++) {
+    if (now[t] === sol.map[t]) continue;
+    const a = now[t], b = sol.map[t];
+    moves.push({ t: "num", a, b });
+    for (let x = 1; x <= N; x++) { if (now[x] === a) now[x] = b; else if (now[x] === b) now[x] = a; }
+  }
+  return moves;
+}
+const notation = m => ({ turn: "T", band: `B${m.a + 1}↔B${m.b + 1}`, row: `R${m.a + 1}↔R${m.b + 1}`, stack: `S${m.a + 1}↔S${m.b + 1}`, col: `C${m.a + 1}↔C${m.b + 1}`, num: `${sym(m.a)}⇄${sym(m.b)}` })[m.t];
+const explain = m => ({
+  turn: "Turn the cube: every row becomes a column. Rows, columns and boxes are still valid.",
+  band: `Swap bands ${m.a + 1} and ${m.b + 1}: ${BR} whole rows move together, so every box moves with them.`,
+  row: `Swap rows ${m.a + 1} and ${m.b + 1} — both are in band ${Math.floor(m.a / BR) + 1}, so each box keeps the same numbers.`,
+  stack: `Swap stacks ${m.a + 1} and ${m.b + 1}: ${BC} whole columns move together.`,
+  col: `Swap columns ${m.a + 1} and ${m.b + 1} — both are in stack ${Math.floor(m.a / BC) + 1}.`,
+  num: `Swap numbers ${sym(m.a)} ⇄ ${sym(m.b)} everywhere — like repainting two colours on a Rubik's cube.`,
+})[m.t];
+
+/* ---------- puzzle editor ---------- */
+function buildPGrid() {
+  const g = $("pgrid"); g.innerHTML = "";
+  g.style.gridTemplateColumns = `repeat(${N},1fr)`; g.style.gridTemplateRows = `repeat(${N},1fr)`;
+  for (let i = 0; i < N * N; i++) {
+    const d = document.createElement("div"), r = (i / N) | 0, c = i % N;
+    if (c === N - 1) d.classList.add("lc"); else if ((c + 1) % BC === 0) d.classList.add("br");
+    if (r === N - 1) d.classList.add("lr"); else if ((r + 1) % BR === 0) d.classList.add("bb");
+    d.addEventListener("click", () => { if (!editing) return; sel = i; renderPGrid(); });
+    g.appendChild(d);
+  }
+  const w = Math.min(420, g.clientWidth || 340) / N;
+  g.style.setProperty("--pfs", Math.max(9, w * 0.55) + "px");
+  const pad = $("pad"); pad.innerHTML = ""; pad.style.gridTemplateColumns = `repeat(${Math.min(N, 9) + (N > 9 ? 0 : 1)},1fr)`;
+  if (N > 9) pad.style.gridTemplateColumns = `repeat(${Math.ceil((N + 1) / 2)},1fr)`;
+  for (let d = 1; d <= N; d++) { const b = document.createElement("button"); b.textContent = sym(d); b.addEventListener("click", () => setCell(d)); pad.appendChild(b); }
+  const e = document.createElement("button"); e.textContent = "⌫"; e.addEventListener("click", () => setCell(0)); pad.appendChild(e);
+}
+function renderPGrid() {
+  [...$("pgrid").children].forEach((el, i) => {
+    el.textContent = sym(puzzle[i]);
+    el.classList.toggle("sel", editing && i === sel);
+    el.style.color = puzzle[i] ? `hsl(${hue(puzzle[i], N)} 65% 38%)` : "";
+  });
+  $("clueCount").textContent = `${puzzle.filter(Boolean).length} givens`;
+  if (typeof cReset === "function" && !editing) cReset();
+}
+function setCell(d) { if (sel < 0) return; puzzle[sel] = d; renderPGrid(); hideAnim(); }
+function setSize(n) {
+  N = n; geo(); puzzle = new Array(N * N).fill(0); sel = -1;
+  $("size").value = String(N); buildPGrid(); renderPGrid(); hideAnim(); $("findMsg").textContent = "";
+}
+
+/* ---------- animation ---------- */
+let A = null; // { moves, k, timer, tiles:[{hv, r, c, el}], ghosts }
+function hideAnim() { stopPlay(); $("animCard").classList.add("hidden"); A = null; }
+function stateAt(k) {
+  // start: tile id = home cell; returns positions & values after k moves
+  const pos = [], val = [];
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) { pos.push([r, c]); val.push(home(r, c)); }
+  for (let m = 0; m < k; m++) applyMove(A.moves[m], pos, val);
+  return { pos, val };
+}
+function applyMove(m, pos, val) {
+  if (m.t === "turn") { for (const p of pos) [p[0], p[1]] = [p[1], p[0]]; return; }
+  if (m.t === "num") { for (let i = 0; i < val.length; i++) { if (val[i] === m.a) val[i] = m.b; else if (val[i] === m.b) val[i] = m.a; } return; }
+  const axis = m.t === "band" || m.t === "row" ? 0 : 1, size = m.t === "band" ? BR : m.t === "stack" ? BC : 1;
+  for (const p of pos) {
+    const x = p[axis], ga = Math.floor(x / size), off = x % size;
+    if (ga === m.a) p[axis] = m.b * size + off; else if (ga === m.b) p[axis] = m.a * size + off;
+  }
+}
+function buildRBoard() {
+  const inner = $("rinner"); inner.innerHTML = "";
+  const gap = N > 9 ? 1.5 : 2.5, cell = 100 / N;
+  const W = $("rboard").clientWidth || 340;
+  inner.style.setProperty("--rfs", Math.max(8, W / N * 0.5) + "px");
+  inner.style.setProperty("--gfs", Math.max(7, W / N * 0.26) + "px");
+  A.tiles = [];
+  for (let i = 0; i < N * N; i++) {
+    const el = document.createElement("div"); el.className = "tile";
+    el.style.width = `calc(${cell}% - ${gap}px)`; el.style.height = `calc(${cell}% - ${gap}px)`;
+    inner.appendChild(el); A.tiles.push(el);
+  }
+  // box frames
+  for (let br = 0; br < N / BR; br++) for (let bc = 0; bc < N / BC; bc++) {
+    const f = document.createElement("div"); f.className = "frame";
+    f.style.left = `calc(${bc * BC * cell}% - 2px)`; f.style.top = `calc(${br * BR * cell}% - 2px)`;
+    f.style.width = `calc(${BC * cell}% + 1px)`; f.style.height = `calc(${BR * cell}% + 1px)`;
+    inner.appendChild(f);
+  }
+  // givens as corner ghosts on fixed board positions
+  A.ghosts = [];
+  for (let i = 0; i < N * N; i++) {
+    const g = document.createElement("div"); g.className = "ghost";
+    g.style.left = `${(i % N) * cell}%`; g.style.top = `${((i / N) | 0) * cell}%`;
+    g.style.width = `calc(${cell}% - ${gap}px)`; g.style.height = `calc(${cell}% - ${gap}px)`;
+    g.textContent = sym(puzzle[i]); inner.appendChild(g); A.ghosts.push(g);
+  }
+  A.hl = document.createElement("div"); A.hl.className = "hlrow hidden"; inner.appendChild(A.hl);
+}
+function drawState(k, animate) {
+  const { pos, val } = stateAt(k), cell = 100 / N, m = k > 0 ? A.moves[k - 1] : null;
+  $("rinner").classList.toggle("noanim", !animate);
+  A.tiles.forEach((el, i) => {
+    const [r, c] = pos[i];
+    el.style.left = `${c * cell}%`; el.style.top = `${r * cell}%`;
+    el.style.backgroundColor = `hsl(${hue(val[i], N)} 72% 62%)`;
+    el.textContent = sym(val[i]);
+    el.classList.remove("flash", "moving");
+    if (animate && m && m.t === "num" && (val[i] === m.a || val[i] === m.b)) { void el.offsetWidth; el.classList.add("flash"); }
+  });
+  // highlight the moved band/row/stack/column
+  const hl = A.hl;
+  if (m && m.t !== "num" && m.t !== "turn") {
+    const rowsAxis = m.t === "band" || m.t === "row", size = m.t === "band" ? BR : m.t === "stack" ? BC : 1;
+    hl.classList.remove("hidden");
+    const a = Math.min(m.a, m.b) * size, b = Math.max(m.a, m.b) * size + size;
+    if (rowsAxis) { hl.style.left = "-3px"; hl.style.width = "calc(100% + 4px)"; hl.style.top = `calc(${a * cell}% - 3px)`; hl.style.height = `calc(${(b - a) * cell}% + 3px)`; }
+    else { hl.style.top = "-3px"; hl.style.height = "calc(100% + 4px)"; hl.style.left = `calc(${a * cell}% - 3px)`; hl.style.width = `calc(${(b - a) * cell}% + 3px)`; }
+  } else hl.classList.add("hidden");
+  // at the end, show that every given is matched
+  const last = k === A.moves.length;
+  const at = new Map(); pos.forEach(([r, c], i) => at.set(r * N + c, val[i]));
+  A.ghosts.forEach((g, i) => { g.classList.toggle("hit", last && puzzle[i] && at.get(i) === puzzle[i]); g.classList.toggle("miss", last && puzzle[i] && at.get(i) !== puzzle[i]); });
+  $("stepNo").textContent = `Move ${k} of ${A.moves.length}`;
+  $("stepText").textContent = k === 0 ? `The home grid. ${A.moves.length} moves will turn it into the solution.`
+    : last ? `${explain(m)} Done — the grid now matches all ${puzzle.filter(Boolean).length} givens, so it is the solution.` : explain(m);
+  [...$("moveList").children].forEach((el, j) => { el.classList.toggle("done", j < k - 1); el.classList.toggle("cur", j === k - 1); });
+  $("aPrev").disabled = k === 0; $("aNext").disabled = last;
+  $("aPlay").textContent = A.timer ? "⏸ Pause" : last ? "↺ Replay" : "▶ Play";
+}
+function go(k, animate) { A.k = Math.max(0, Math.min(A.moves.length, k)); drawState(A.k, animate); }
+function stopPlay() { if (A && A.timer) { clearInterval(A.timer); A.timer = null; } }
+function play() {
+  if (A.timer) { stopPlay(); drawState(A.k, false); return; }
+  if (A.k >= A.moves.length) go(0, false);
+  A.timer = setInterval(() => { if (A.k >= A.moves.length) { stopPlay(); drawState(A.k, false); return; } go(A.k + 1, true); }, +$("aSpeed").value);
+  drawState(A.k, false);
+}
+
+function solve() {
+  const clues = puzzle.filter(Boolean).length;
+  const msg = $("findMsg"); msg.className = "msg";
+  if (clues < N) { msg.textContent = "Add more givens first."; msg.classList.add("bad"); return; }
+  if (countSolutions(puzzle, 1, 1e6) === 0) { msg.textContent = "These givens break the rules or have no solution."; msg.classList.add("bad"); hideAnim(); return; }
+  $("busy").classList.remove("hidden");
+  setTimeout(() => {
+    const t = performance.now(), sol = findMoves(puzzle), ms = Math.round(performance.now() - t);
+    $("busy").classList.add("hidden");
+    if (!sol) {
+      msg.textContent = "No move sequence exists: this puzzle's solution is from a different family than the home grid. Use the layer or cube method in the game.";
+      msg.classList.add("bad"); hideAnim(); return;
+    }
+    stopPlay();
+    A = { moves: moveList(sol), k: 0, timer: null };
+    msg.textContent = `Found ${A.moves.length} moves in ${ms} ms.`; msg.classList.add("ok");
+    $("animCard").classList.remove("hidden");
+    buildRBoard();
+    const list = $("moveList"); list.innerHTML = "";
+    A.moves.forEach((m, j) => { const s = document.createElement("span"); s.textContent = notation(m); s.title = explain(m); s.addEventListener("click", () => { stopPlay(); go(j + 1, false); }); list.appendChild(s); });
+    go(0, false);
+    $("animCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 30);
+}
+
+/* ---------- colour mode: static home grid, pin, logic, swap inside boxes ---------- */
+const Cm = { timer: null, running: false };
+const colourOf = v => `hsl(${hue(v, N)} 72% 58%)`;
+const swatch = v => `<i class="sw" style="background:${colourOf(v)}"></i>`;
+const SPEEDS = {
+  slow:   { ev: 900, tries: 400000, toBest: true,  delay: 900, quick: false },
+  normal: { ev: 320, tries: 400000, toBest: true,  delay: 320, quick: false },
+  fast:   { ev: 70,  tries: 25000,  toBest: false, delay: 40,  quick: true },
+  turbo:  { ev: 0,   tries: 150000, toBest: false, delay: 0,   quick: true },
+};
+const cellName = i => `row ${((i / N) | 0) + 1}, column ${i % N + 1}`;
+const boxCells = b => { const out = [], br = Math.floor(b / (N / BC)) * BR, bc = (b % (N / BC)) * BC; for (let r = br; r < br + BR; r++) for (let c = bc; c < bc + BC; c++) out.push(r * N + c); return out; };
+
+// Logic first: singles in all four directions of the cube, recorded in the order found
+function logicPins(p) {
+  const g = p.slice(), out = [], full = (1 << (N + 1)) - 2;
+  const units = [];
+  for (let r = 0; r < N; r++) units.push(["Row " + (r + 1), [...Array(N).keys()].map(c => r * N + c)]);
+  for (let c = 0; c < N; c++) units.push(["Column " + (c + 1), [...Array(N).keys()].map(r => r * N + c)]);
+  for (let b = 0; b < N; b++) units.push(["Box " + (b + 1), boxCells(b)]);
+  const cand = i => { const r = (i / N) | 0, c = i % N; let used = 0; for (let k = 0; k < N; k++) { used |= 1 << g[r * N + k]; used |= 1 << g[k * N + c]; } for (const j of boxCells(boxOf(r, c))) used |= 1 << g[j]; return full & ~used; };
+  for (let changed = true; changed;) {
+    changed = false;
+    for (let i = 0; i < N * N; i++) if (!g[i]) {
+      const m = cand(i); if (m && !(m & (m - 1))) { const v = Math.log2(m); g[i] = v; out.push({ cell: i, v, why: `Only ${swatch(v)} can go at ${cellName(i)} — every other colour already sits in its row, column or box.` }); changed = true; }
+    }
+    for (const [name, cells] of units) for (let v = 1; v <= N; v++) {
+      if (cells.some(i => g[i] === v)) continue;
+      const spots = cells.filter(i => !g[i] && (cand(i) & (1 << v)));
+      if (spots.length === 1) { g[spots[0]] = v; out.push({ cell: spots[0], v, why: `${name} has only one place left for ${swatch(v)}: ${cellName(spots[0])}.` }); changed = true; }
+    }
+  }
+  return out;
+}
+function cReset() {
+  cStop();
+  Cm.g = []; for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) Cm.g.push(home(r, c));
+  Cm.pin = new Uint8Array(N * N); Cm.kept = 0; Cm.tried = 0; Cm.pinSwaps = 0; Cm.phase = "home"; Cm.done = false;
+  Cm.events = [];
+  for (let i = 0; i < N * N; i++) if (puzzle[i]) Cm.events.push({ kind: 1, cell: i, v: puzzle[i], why: `Given: pin ${swatch(puzzle[i])} at ${cellName(i)} by swapping it inside box ${boxOf((i / N) | 0, i % N) + 1}.` });
+  Cm.nGiven = Cm.events.length;
+  if ($("cLogic").checked && puzzle.filter(Boolean).length >= N && countSolutions(puzzle, 1, 200000) !== 0)
+    for (const e of logicPins(puzzle)) Cm.events.push({ kind: 2, ...e });
+  Cm.nLogic = Cm.events.length - Cm.nGiven;
+  // tiles: one coloured sticker per cell of the home grid
+  const inner = $("cinner"); inner.innerHTML = "";
+  const gap = N > 9 ? 1.5 : 2.5, cell = 100 / N, W = $("cboard").clientWidth || 340;
+  inner.style.setProperty("--rfs", Math.max(8, W / N * 0.5) + "px");
+  Cm.tileAt = [];
+  for (let i = 0; i < N * N; i++) {
+    const el = document.createElement("div"); el.className = "tile"; el.dataset.v = Cm.g[i];
+    el.style.width = `calc(${cell}% - ${gap}px)`; el.style.height = `calc(${cell}% - ${gap}px)`;
+    el.style.backgroundColor = colourOf(Cm.g[i]);
+    inner.appendChild(el); Cm.tileAt.push(el);
+  }
+  for (let br = 0; br < N / BR; br++) for (let bc = 0; bc < N / BC; bc++) {
+    const f = document.createElement("div"); f.className = "frame";
+    f.style.left = `calc(${bc * BC * cell}% - 2px)`; f.style.top = `calc(${br * BR * cell}% - 2px)`;
+    f.style.width = `calc(${BC * cell}% + 1px)`; f.style.height = `calc(${BR * cell}% + 1px)`;
+    inner.appendChild(f);
+  }
+  recount();
+  cRender([]);
+  cSay("Home grid", `The same start for every puzzle: each box already holds one of each colour. ${Cm.nGiven} givens to pin${$("cLogic").checked ? `, then ${Cm.nLogic} colours proved by logic` : ""}, then the colour search. Press Start.`);
+}
+function recount() {
+  Cm.rows = [...Array(N)].map(() => new Int16Array(N + 1)); Cm.cols = [...Array(N)].map(() => new Int16Array(N + 1));
+  for (let i = 0; i < N * N; i++) { Cm.rows[(i / N) | 0][Cm.g[i]]++; Cm.cols[i % N][Cm.g[i]]++; }
+  Cm.cost = 0; for (let k = 0; k < N; k++) for (let v = 1; v <= N; v++) { if (!Cm.rows[k][v]) Cm.cost++; if (!Cm.cols[k][v]) Cm.cost++; }
+}
+function swapCells(a, b) { // swap colours of two cells in the same box, keeping row/column counts and score up to date
+  const va = Cm.g[a], vb = Cm.g[b], ra = (a / N) | 0, ca = a % N, rb = (b / N) | 0, cb = b % N;
+  const dec = (cnt, v) => { cnt[v]--; if (!cnt[v]) Cm.cost++; }, inc = (cnt, v) => { if (!cnt[v]) Cm.cost--; cnt[v]++; };
+  dec(Cm.rows[ra], va); dec(Cm.cols[ca], va); inc(Cm.rows[ra], vb); inc(Cm.cols[ca], vb);
+  dec(Cm.rows[rb], vb); dec(Cm.cols[cb], vb); inc(Cm.rows[rb], va); inc(Cm.cols[cb], va);
+  Cm.g[a] = vb; Cm.g[b] = va; [Cm.tileAt[a], Cm.tileAt[b]] = [Cm.tileAt[b], Cm.tileAt[a]];
+}
+function cRender(hot) {
+  const cell = 100 / N, nums = $("cNums").checked;
+  $("cinner").classList.toggle("quick", SPEEDS[$("cSpeed").value].quick);
+  Cm.tileAt.forEach((el, i) => {
+    const r = (i / N) | 0, c = i % N, v = Cm.g[i];
+    el.style.left = `${c * cell}%`; el.style.top = `${r * cell}%`;
+    el.textContent = nums ? sym(v) : "";
+    el.classList.toggle("pin", Cm.pin[i] === 1); el.classList.toggle("lpin", Cm.pin[i] === 2);
+    el.classList.toggle("conf", Cm.phase === "search" && !Cm.pin[i] && (Cm.rows[r][v] > 1 || Cm.cols[c][v] > 1));
+    el.classList.toggle("hot", hot.includes(i));
+  });
+  $("cScore").textContent = Cm.cost;
+  $("cPinned").textContent = Cm.pin.reduce((a, b) => a + (b ? 1 : 0), 0);
+  $("cKept").textContent = Cm.kept.toLocaleString();
+  $("cTried").textContent = Cm.tried.toLocaleString();
+  $("cPlay").textContent = Cm.running ? "⏸ Pause" : Cm.done ? "↺ Again" : Cm.phase === "home" ? "▶ Start" : "▶ Continue";
+}
+function cSay(phase, html) { $("cPhase").textContent = phase; $("cText").innerHTML = html; }
+function applyPin(e) {
+  const box = boxCells(boxOf((e.cell / N) | 0, e.cell % N)), j = box.find(k => Cm.g[k] === e.v);
+  const hot = [e.cell];
+  if (j !== e.cell) { swapCells(e.cell, j); Cm.kept++; Cm.pinSwaps++; hot.push(j); }
+  Cm.pin[e.cell] = e.kind;
+  return hot;
+}
+function startSearch() {
+  Cm.phase = "search";
+  Cm.free = []; for (let b = 0; b < N; b++) { const f = boxCells(b).filter(i => !Cm.pin[i]); if (f.length >= 2) Cm.free.push(f); }
+  Cm.T = 0.6; Cm.best = Cm.cost; Cm.stuck = 0;
+}
+function searchChunk(maxTries, toBest) {
+  const startBest = Cm.best;
+  for (let t = 0; t < maxTries; t++) {
+    if (!Cm.cost) return "done";
+    const f = Cm.free[(Math.random() * Cm.free.length) | 0];
+    const a = f[(Math.random() * f.length) | 0], b = f[(Math.random() * f.length) | 0];
+    if (a === b || Cm.g[a] === Cm.g[b]) continue;
+    Cm.tried++;
+    const before = Cm.cost; swapCells(a, b);
+    const d = Cm.cost - before;
+    if (d <= 0 || Math.random() < Math.exp(-d / Cm.T)) {
+      Cm.kept++;
+      if (Cm.cost < Cm.best) { Cm.best = Cm.cost; Cm.stuck = 0; if (toBest) { Cm.lastHot = [a, b]; return "best"; } } else Cm.stuck++;
+    } else { swapCells(a, b); Cm.stuck++; }
+    Cm.T = Math.max(0.05, Cm.T * 0.99995);
+    if (Cm.stuck > 40000) { Cm.T = 0.6; Cm.stuck = 0; Cm.best = Cm.cost; } // reheat when stuck
+  }
+  return startBest === Cm.best ? "chunk" : "chunk";
+}
+function tick(single) {
+  const sp = SPEEDS[$("cSpeed").value];
+  if (Cm.phase === "home") Cm.phase = "pin";
+  if (Cm.events.length) {
+    let hot = [], e;
+    do { e = Cm.events.shift(); hot = applyPin(e); } while (sp.ev === 0 && Cm.events.length && !single);
+    cRender(hot);
+    cSay(e.kind === 1 ? `Pin the givens · ${Cm.pin.reduce((a, b) => a + (b === 1), 0)} of ${Cm.nGiven}` : `Logic first · ${Cm.pin.reduce((a, b) => a + (b === 2), 0)} of ${Cm.nLogic}`, e.why);
+    return sp.ev;
+  }
+  if (Cm.phase !== "search") {
+    startSearch();
+    cRender([]);
+    if (!Cm.free.length || !Cm.cost) return finish();
+    cSay("Colour search", `Now swap two unpinned colours inside a box. Keep the swap if repeats go down — and sometimes even if not, to escape dead ends. ${Cm.cost} repeats to remove.`);
+    return sp.delay;
+  }
+  const res = searchChunk(single ? 1e6 : sp.tries, sp.toBest || single);
+  cRender(res === "best" ? Cm.lastHot : []);
+  if (res === "done" || !Cm.cost) return finish();
+  cSay("Colour search", `Swapping inside boxes… ${Cm.cost} repeat${Cm.cost === 1 ? "" : "s"} left.`);
+  const LIMIT = N <= 9 ? 30e6 : 80e6;
+  if (Cm.tried > LIMIT && !single) { cSay("Colour search", `Still ${Cm.cost} repeats after ${Cm.tried.toLocaleString()} tries. Press Continue to keep going${$("cLogic").checked ? "" : ", or Reset with Logic first on"}.`); return -1; }
+  return sp.delay;
+}
+function finish() {
+  Cm.done = true; Cm.phase = "done";
+  const ok = puzzle.every((v, i) => !v || Cm.g[i] === v) && Cm.cost === 0;
+  cStop(); cRender([]);
+  const pins = `${Cm.nGiven} givens pinned${Cm.nLogic ? ` and ${Cm.nLogic} colours proved by logic` : ""} (${Cm.pinSwaps} swaps)`;
+  cSay("Solved", ok
+    ? (Cm.tried
+        ? `No row, column or box repeats a colour. ${pins}, then the search kept ${(Cm.kept - Cm.pinSwaps).toLocaleString()} swaps out of ${Cm.tried.toLocaleString()} tried. Tick "Show numbers" to see the Sudoku.`
+        : `No row, column or box repeats a colour. ${pins} — logic proved every colour, so no search was needed. Tick "Show numbers" to see the Sudoku.`)
+    : "Stopped.");
+  return -1;
+}
+function cStop() { if (Cm.timer) clearTimeout(Cm.timer); Cm.timer = null; Cm.running = false; }
+function cLoop() {
+  const wait = tick(false);
+  if (wait < 0 || !Cm.running) { Cm.running = false; cRender([]); return; }
+  Cm.timer = setTimeout(cLoop, wait);
+}
+function cPlay() {
+  if (Cm.running) { cStop(); cRender([]); return; }
+  if (Cm.done) cReset();
+  if (puzzle.filter(Boolean).length < N) { cSay("Colour mode", "Add or make a puzzle first."); return; }
+  if (countSolutions(puzzle, 1, 200000) === 0) { cSay("Colour mode", "These givens break the rules — there is nothing to solve."); return; }
+  Cm.running = true; cRender([]); cLoop();
+}
+
+/* ---------- wiring ---------- */
+$("cPlay").addEventListener("click", cPlay);
+$("cReset").addEventListener("click", cReset);
+$("cStep").addEventListener("click", () => { cStop(); if (Cm.done) return; if (puzzle.filter(Boolean).length < N) return; const w = tick(true); cRender(w >= 0 && Cm.lastHot && Cm.phase === "search" ? Cm.lastHot : []); });
+$("cLogic").addEventListener("change", cReset);
+$("cNums").addEventListener("change", () => cRender([]));
+$("cSpeed").addEventListener("change", () => cRender([]));
+$("size").addEventListener("change", () => setSize(+$("size").value));
+$("newBtn").addEventListener("click", () => {
+  $("busy").classList.remove("hidden");
+  setTimeout(() => { puzzle = classicPuzzle($("level").value); editing = false; sel = -1; $("editBtn").classList.remove("on"); $("pad").classList.add("hidden"); renderPGrid(); hideAnim(); $("findMsg").textContent = ""; $("busy").classList.add("hidden"); }, 30);
+});
+$("newVariedBtn").addEventListener("click", () => {
+  $("busy").classList.remove("hidden");
+  setTimeout(() => { puzzle = variedPuzzle($("level").value); editing = false; sel = -1; $("editBtn").classList.remove("on"); $("pad").classList.add("hidden"); renderPGrid(); hideAnim(); $("findMsg").textContent = ""; $("busy").classList.add("hidden"); $("colCard").scrollIntoView({ behavior: "smooth", block: "start" }); }, 30);
+});
+$("editBtn").addEventListener("click", () => { editing = !editing; $("editBtn").classList.toggle("on", editing); $("pad").classList.toggle("hidden", !editing); if (editing && sel < 0) sel = 0; renderPGrid(); if (!editing) cReset(); });
+$("clearBtn").addEventListener("click", () => { puzzle = new Array(N * N).fill(0); renderPGrid(); hideAnim(); $("findMsg").textContent = ""; });
+$("solveBtn").addEventListener("click", solve);
+$("aPlay").addEventListener("click", play);
+$("aNext").addEventListener("click", () => { stopPlay(); go(A.k + 1, true); });
+$("aPrev").addEventListener("click", () => { stopPlay(); go(A.k - 1, false); });
+$("aReset").addEventListener("click", () => { stopPlay(); go(0, false); });
+$("aSpeed").addEventListener("change", () => { if (A && A.timer) { stopPlay(); play(); } });
+document.addEventListener("keydown", e => {
+  if (!editing || sel < 0) return;
+  const v = SYMBOLS.indexOf(e.key.toUpperCase());
+  if (v >= 1 && v <= N) setCell(v); else if (e.key === "Backspace" || e.key === "Delete" || e.key === "0") setCell(0);
+  else if (e.key.startsWith("Arrow")) { const r = (sel / N) | 0, c = sel % N; sel = e.key === "ArrowUp" ? ((r + N - 1) % N) * N + c : e.key === "ArrowDown" ? ((r + 1) % N) * N + c : e.key === "ArrowLeft" ? r * N + (c + N - 1) % N : r * N + (c + 1) % N; renderPGrid(); e.preventDefault(); }
+});
+
+// boot: a puzzle passed from the game (#n=9&p=...), else a new classic puzzle
+(function boot() {
+  const h = new URLSearchParams(location.hash.slice(1)), n = +h.get("n"), p = h.get("p") || "";
+  if ([4, 6, 9, 12, 16].includes(n) && p.length === n * n) {
+    setSize(n); puzzle = [...p].map(ch => Math.max(0, SYMBOLS.indexOf(ch.toUpperCase())));
+    if (puzzle.some(v => v > N)) puzzle = puzzle.map(v => v > N ? 0 : v);
+    renderPGrid(); solve();
+  } else { setSize(9); $("newBtn").click(); }
+})();
+</script>
+</body>
+</html>

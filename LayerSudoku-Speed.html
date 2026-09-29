@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Option Layers Speed</title>
+<style>
+:root{
+  --bg:#f5f4ef; --surface:#fff; --ink:#1c1e23; --muted:#6a6e77; --line:#d9dbe0; --accent:#2455c7; --accent-ink:#fff;
+  --btn:#e9e7e0; --btn-ink:#1c1e23; --ok:#2e9e57; --bad:#c42626; --hi:#d9822b;
+  --m1:#2455c7; --m2:#7c9cf0; --m3:#8a5cc7; --m4:#2e9e57; --m5:#6a6e77;
+  --src0:#1c1e23; --src1:#2455c7; --src2:#2e9e57; --src3:#d9822b;
+  --shadow:0 1px 2px rgba(0,0,0,.08),0 4px 14px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#131519; --surface:#1c1f25; --ink:#e7e8eb; --muted:#9aa0aa; --line:#383d46; --accent:#6f98ff; --accent-ink:#0d1117;
+    --btn:#2a2e36; --btn-ink:#e7e8eb; --hi:#f0a04b; --shadow:0 1px 2px rgba(0,0,0,.4);
+    --m1:#6f98ff; --m2:#a9bdf5; --m3:#b58cf0; --m4:#4cc27a; --m5:#9aa0aa;
+    --src0:#e7e8eb; --src1:#6f98ff; --src2:#4cc27a; --src3:#f0a04b;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:max(12px,env(safe-area-inset-top)) 16px 28px}
+.wrap{max-width:820px;margin:0 auto}
+h1{font-size:20px;margin:0 0 2px}
+.sub{font-size:12.5px;color:var(--muted);margin-bottom:10px}
+.card{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:12px;margin-top:12px}
+h2{font-size:15px;margin:0 0 6px}
+p{margin:6px 0}
+.note{font-size:12.5px;color:var(--muted)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+label{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center}
+select,button{font:inherit;color:var(--btn-ink);background:var(--btn);border:0;border-radius:10px;padding:8px 11px;cursor:pointer;max-width:100%;min-width:0}
+button.primary{background:var(--accent);color:var(--accent-ink);font-weight:600}
+button:disabled{opacity:.5}
+.prog{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:8px}
+.prog i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;font-size:12.5px;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{font-size:11px;color:var(--muted);font-weight:600}
+th:first-child,td:first-child{text-align:left}
+td.warn{color:var(--bad);font-weight:700}
+td.best{color:var(--ok);font-weight:700}
+.sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+svg{width:100%;height:auto;display:block}
+svg text{fill:var(--muted);font:12px -apple-system,Segoe UI,Roboto,sans-serif}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:4px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-2px}
+ul.find{margin:4px 0;padding-left:18px;font-size:14px}
+ul.find li{margin:4px 0}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:6px}
+.steps div{background:var(--bg);border-radius:10px;padding:8px 10px;font-size:13px}
+.steps b{display:block;font-size:14px;margin-bottom:2px}
+.board{display:grid;margin:8px auto 4px;border:2px solid var(--ink);border-radius:4px;overflow:hidden;width:min(100%,420px);aspect-ratio:1}
+.board div{display:flex;align-items:center;justify-content:center;font-weight:600;border-right:1px solid var(--line);border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.board div.br{border-right:2px solid var(--ink)} .board div.bb{border-bottom:2px solid var(--ink)}
+.board .s0{color:var(--src0);font-weight:800;background:var(--bg)} .board .s1{color:var(--src1)} .board .s2{color:var(--src2)} .board .s3{color:var(--src3)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chips span{background:var(--bg);border-radius:8px;padding:3px 8px;font-size:12.5px}
+.hidden{display:none}
+.lines{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}
+.lines svg text.t{fill:var(--ink);font-weight:600;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>⚡ Option Layers — Speed</h1>
+  <div class="sub">Only build the layers, AND and cut — how fast is it? · S. S. Soltan</div>
+
+  <div class="card">
+    <h2>The lean method</h2>
+    <div class="steps">
+      <div><b>1 · Build</b>Start with only the top 2 or 3 numbers (fewest open cells, or most repeated) and list their options — never all layers at once.</div>
+      <div><b>2 · Cut</b>Remove options that use a cell the number can no longer take.</div>
+      <div><b>3 · AND</b>A cell in every option is certain; a cell in no option is removed. One option left = locked.</div>
+      <div><b>Pillar</b>A cell that only one number can still reach gets that number.</div>
+    </div>
+    <p class="note">Repeat 2–3 while anything changes; only when stuck, add the next layer by the same rule. Guess (fewest options first) only when every layer is built and nothing changes. Left out on purpose: the step-by-step words and explanations — not just unprinted: nothing about the steps is recorded or counted (no rule per cell, no layer order, no counts of options or guesses) — the pair check, the 3/4-number group check and the probe. The data is packed in bit sets so every cut and AND is a few machine words.</p>
+  </div>
+
+  <div class="card">
+    <h2>Set up</h2>
+    <div class="row">
+      <label>Size <select id="size"><option value="4">4×4</option><option value="6">6×6</option><option value="9" selected>9×9</option><option value="12">12×12</option><option value="16">16×16</option><option value="20">20×20</option><option value="30">30×30</option></select></label>
+      <label>Level <select id="level"><option value="easy">Easy (50% givens)</option><option value="medium">Medium (40%)</option><option value="hard" selected>Hard (as few as stay unique)</option></select></label>
+      <label>Puzzles <select id="count"><option>10</option><option selected>30</option><option>60</option><option>100</option></select></label>
+    </div>
+    <div class="row">
+      <label>Lean: start with <select id="startK"><option value="2" selected>top 2 layers</option><option value="3">top 3 layers</option></select></label>
+      <label>chosen by <select id="orderBy"><option value="cells" selected>fewest open cells</option><option value="repeat">most repeated number</option><option value="tight">the numbers of the tightest cell (fewest possible numbers, like MRV)</option></select></label>
+    </div>
+    <div class="row" id="methods"></div>
+    <div class="row"><button id="run" class="primary">▶ Run speed test</button><button id="runAll">📈 Run all sizes</button><button id="stopBtn" disabled>■ Stop</button><span class="note" id="status"></span></div>
+    <div class="prog"><i id="prog"></i></div>
+    <p class="note">All puzzles are made first (each has exactly one solution), then every method solves the same puzzles one after another. Short solves are repeated and averaged, so times below 0.1 ms are still measured. Every answer is checked against the true solution. <b>Run all sizes</b> tests 4×4, 6×6, 9×9, 12×12, 16×16, 20×20 and 30×30 at the chosen level (at most 30 puzzles for 12×12, 10 for 16×16 and 20×20, 5 for 30×30) and draws the line graph. On 16×16 and bigger, removing givens stops near half the cells (about 43% at 16×16, 48% at 20×20, 53% at 30×30), because proving that each puzzle still has one answer gets too slow; so Medium and Hard give the same puzzles there.</p>
+  </div>
+
+  <div id="outAll" class="card hidden">
+    <h2>Speed by board size</h2>
+    <div id="chart3" class="lines"></div>
+    <div class="legend" id="legend3"></div>
+    <p class="note">Median time per puzzle on a normal (linear) scale. Left: every method ticked. Right: zoomed in without the full option layers, so the lean method and the classic solvers can be told apart.</p>
+    <div class="scroll"><table id="tblAll"></table></div>
+  </div>
+
+  <div id="out" class="hidden">
+    <div class="card">
+      <h2>What the test shows</h2>
+      <ul class="find" id="find"></ul>
+    </div>
+    <div class="card">
+      <h2>Time per puzzle</h2>
+      <div id="chart1"></div>
+      <div class="legend"><span>bar = median</span><span>● = average</span><span>| = slowest</span><span>· log scale</span></div>
+    </div>
+    <div class="card">
+      <h2>Results</h2>
+      <div class="scroll"><table id="tbl"></table></div>
+      <p class="note">Options built and guesses are counted for the full option layers only — the lean method keeps no counts (–). Guessed = puzzles where a guess was needed. MRV = backtracking on the cell with the fewest candidates; Dancing Links = Knuth's Algorithm X on the exact-cover form.</p>
+    </div>
+    <div class="card">
+      <h2>Lean vs full option layers, puzzle by puzzle</h2>
+      <div id="chart2"></div>
+      <p class="note">Each dot is one puzzle. Below the diagonal = the lean method was faster on that puzzle.</p>
+    </div>
+    <div class="card">
+      <h2>Look at one puzzle</h2>
+      <div class="row"><label>Puzzle <select id="pick"></select></label></div>
+      <div class="board" id="board"></div>
+      <div class="legend"><span><i style="background:var(--src0)"></i>given</span><span><i style="background:var(--src1)"></i>filled by the solver</span></div>
+      <div class="chips" id="chips"></div>
+      <p class="note" id="pickNote"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+let N = 9, BR = 3, BC = 3;
+function boxShape(n) { let best = null; for (let r = 1; r <= n; r++) if (n % r === 0) { const c = n / r; if (r <= c) { const d = Math.abs(r - Math.sqrt(n)); if (!best || d < best[0]) best = [d, r, c]; } } return [best[1], best[2]]; }
+const boxOf = (r, c) => Math.floor(r / BR) * (N / BC) + Math.floor(c / BC);
+
+/* ---------- geometry for the lean engine (bit sets) ---------- */
+let G = null;
+function setSize(n) {
+  N = n; [BR, BC] = boxShape(n);
+  const NN = N * N, W = Math.ceil(NN / 32), R = new Int16Array(NN), C = new Int16Array(NN), B = new Int16Array(NN);
+  const peer = new Uint32Array(NN * W), boxMask = new Uint32Array(N * W), valid = new Uint32Array(W);
+  for (let i = 0; i < NN; i++) { R[i] = (i / N) | 0; C[i] = i % N; B[i] = boxOf(R[i], C[i]); valid[i >> 5] |= 1 << (i & 31); boxMask[B[i] * W + (i >> 5)] |= 1 << (i & 31); }
+  for (let i = 0; i < NN; i++) for (let j = 0; j < NN; j++) if (i !== j && (R[i] === R[j] || C[i] === C[j] || B[i] === B[j])) peer[i * W + (j >> 5)] |= 1 << (j & 31);
+  const boxCells = [...Array(N)].map(() => []); for (let i = 0; i < NN; i++) boxCells[B[i]].push(i);
+  G = { N, NN, W, R, C, B, peer, boxMask, valid, boxCells };
+}
+const popc = x => { x = x - ((x >>> 1) & 0x55555555); x = (x & 0x33333333) + ((x >>> 2) & 0x33333333); return (Math.imul((x + (x >>> 4)) & 0x0F0F0F0F, 0x01010101) >>> 24); };
+
+/* ---------- the lean method: build, cut, AND (+ pillar), guess last ---------- */
+// Pure solving: no step words, no record of which rule filled a cell, no layer order, no counts of options, layers or guesses.
+function leanLayers(p, opt = {}) {
+  const cap = opt.cap || 300000, startK = opt.start || 2, rule = opt.order || "cells";
+  const { N, NN, W, R, C, B, peer, boxMask, valid, boxCells } = G;
+  const blank = () => ({ g: new Int8Array(NN), allow: new Uint32Array((N + 1) * W), placed: new Uint32Array((N + 1) * W), T: new Array(N + 1).fill(null), cnt: new Int32Array(N + 1), done: new Uint8Array(N + 1), big: new Uint8Array(N + 1), left: NN });
+  const clone = S => ({ g: S.g.slice(), allow: S.allow.slice(), placed: S.placed.slice(), T: S.T.slice(), cnt: S.cnt.slice(), done: S.done.slice(), big: S.big.slice(), left: S.left });
+  function place(S, i, d) {
+    if (S.g[i]) return S.g[i] === d;
+    const bw = i >> 5, bit = 1 << (i & 31);
+    if (!(S.allow[d * W + bw] & bit)) return false;
+    S.g[i] = d; S.left--;
+    S.placed[d * W + bw] |= bit;
+    for (let e = 1; e <= N; e++) if (e !== d) S.allow[e * W + bw] &= ~bit;
+    const o = d * W, po = i * W; for (let w = 0; w < W; w++) S.allow[o + w] &= ~peer[po + w];
+    return true;
+  }
+  // thinnest layer = smallest product of open cells per box (log sum)
+  function estimate(S, d) {
+    let s = 0; for (let b = 0; b < N; b++) { let k = 0; for (let w = 0; w < W; w++) k += popc(S.allow[d * W + w] & boxMask[b * W + w]); if (!k) return -1; s += Math.log(k); } return s;
+  }
+  // the next k layers to build: most repeated first (ties: fewest open cells), fewest open cells first, or the numbers of the tightest cell
+  function nextLayers(S, k) {
+    const c = [];
+    for (let d = 1; d <= N; d++) {
+      if (S.done[d] || S.T[d] || S.big[d]) continue;
+      let pl = 0, open = 0; for (let w = 0; w < W; w++) { pl += popc(S.placed[d * W + w]); open += popc(S.allow[d * W + w] & ~S.placed[d * W + w]); }
+      if (pl === N) { S.done[d] = 1; continue; }
+      const e = estimate(S, d); if (e < 0) return null;
+      c.push({ d, pl, open, e });
+    }
+    c.sort(rule === "repeat" ? (a, b) => b.pl - a.pl || a.open - b.open || a.e - b.e : (a, b) => a.open - b.open || a.e - b.e);
+    if (rule !== "tight") return c.slice(0, k).map(x => x.d);
+    // "tight": like MRV, look at cells — take the empty cell with the fewest possible numbers and build those numbers' layers
+    // (fewest open cells first among them); then the next tightest cell, until k layers are chosen
+    const ok = new Uint8Array(N + 1); for (const x of c) ok[x.d] = 1;
+    const cand = []; for (let i = 0; i < NN; i++) { const bw = i >> 5, bit = 1 << (i & 31); let f = 0; for (let d = 1; d <= N; d++) if (S.placed[d * W + bw] & bit) { f = 1; break; } if (f) continue;
+      const ds = []; for (let d = 1; d <= N; d++) if (S.allow[d * W + bw] & bit) ds.push(d); cand.push([ds.length, i, ds]); }
+    cand.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    const rank = new Array(N + 1); c.forEach((x, r) => rank[x.d] = r);
+    const out = [];
+    for (const [, , ds] of cand) { for (const d of ds.filter(d => ok[d]).sort((a, b) => rank[a] - rank[b])) if (!out.includes(d)) { out.push(d); if (out.length === k) return out; } }
+    for (const x of c) if (!out.includes(x.d)) { out.push(x.d); if (out.length === k) break; }
+    return out;
+  }
+  function build(S, d) {
+    const opts = []; for (let b = 0; b < N; b++) { const o = boxCells[b].filter(i => (S.allow[d * W + (i >> 5)] >>> (i & 31)) & 1); if (!o.length) return false; opts.push(o); }
+    opts.sort((a, b) => a.length - b.length);
+    let out = new Uint32Array(Math.max(64, W * 256)), n = 0, over = false; const bits = new Uint32Array(W);
+    (function rec(k, uR, uC) {
+      if (over) return;
+      if (k === N) { if (n >= cap) { over = true; return; } if ((n + 1) * W > out.length) { const o2 = new Uint32Array(out.length * 2); o2.set(out); out = o2; } out.set(bits, n * W); n++; return; }
+      for (const i of opts[k]) { const rb = 1 << R[i], cb = 1 << C[i]; if ((uR & rb) || (uC & cb)) continue; bits[i >> 5] |= 1 << (i & 31); rec(k + 1, uR | rb, uC | cb); bits[i >> 5] &= ~(1 << (i & 31)); }
+    })(0, 0, 0);
+    if (over) { S.big[d] = 1; return true; }        // too many options: leave this layer unbuilt
+    S.T[d] = out.subarray(0, n * W); S.cnt[d] = n;
+    return n > 0;
+  }
+  function propagate(S) {
+    const and = new Uint32Array(W), or = new Uint32Array(W);
+    for (;;) {
+      let changed = false;
+      // pillar: every empty cell must be reachable; a cell only one number reaches gets it
+      for (let w = 0; w < W; w++) {
+        let once = 0, twice = 0, full = 0;
+        for (let d = 1; d <= N; d++) { const a = S.allow[d * W + w]; twice |= once & a; once |= a; full |= S.placed[d * W + w]; }
+        const empty = valid[w] & ~full;
+        if (empty & ~once) return false;
+        let single = empty & once & ~twice;
+        while (single) { const b = single & -single, i = w * 32 + (31 - Math.clz32(b)); single ^= b;
+          if (S.g[i]) continue;
+          // an earlier single in this pass may have taken the last number away: that is a dead end, not a search
+          let d = 1; while (d <= N && !(S.allow[d * W + w] & b)) d++;
+          if (d > N || !place(S, i, d)) return false; changed = true; }
+      }
+      // cut + AND for every built layer
+      for (let d = 1; d <= N; d++) {
+        if (S.done[d] || !S.T[d]) continue;
+        const T = S.T[d], n0 = S.cnt[d], o = d * W;
+        let k = 0, first = -1;
+        for (let t = 0; t < n0; t++) { let ok = true; for (let w = 0; w < W; w++) if (T[t * W + w] & ~S.allow[o + w]) { ok = false; break; } if (!ok) { first = t; break; } }
+        let T2 = T, n = n0;
+        if (first >= 0) {                                 // copy-on-write: branches may share lists
+          T2 = new Uint32Array(n0 * W); k = 0;
+          for (let t = 0; t < n0; t++) { let ok = true; if (t >= first) for (let w = 0; w < W; w++) if (T[t * W + w] & ~S.allow[o + w]) { ok = false; break; } if (ok) { T2.set(T.subarray(t * W, t * W + W), k * W); k++; } }
+          n = k; T2 = T2.subarray(0, n * W); S.T[d] = T2; S.cnt[d] = n; changed = true;
+          if (!n) return false;
+        }
+        and.fill(0xFFFFFFFF); or.fill(0);
+        for (let t = 0; t < n; t++) for (let w = 0; w < W; w++) { const x = T2[t * W + w]; and[w] &= x; or[w] |= x; }
+        for (let w = 0; w < W; w++) {
+          const na = (S.allow[o + w] & or[w]) >>> 0; if (na !== S.allow[o + w]) { S.allow[o + w] = na; changed = true; }
+          let cert = and[w] & ~S.placed[o + w];
+          while (cert) { const b = cert & -cert, i = w * 32 + (31 - Math.clz32(b)); cert ^= b; if (!place(S, i, d)) return false; changed = true; }
+        }
+        if (n === 1) { S.done[d] = 1; S.T[d] = null; }
+      }
+      if (!S.left) return true;
+      if (changed) continue;
+      // stuck: add the next layer (same rule as the start)
+      const nx = nextLayers(S, 1); if (nx === null) return false;
+      if (!nx.length) return true;
+      if (!build(S, nx[0])) return false;
+    }
+  }
+  function solve(S) {
+    if (!propagate(S)) return null;
+    if (!S.left) return S;
+    let d = 0; for (let e = 1; e <= N; e++) if (S.T[e] && !S.done[e] && (!d || S.cnt[e] < S.cnt[d])) d = e;
+    if (d) {
+      const T = S.T[d];
+      for (let t = 0; t < S.cnt[d]; t++) { const U = clone(S); U.T[d] = T.subarray(t * W, t * W + W); U.cnt[d] = 1; const r = solve(U); if (r) return r; }
+      return null;
+    }
+    // every open layer too big to list: guess on the cell with the fewest numbers
+    let bi = -1, bk = 99; for (let i = 0; i < NN; i++) if (!S.g[i]) { let k = 0; for (let e = 1; e <= N; e++) if ((S.allow[e * W + (i >> 5)] >>> (i & 31)) & 1) k++; if (k < bk) { bk = k; bi = i; } }
+    for (let e = 1; e <= N; e++) if ((S.allow[e * W + (bi >> 5)] >>> (bi & 31)) & 1) { const U = clone(S); if (!place(U, bi, e)) continue; const r = solve(U); if (r) return r; }
+    return null;
+  }
+  const S0 = blank();
+  for (let d = 1; d <= N; d++) for (let w = 0; w < W; w++) S0.allow[d * W + w] = valid[w];
+  for (let i = 0; i < NN; i++) if (p[i] && !place(S0, i, p[i])) return { ok: false, grid: null };
+  const first = nextLayers(S0, startK); if (first === null) return { ok: false, grid: null };
+  for (const d of first) if (!build(S0, d)) return { ok: false, grid: null };
+  const r = solve(S0);
+  return { ok: !!r, grid: r ? Array.from(r.g) : null };
+}
+
+/* ---------- the full option-layer method (pairs + 3/4 groups, as in the Givens Test page) ---------- */
+function optionLayers(p) {
+  const NN = N * N, W = Math.ceil(NN / 32), has = (t, i) => (t[i >> 5] >>> (i & 31)) & 1;
+  const R = [], C = [], B = [], boxes = [...Array(N)].map(() => []);
+  for (let i = 0; i < NN; i++) { R[i] = (i / N) | 0; C[i] = i % N; B[i] = boxOf(R[i], C[i]); boxes[B[i]].push(i); }
+  const cnt = new Array(N + 1).fill(0); p.forEach(v => { if (v) cnt[v]++; });
+  const boxFree = d => { const rh = new Uint8Array(N), ch = new Uint8Array(N), bh = new Uint8Array(N); boxes.forEach((bx, b) => bx.forEach(i => { if (p[i] === d) rh[R[i]] = ch[C[i]] = bh[b] = 1; })); let min = 99, free = 0; boxes.forEach((bx, b) => { if (bh[b]) return; let n = 0; for (const i of bx) if (!p[i] && !rh[R[i]] && !ch[C[i]]) n++; free += n; if (n < min) min = n; }); return [min, free]; };
+  const tie = [null]; for (let d = 1; d <= N; d++) tie.push(boxFree(d));
+  const order = [...Array(N).keys()].map(k => k + 1).sort((a, b) => cnt[b] - cnt[a] || tie[a][0] - tie[b][0] || tie[a][1] - tie[b][1] || a - b);
+  const st = { built: 0, guesses: 0 };
+  const disjoint = (a, b) => { for (let w = 0; w < W; w++) if (a[w] & b[w]) return false; return true; };
+  const fitsWith = (lists, acc, work) => { if (!lists.length) return true; for (const u of lists[0]) { if (++work.n > 3e6) return true; if (!disjoint(u, acc)) continue; const a2 = acc.slice(); for (let w = 0; w < W; w++) a2[w] |= u[w]; if (fitsWith(lists.slice(1), a2, work)) return true; } return false; };
+  const pickK = (n, k, from = 0) => k === 0 ? [[]] : [...Array(Math.max(0, n - from)).keys()].map(x => x + from).flatMap(i => pickK(n, k - 1, i + 1).map(c => [i, ...c]));
+  function groupCut(T, act) {
+    for (const k of [3, 4]) {
+      if (act.length < k) break;
+      const work = { n: 0 };
+      for (const d of act) {
+        if (T[d].length === 1) continue;
+        const before = T[d].length;
+        const keep = T[d].filter(t => { const others = act.filter(e => e !== d).map(e => T[e].filter(u => disjoint(t, u))); if (others.some(o => !o.length)) return false; for (const c of pickK(others.length, k - 1)) if (!fitsWith(c.map(i => others[i]).sort((a, b) => a.length - b.length), t, work)) return false; return true; });
+        if (keep.length !== before) { T[d] = keep; return { after: keep.length }; }
+      }
+    }
+    return null;
+  }
+  function build(S, d) {
+    const g = S.g, rowHas = new Uint8Array(N), colHas = new Uint8Array(N), boxAt = new Int16Array(N).fill(-1);
+    for (let i = 0; i < NN; i++) if (g[i] === d) { rowHas[R[i]] = 1; colHas[C[i]] = 1; boxAt[B[i]] = i; }
+    const opts = [...Array(N).keys()].map(b => boxAt[b] >= 0 ? [boxAt[b]] : boxes[b].filter(i => !g[i] && !rowHas[R[i]] && !colHas[C[i]]));
+    const ord = [...Array(N).keys()].sort((a, b) => opts[a].length - opts[b].length);
+    const list = [], uR = new Uint8Array(N), uC = new Uint8Array(N), bits = new Uint32Array(W); let over = false;
+    (function rec(k) { if (over) return; if (k === N) { if (list.length >= 400000) { over = true; return; } list.push(bits.slice()); return; } for (const i of opts[ord[k]]) { if (uR[R[i]] || uC[C[i]]) continue; uR[R[i]] = uC[C[i]] = 1; bits[i >> 5] |= 1 << (i & 31); rec(k + 1); bits[i >> 5] &= ~(1 << (i & 31)); uR[R[i]] = uC[C[i]] = 0; } })(0);
+    // too many options: do NOT use a cut-off list (it would make AND and cut wrong); try again after more cells are filled
+    if (over) { S.bigAt[d] = S.g.filter(Boolean).length; return; }
+    st.built += list.length; S.T[d] = list;
+  }
+  const lock = (S, d) => { const t = S.T[d][0]; for (let i = 0; i < NN; i++) if (has(t, i)) S.g[i] = d; S.T[d] = null; S.locked[d] = 1; };
+  function propagate(S) {
+    for (let changed = true; changed;) {
+      changed = false;
+      const act = order.filter(d => S.T[d]);
+      for (const d of act) if (!S.T[d].length) return false;
+      for (const d of act) { const keep = S.T[d].filter(t => { for (let i = 0; i < NN; i++) if (S.g[i] && S.g[i] !== d && has(t, i)) return false; return true; }); if (keep.length !== S.T[d].length) { S.T[d] = keep; changed = true; if (!keep.length) return false; } }
+      const core = {}, union = {};
+      for (const d of act) { const a = S.T[d][0].slice(), o = new Uint32Array(W); for (const t of S.T[d]) for (let w = 0; w < W; w++) { a[w] &= t[w]; o[w] |= t[w]; } core[d] = a; union[d] = o; }
+      const need = {}; for (const d of act) need[d] = new Uint32Array(W);
+      for (let i = 0; i < NN; i++) if (!S.g[i]) {
+        let n = 0, who = 0;
+        for (let d = 1; d <= N; d++) {
+          if (S.locked[d]) continue;
+          let reach;
+          if (S.T[d]) reach = has(union[d], i);
+          else { reach = true; for (let j = 0; j < NN; j++) if (S.g[j] === d && (R[j] === R[i] || C[j] === C[i] || B[j] === B[i])) { reach = false; break; } }
+          if (reach) { n++; who = d; }
+        }
+        if (!n) return false;
+        if (n === 1 && S.T[who] && !has(core[who], i)) need[who][i >> 5] |= 1 << (i & 31);
+      }
+      for (const d of act) { const keep = S.T[d].filter(t => { for (let w = 0; w < W; w++) if (((t[w] & need[d][w]) >>> 0) !== need[d][w]) return false; for (const e of act) if (e !== d) for (let w = 0; w < W; w++) if (t[w] & core[e][w]) return false; return true; }); if (keep.length !== S.T[d].length) { S.T[d] = keep; changed = true; if (!keep.length) return false; } }
+      if (!changed) for (const d of act) { if (S.T[d].length === 1) continue; const keep = S.T[d].filter(t => act.every(e => e === d || S.T[e].some(u => disjoint(t, u)))); if (keep.length !== S.T[d].length) { S.T[d] = keep; changed = true; if (!keep.length) return false; } }
+      if (!changed && !order.find(e => !S.locked[e] && !S.T[e])) { const gc = groupCut(S.T, act); if (gc) { changed = true; if (!gc.after) return false; } }
+      for (const d of act) if (S.T[d] && S.T[d].length === 1) { lock(S, d); changed = true; }
+      if (!changed) { const filled = S.g.filter(Boolean).length, next = order.find(d => !S.locked[d] && !S.T[d] && S.bigAt[d] < filled); if (next) { build(S, next); changed = true; } }
+    }
+    return true;
+  }
+  function solve(S) {
+    if (!propagate(S)) return null;
+    const act = order.filter(d => S.T[d]);
+    if (!act.length) {
+      if (S.g.every(Boolean)) return S;
+      let bi = -1, bm = null;
+      for (let i = 0; i < NN; i++) if (!S.g[i]) { const m = []; for (let e = 1; e <= N; e++) { let ok = true; for (let j = 0; j < NN; j++) if (S.g[j] === e && (R[j] === R[i] || C[j] === C[i] || B[j] === B[i])) { ok = false; break; } if (ok) m.push(e); } if (!bm || m.length < bm.length) { bi = i; bm = m; } }
+      for (const e of bm) { st.guesses++; const U = { g: S.g.slice(), locked: S.locked.slice(), T: S.T.slice(), bigAt: new Array(N + 1).fill(-1) }; U.g[bi] = e; const r = solve(U); if (r) return r; }
+      return null;
+    }
+    const d = act.sort((a, b) => S.T[a].length - S.T[b].length)[0];
+    const clash = t => { let c2 = 0; for (const e of order) if (e !== d && S.T[e]) for (const u of S.T[e]) if (!disjoint(t, u)) c2++; return c2; };
+    for (const { t } of S.T[d].map(t => ({ t, c: clash(t) })).sort((a, b) => a.c - b.c)) {
+      st.guesses++;
+      const U = { g: S.g.slice(), locked: S.locked.slice(), T: S.T.map(l => l && l.slice()), bigAt: S.bigAt.slice() }; U.T[d] = [t];
+      const r = solve(U); if (r) return r;
+    }
+    return null;
+  }
+  const S0 = { g: p.slice(), locked: new Array(N + 1).fill(0), T: new Array(N + 1).fill(null), bigAt: new Array(N + 1).fill(-1) };
+  for (const d of order.slice(0, 2)) build(S0, d);
+  const r = solve(S0);
+  return { ok: !!r, grid: r ? r.g : null, ...st };
+}
+
+/* ---------- classic algorithms ---------- */
+function mrvSolve(p, nodeCap = 5e6) {
+  const NC = N * N, g = Int8Array.from(p), rm = new Int32Array(N), cm = new Int32Array(N), bm = new Int32Array(N), full = (1 << (N + 1)) - 2;
+  const box = i => boxOf((i / N) | 0, i % N);
+  for (let i = 0; i < NC; i++) if (g[i]) { const b = 1 << g[i]; rm[(i / N) | 0] |= b; cm[i % N] |= b; bm[box(i)] |= b; }
+  let nodes = 0, aborted = false;
+  const rec = () => {
+    if (++nodes > nodeCap) { aborted = true; return false; }
+    let best = -1, bc = 99, mask = 0;
+    for (let i = 0; i < NC; i++) if (!g[i]) { const m = full & ~(rm[(i / N) | 0] | cm[i % N] | bm[box(i)]), k = popc(m); if (k < bc) { bc = k; best = i; mask = m; if (k < 2) break; } }
+    if (best < 0) return true; if (!bc) return false;
+    const r = (best / N) | 0, c = best % N, bx = box(best);
+    for (let v = 1; v <= N; v++) if (mask & (1 << v)) { const b = 1 << v; g[best] = v; rm[r] |= b; cm[c] |= b; bm[bx] |= b; if (rec()) return true; g[best] = 0; rm[r] &= ~b; cm[c] &= ~b; bm[bx] &= ~b; if (aborted) return false; }
+    return false;
+  };
+  const ok = rec();
+  return { ok: ok && !aborted, grid: ok ? Array.from(g) : null, nodes, guesses: nodes - 1 };
+}
+function dlxSolve(p, nodeCap = 5e6) {
+  const NC = N * N, ncols = 4 * NC;
+  const L = [], Rt = [], U = [], D = [], Cl = [], RowId = [], S = new Int32Array(ncols + 1);
+  for (let j = 0; j <= ncols; j++) { L.push(j - 1); Rt.push(j + 1); U.push(j); D.push(j); Cl.push(j); RowId.push(-1); }
+  L[0] = ncols; Rt[ncols] = 0;
+  const rows = [];
+  const addRow = (cols, info) => { let first = -1; for (const col of cols) { const x = L.length; Cl.push(col + 1); RowId.push(rows.length); U.push(U[col + 1]); D.push(col + 1); D[U[col + 1]] = x; U[col + 1] = x; S[col + 1]++; if (first < 0) { first = x; L.push(x); Rt.push(x); } else { L.push(L[first]); Rt.push(first); Rt[L[first]] = x; L[first] = x; } } rows.push(info); };
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) { const i = r * N + c, given = p[i]; for (let v = 1; v <= N; v++) { if (given && given !== v) continue; addRow([i, NC + r * N + v - 1, 2 * NC + c * N + v - 1, 3 * NC + boxOf(r, c) * N + v - 1], [i, v]); } }
+  const cover = c => { Rt[L[c]] = Rt[c]; L[Rt[c]] = L[c]; for (let i = D[c]; i !== c; i = D[i]) for (let j = Rt[i]; j !== i; j = Rt[j]) { D[U[j]] = D[j]; U[D[j]] = U[j]; S[Cl[j]]--; } };
+  const uncover = c => { for (let i = U[c]; i !== c; i = U[i]) for (let j = L[i]; j !== i; j = L[j]) { S[Cl[j]]++; D[U[j]] = j; U[D[j]] = j; } Rt[L[c]] = c; L[Rt[c]] = c; };
+  const sol = []; let nodes = 0, aborted = false, found = null;
+  const search = () => {
+    if (++nodes > nodeCap) { aborted = true; return true; }
+    if (Rt[0] === 0) { found = sol.slice(); return true; }
+    let best = Rt[0]; for (let j = Rt[0]; j !== 0; j = Rt[j]) if (S[j] < S[best]) best = j;
+    const c = best; if (!S[c]) return false;
+    cover(c);
+    for (let r = D[c]; r !== c; r = D[r]) { sol.push(RowId[r]); for (let j = Rt[r]; j !== r; j = Rt[j]) cover(Cl[j]); if (search()) return true; for (let j = L[r]; j !== r; j = L[j]) uncover(Cl[j]); sol.pop(); }
+    uncover(c); return false;
+  };
+  search();
+  const grid = found ? (() => { const g = new Array(NC).fill(0); for (const k of found) { const [i, v] = rows[k]; g[i] = v; } return g; })() : null;
+  return { ok: !!found && !aborted, grid, nodes, guesses: nodes - 1 };
+}
+
+/* ---------- puzzles ---------- */
+function countSolutions(p, limit, budget) {
+  const g = p.slice(), rm = new Int32Array(N), cm = new Int32Array(N), bm = new Int32Array(N), full = (1 << (N + 1)) - 2;
+  for (let i = 0; i < N * N; i++) if (g[i]) { const b = 1 << g[i], r = (i / N) | 0, c = i % N; if ((rm[r] | cm[c] | bm[boxOf(r, c)]) & b) return 0; rm[r] |= b; cm[c] |= b; bm[boxOf(r, c)] |= b; }
+  let count = 0, nodes = 0;
+  (function rec() {
+    if (count >= limit || ++nodes > budget) return;
+    let best = -1, bc = 99, bmask = 0;
+    for (let i = 0; i < N * N; i++) if (!g[i]) { const r = (i / N) | 0, c = i % N, m = full & ~(rm[r] | cm[c] | bm[boxOf(r, c)]); const k = popc(m); if (k < bc) { bc = k; best = i; bmask = m; if (k < 2) break; } }
+    if (best < 0) { count++; return; }
+    const r = (best / N) | 0, c = best % N, b0 = boxOf(r, c);
+    for (let d = 1; d <= N; d++) if (bmask & (1 << d)) { const b = 1 << d; g[best] = d; rm[r] |= b; cm[c] |= b; bm[b0] |= b; rec(); g[best] = 0; rm[r] &= ~b; cm[c] &= ~b; bm[b0] &= ~b; if (count >= limit) return; }
+  })();
+  return nodes > budget ? -1 : count;
+}
+// a random full grid; random backtracking can wander into a huge dead end (seen: 28 s on 16×16),
+// so give up after a step limit and start again with a fresh random order
+function randomSolution() {
+  const cap = 20 * N * N;
+  for (;;) {
+    const g = new Array(N * N).fill(0), rm = new Int32Array(N), cm = new Int32Array(N), bm = new Int32Array(N), full = (1 << (N + 1)) - 2;
+    let steps = 0;
+    const rec = () => {
+      if (++steps > cap) return null;                      // too long: restart
+      let best = -1, bc = 99, bmask = 0;
+      for (let i = 0; i < N * N; i++) if (!g[i]) { const r = (i / N) | 0, c = i % N, m = full & ~(rm[r] | cm[c] | bm[boxOf(r, c)]); const k = popc(m); if (k < bc) { bc = k; best = i; bmask = m; if (k < 2) break; } }
+      if (best < 0) return true; if (!bc) return false;
+      const r = (best / N) | 0, c = best % N, b0 = boxOf(r, c), ds = []; for (let d = 1; d <= N; d++) if (bmask & (1 << d)) ds.push(d);
+      for (const d of shuffle(ds)) { const b = 1 << d; g[best] = d; rm[r] |= b; cm[c] |= b; bm[b0] |= b; const x = rec(); if (x) return true; if (x === null) return null; g[best] = 0; rm[r] &= ~b; cm[c] &= ~b; bm[b0] &= ~b; }
+      return false;
+    };
+    if (rec()) return g;
+  }
+}
+function carve(sol, level) {
+  const ratio = { easy: 0.5, medium: 0.4, hard: 0 }[level], target = Math.round(N * N * ratio), p = sol.slice(), budget = N <= 9 ? 20000 : 5000;
+  let clues = N * N; const pairs = []; for (let i = 0; i <= (N * N - 1) / 2; i++) pairs.push([i, N * N - 1 - i]);
+  for (const [a, b] of shuffle(pairs)) { if (clues <= target) break; const va = p[a], vb = p[b]; p[a] = 0; p[b] = 0; if (countSolutions(p, 2, budget) === 1) clues -= a === b ? 1 : 2; else { p[a] = va; p[b] = vb; } }
+  return p;
+}
+
+/* ---------- the test ---------- */
+let LEAN = { start: 2, order: "cells" };
+const METHODS = [
+  { key: "lean", name: "Lean option layers (build · cut · AND)", color: "--m1", on: true, run: p => leanLayers(p, LEAN) },
+  { key: "full", name: "Full option layers (+ pairs, 3/4 groups)", color: "--m3", on: true, run: p => optionLayers(p) },
+  { key: "dlx", name: "Dancing Links (Algorithm X)", color: "--m4", on: true, run: p => dlxSolve(p) },
+  { key: "mrv", name: "MRV backtracking", color: "--m5", on: true, run: p => mrvSolve(p) },
+];
+$("methods").innerHTML = METHODS.map(m => `<label><input type="checkbox" id="use_${m.key}" ${m.on ? "checked" : ""}><span class="sw" style="background:var(${m.color})"></span>${m.name.replace(/ \(.*/, "")}</label>`).join("");
+const sleep0 = () => new Promise(r => setTimeout(r, 0));
+const median = a => { if (!a.length) return NaN; const s = a.slice().sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+const mean = a => a.reduce((x, y) => x + y, 0) / (a.length || 1);
+const fmt = ms => !isFinite(ms) ? "–" : ms >= 100 ? ms.toFixed(0) : ms >= 10 ? ms.toFixed(1) : ms >= 1 ? ms.toFixed(2) : ms >= 0.1 ? ms.toFixed(3) : (ms * 1000).toFixed(0) + " µs";
+const fmtU = ms => !isFinite(ms) ? "–" : ms >= 1 ? fmt(ms) + " ms" : fmt(ms).includes("µs") ? fmt(ms) : fmt(ms) + " ms";
+function timeIt(fn) {
+  let t0 = performance.now(); const res = fn(); let ms = performance.now() - t0;
+  if (ms < 4) { const reps = Math.min(400, Math.ceil(8 / Math.max(ms, 0.01))); t0 = performance.now(); for (let k = 0; k < reps; k++) fn(); ms = (performance.now() - t0) / reps; }
+  return { res, ms };
+}
+let stop = false, DATA = null;
+$("stopBtn").onclick = () => { stop = true; };
+// make the puzzles, then time every method on them; progress runs from lo% to hi%
+async function measure(n, level, count, use, lo, hi, tag) {
+  setSize(n);
+  const puzzles = [];
+  for (let k = 0; k < count && !stop; k++) {
+    $("status").textContent = `${tag}Making puzzle ${k + 1} of ${count}…`; $("prog").style.width = (lo + (hi - lo) * 0.4 * k / count) + "%"; await sleep0();
+    const sol = randomSolution(), p = carve(sol, level); puzzles.push({ p, sol, givens: p.filter(Boolean).length, res: {} });
+  }
+  // warm up so the first timed puzzle is not paying for the browser's compile
+  if (puzzles.length) for (const m of use) m.run(puzzles[0].p);
+  const jobs = []; for (const m of use) for (const z of puzzles) jobs.push([m, z]);
+  for (let j = 0; j < jobs.length && !stop; j++) {
+    const [m, z] = jobs[j];
+    if (j % 3 === 0) { $("status").textContent = `${tag}${m.name.replace(/ \(.*/, "")}: puzzle ${puzzles.indexOf(z) + 1} of ${puzzles.length}`; $("prog").style.width = (lo + (hi - lo) * (0.4 + 0.6 * j / jobs.length)) + "%"; await sleep0(); }
+    const { res, ms } = timeIt(() => m.run(z.p));
+    z.res[m.key] = { ms, ok: !!res.grid && res.grid.every((v, i) => v === z.sol[i]), guesses: res.guesses ?? null, built: res.built ?? null, layers: res.layers ?? null };   // lean keeps no counts: null = not counted
+  }
+  return puzzles.filter(z => use.every(m => z.res[m.key]));
+}
+function startRun() {
+  const use = METHODS.filter(m => $("use_" + m.key).checked);
+  if (!use.length) { $("status").textContent = "Pick at least one method."; return null; }
+  LEAN = { start: +$("startK").value, order: $("orderBy").value };
+  stop = false; $("run").disabled = $("runAll").disabled = true; $("stopBtn").disabled = false;
+  return use;
+}
+const endRun = () => { $("prog").style.width = "100%"; $("run").disabled = $("runAll").disabled = false; $("stopBtn").disabled = true; };
+$("run").onclick = async () => {
+  const n = +$("size").value, level = $("level").value, count = +$("count").value, use = startRun(); if (!use) return;
+  $("out").classList.add("hidden");
+  const done = await measure(n, level, count, use, 0, 100, "");
+  endRun();
+  $("status").textContent = stop ? `Stopped — ${done.length} puzzles fully measured.` : `Done — ${done.length} puzzles, ${n}×${n}.`;
+  DATA = { n, level, use, puzzles: done };
+  if (done.length) render();
+};
+// every board size at the chosen level, then the line graph
+const SIZES = [4, 6, 9, 12, 16, 20, 30], CAP = { 12: 30, 16: 10, 20: 10, 30: 5 };
+$("runAll").onclick = async () => {
+  const level = $("level").value, count = +$("count").value, use = startRun(); if (!use) return;
+  const rows = []; $("outAll").classList.remove("hidden"); $("chart3").innerHTML = ""; $("tblAll").innerHTML = "";
+  for (let k = 0; k < SIZES.length && !stop; k++) {
+    const n = SIZES[k], c = Math.min(count, CAP[n] || count);
+    const done = await measure(n, level, c, use, 100 * k / SIZES.length, 100 * (k + 1) / SIZES.length, `${n}×${n} — `);
+    if (!done.length) break;
+    const row = { n, k: done.length, givens: mean(done.map(z => z.givens)), ok: done.every(z => use.every(m => z.res[m.key].ok)), m: {} };
+    for (const m of use) { const r = done.map(z => z.res[m.key]); row.m[m.key] = { med: median(r.map(x => x.ms)) }; }
+    rows.push(row); drawLines(rows, use);
+  }
+  endRun();
+  $("status").textContent = stop ? `Stopped — ${rows.length} sizes measured.` : `Done — all ${rows.length} sizes (${level}).`;
+};
+function drawLines(rows, use) {
+  const sizes = rows.map(r => r.n), mk = { lean: "circle", full: "diamond", dlx: "square", mrv: "triangle" };
+  const panel = (keys, title, labels) => {
+    const W = 360, H = 250, l = 46, r = 26, t = 28, b = 34;
+    const vals = rows.flatMap(row => keys.map(k => row.m[k].med)), top = Math.max(...vals) || 1;
+    const step = [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100, 200, 500, 1000].find(x => top / x <= 5) || 1000, ymax = Math.ceil(top / step) * step;
+    const maxN = Math.max(...SIZES), X = n => l + (n - 4) / (maxN - 4) * (W - l - r), Y = v => H - b - v / ymax * (H - t - b);
+    let s = `<svg viewBox="0 0 ${W} ${H}"><text class="t" x="${W / 2}" y="16" text-anchor="middle">${title}</text>`;
+    for (let v = 0; v <= ymax + 1e-9; v += step) s += `<line x1="${l}" x2="${W - r}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)"/><text x="${l - 5}" y="${Y(v) + 4}" text-anchor="end">${+v.toPrecision(3)}</text>`;
+    for (const n of SIZES) s += `<text x="${X(n)}" y="${H - b + 16}" text-anchor="middle">${n}</text>`;
+    s += `<text x="${(l + W - r) / 2}" y="${H - 3}" text-anchor="middle">board size (N×N)</text><text transform="translate(11 ${(t + H - b) / 2}) rotate(-90)" text-anchor="middle">median ms per puzzle</text>`;
+    for (const key of keys) {
+      const m = METHODS.find(x => x.key === key), col = `var(${m.color})`, pts = rows.map(row => [X(row.n), Y(row.m[key].med)]);
+      s += `<polyline points="${pts.map(p => p.join(",")).join(" ")}" fill="none" stroke="${col}" stroke-width="${key === "lean" ? 3 : 2}" ${key === "full" ? 'stroke-dasharray="6 4"' : ""}/>`;
+      for (const [x, y] of pts) s += mk[key] === "square" ? `<rect x="${x - 4}" y="${y - 4}" width="8" height="8" fill="${col}"/>` : mk[key] === "diamond" ? `<rect x="${x - 4}" y="${y - 4}" width="8" height="8" fill="${col}" transform="rotate(45 ${x} ${y})"/>` : mk[key] === "triangle" ? `<path d="M${x} ${y - 5}L${x + 5} ${y + 4}L${x - 5} ${y + 4}Z" fill="${col}"/>` : `<circle cx="${x}" cy="${y}" r="4.5" fill="${col}"/>`;
+      if (key === "lean" && labels) rows.forEach((row, k) => { if (k === rows.length - 1 && row.n >= 12) s += `<text x="${pts[k][0] - 8}" y="${pts[k][1] - 9}" text-anchor="end" style="fill:${col};font-weight:700;paint-order:stroke;stroke:var(--surface);stroke-width:4px">${fmtU(row.m.lean.med)}</text>`; });
+    }
+    return s + `</svg>`;
+  };
+  const keys = use.map(m => m.key), noFull = keys.filter(k => k !== "full");
+  $("chart3").innerHTML = (keys.includes("full") && noFull.length ? panel(keys, "All methods ticked", false) + panel(noFull, "Without the full option layers (zoom)", true) : panel(keys, "All methods ticked", true));
+  $("legend3").innerHTML = use.map(m => `<span><i style="background:var(${m.color})"></i>${m.name.replace(/ \(.*/, "")}</span>`).join("");
+  const best = row => Math.min(...keys.map(k => row.m[k].med));
+  $("tblAll").innerHTML = `<tr><th>Board</th><th>Puzzles</th><th>Givens</th>${use.map(m => `<th>${m.name.replace(/ \(.*/, "").replace("option layers", "OL")}</th>`).join("")}<th>Correct</th></tr>` +
+    rows.map(row => `<tr><td>${row.n}×${row.n}</td><td>${row.k}</td><td>${row.givens.toFixed(1)}</td>${keys.map(k => `<td class="${row.m[k].med === best(row) ? "best" : ""}">${fmtU(row.m[k].med)}</td>`).join("")}<td class="${row.ok ? "" : "warn"}">${row.ok ? "all" : "some wrong"}</td></tr>`).join("");
+}
+function render() {
+  const { n, use, puzzles } = DATA;
+  $("out").classList.remove("hidden");
+  const S = use.map(m => { const r = puzzles.map(z => z.res[m.key]), ms = r.map(x => x.ms);
+    return { m, n: r.length, ok: r.filter(x => x.ok).length, med: median(ms), avg: mean(ms), max: Math.max(...ms), guessed: r.some(x => x.guesses == null) ? null : r.filter(x => x.guesses > 0).length, guesses: r.some(x => x.guesses == null) ? null : mean(r.map(x => x.guesses)), built: r[0].built == null ? null : median(r.map(x => x.built)), layers: r[0].layers == null ? null : mean(r.map(x => x.layers)) }; });
+  const bestMed = Math.min(...S.map(s => s.med));
+  $("tbl").innerHTML = `<tr><th>Method</th><th>Correct</th><th>Median</th><th>Average</th><th>Slowest</th><th>Guessed</th><th>Guesses / nodes (avg)</th><th>Options built (median)</th></tr>` +
+    S.map(s => `<tr><td><span class="sw" style="background:var(${s.m.color})"></span>${s.m.name}</td><td class="${s.ok < s.n ? "warn" : ""}">${s.ok}/${s.n}</td><td class="${s.med === bestMed ? "best" : ""}">${fmtU(s.med)}</td><td>${fmtU(s.avg)}</td><td>${fmtU(s.max)}</td><td>${s.guessed ?? "–"}</td><td>${s.guesses == null ? "–" : s.guesses.toFixed(1)}</td><td>${s.built == null ? "–" : Math.round(s.built).toLocaleString()}${s.layers == null ? "" : ` <span class="note">(${s.layers.toFixed(1)} layers)</span>`}</td></tr>`).join("");
+  drawBars(S); drawScatter();
+  // findings
+  const g = k => S.find(s => s.m.key === k), f = [];
+  const L = g("lean"), F = g("full"), X = g("dlx"), M = g("mrv"), giv = mean(puzzles.map(z => z.givens));
+  f.push(`${puzzles.length} puzzles ${n}×${n}, ${giv.toFixed(1)} givens on average. ${S.every(s => s.ok === s.n) ? "Every method solved every puzzle correctly." : "<b>Some answers were wrong — see the table.</b>"}`);
+  if (L && F) { const r = F.med / L.med; f.push(`Lean vs full option layers: median ${fmtU(L.med)} vs ${fmtU(F.med)} — the lean method is <b>${r >= 1 ? r.toFixed(1) + "× faster" : (1 / r).toFixed(1) + "× slower"}</b>. Lean faster on ${puzzles.filter(z => z.res.lean.ms < z.res.full.ms).length} of ${puzzles.length} puzzles.`);
+    f.push(`The full engine needed a guess on ${F.guessed} of ${F.n} puzzles. The lean method keeps no counts at all (no guesses, options or layers are counted), so its columns show –.`); }
+  if (L && X) { const r = L.med / X.med; f.push(`Against Dancing Links: ${fmtU(L.med)} vs ${fmtU(X.med)} — lean is ${r >= 1 ? r.toFixed(1) + "× slower" : (1 / r).toFixed(1) + "× faster"} at the median${L.max < X.max ? ", and its slowest puzzle is quicker" : ""}.`); }
+  if (L && M) { const r = L.med / M.med; f.push(`Against MRV backtracking: ${fmtU(L.med)} vs ${fmtU(M.med)} — lean is ${r >= 1 ? r.toFixed(1) + "× slower" : (1 / r).toFixed(1) + "× faster"} at the median; slowest ${fmtU(L.max)} vs ${fmtU(M.max)}.`); }
+  $("find").innerHTML = f.map(x => `<li>${x}</li>`).join("");
+  // one puzzle
+  const pick = $("pick"); const hasLean = !!g("lean");
+  pick.innerHTML = puzzles.map((z, k) => `<option value="${k}">#${k + 1} · ${z.givens} givens${hasLean ? " · lean " + fmtU(z.res.lean.ms) : ""}</option>`).join("");
+  if (hasLean) { let w = 0; puzzles.forEach((z, k) => { if (z.res.lean.ms > puzzles[w].res.lean.ms) w = k; }); pick.value = w; }
+  showPuzzle();
+}
+$("pick").onchange = showPuzzle;
+function showPuzzle() {
+  const { n, use, puzzles } = DATA, z = puzzles[+$("pick").value]; if (!z) return;
+  const [br, bc] = boxShape(n), el = $("board"), lr = z.res.lean;
+  el.style.gridTemplateColumns = `repeat(${n},1fr)`; el.style.width = n > 16 ? "min(100%,620px)" : ""; el.style.fontSize = `min(${n > 16 ? 1.6 : n > 9 ? 2.6 : 4}vw,${n > 16 ? 10 : n > 9 ? 14 : 22}px)`;
+  el.innerHTML = z.sol.map((v, i) => { const r = (i / n) | 0, c = i % n, s = z.p[i] ? 0 : 1;
+    return `<div class="s${s}${(c + 1) % bc === 0 && c < n - 1 ? " br" : ""}${(r + 1) % br === 0 && r < n - 1 ? " bb" : ""}">${v}</div>`; }).join("");
+  $("chips").innerHTML = "";   // the lean method keeps no record of the layers it built
+  $("pickNote").innerHTML = use.map(m => `${m.name.replace(/ \(.*/, "")}: <b>${fmtU(z.res[m.key].ms)}</b>${z.res[m.key].guesses ? ` (${z.res[m.key].guesses} ${m.key === "lean" || m.key === "full" ? "guesses" : "nodes"})` : ""}`).join(" · ");
+}
+function drawBars(S) {
+  const W = 640, row = 34, H = S.length * row + 34, x0 = 150, x1 = W - 20;
+  const all = S.flatMap(s => [s.med, s.max]).filter(v => v > 0), lo = Math.pow(10, Math.floor(Math.log10(Math.min(...all)))), hi = Math.pow(10, Math.ceil(Math.log10(Math.max(...all))));
+  const X = v => x0 + (Math.log10(Math.max(v, lo)) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo)) * (x1 - x0);
+  let s = `<svg viewBox="0 0 ${W} ${H}">`;
+  for (let e = Math.log10(lo); e <= Math.log10(hi) + 1e-9; e++) { const v = Math.pow(10, e), x = X(v); s += `<line x1="${x}" x2="${x}" y1="4" y2="${H - 24}" stroke="var(--line)"/><text x="${x}" y="${H - 8}" text-anchor="middle">${fmtU(v)}</text>`; }
+  S.forEach((r, k) => { const y = 8 + k * row;
+    s += `<text x="${x0 - 8}" y="${y + 15}" text-anchor="end" style="fill:var(--ink)">${r.m.name.replace(/ \(.*/, "").replace("option layers", "OL")}</text>`;
+    s += `<rect x="${x0}" y="${y + 2}" width="${Math.max(2, X(r.med) - x0)}" height="18" rx="4" fill="var(${r.m.color})"/>`;
+    s += `<circle cx="${X(r.avg)}" cy="${y + 11}" r="4.5" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.5"/>`;
+    s += `<line x1="${X(r.max)}" x2="${X(r.max)}" y1="${y}" y2="${y + 22}" stroke="var(--ink)" stroke-width="2"/>`; });
+  $("chart1").innerHTML = s + `</svg>`;
+}
+function drawScatter() {
+  const { puzzles, use } = DATA, el = $("chart2");
+  if (!use.find(m => m.key === "lean") || !use.find(m => m.key === "full")) { el.innerHTML = `<p class="note">Tick both option-layer methods to compare them.</p>`; return; }
+  const pts = puzzles.map(z => [z.res.full.ms, z.res.lean.ms]), vals = pts.flat().filter(v => v > 0);
+  const lo = Math.pow(10, Math.floor(Math.log10(Math.min(...vals)))), hi = Math.pow(10, Math.ceil(Math.log10(Math.max(...vals))));
+  const S = 360, m = 46, A = v => m + (Math.log10(Math.max(v, lo)) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo)) * (S - m - 10);
+  let s = `<svg viewBox="0 0 ${S} ${S}" style="max-width:420px;margin:0 auto">`;
+  for (let e = Math.log10(lo); e <= Math.log10(hi) + 1e-9; e++) { const v = Math.pow(10, e), p = A(v); s += `<line x1="${p}" x2="${p}" y1="10" y2="${S - m}" stroke="var(--line)"/><line x1="${m}" x2="${S - 10}" y1="${S - p}" y2="${S - p}" stroke="var(--line)"/><text x="${p}" y="${S - m + 14}" text-anchor="middle">${fmtU(v)}</text><text x="${m - 4}" y="${S - p + 4}" text-anchor="end">${fmtU(v)}</text>`; }
+  s += `<line x1="${A(lo)}" y1="${S - A(lo)}" x2="${A(hi)}" y2="${S - A(hi)}" stroke="var(--muted)" stroke-dasharray="4 4"/>`;
+  s += pts.map(([f, l]) => `<circle cx="${A(f)}" cy="${S - A(l)}" r="4" fill="var(--m1)" fill-opacity=".7"/>`).join("");
+  s += `<text x="${(S + m) / 2}" y="${S - 6}" text-anchor="middle">full option layers</text><text transform="translate(12 ${(S - m) / 2}) rotate(-90)" text-anchor="middle">lean option layers</text>`;
+  el.innerHTML = s + `</svg>`;
+}
+</script>
+</body>
+</html>

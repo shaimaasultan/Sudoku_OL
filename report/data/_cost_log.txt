@@ -1,0 +1,79 @@
+8x8 1★ #0: proved true best 22 (simple ✓ 11ms, descent 5ms, cell ✓ 6ms) | cf 26 lock6 22 down 23 ann 22 unstick 23 lock6+unstick 22
+8x8 1★ #1: proved true best 19 (simple ✓ 4ms, descent 5ms, cell ✓ 6ms) | cf 29 lock6 28 down 29 ann 23 unstick 24 lock6+unstick 24
+8x8 1★ #2: proved true best 20 (simple ✓ 4ms, descent 2ms, cell ✓ 2ms) | cf 24 lock6 20 down 23 ann 23 unstick 23 lock6+unstick 20
+8x8 1★ #3: proved true best 25 (simple ✓ 5ms, descent 4ms, cell ✓ 5ms) | cf 38 lock6 25 down 32 ann 25 unstick 25 lock6+unstick 25
+8x8 1★ #4: proved true best 34 (simple ✓ 11ms, descent 5ms, cell ✓ 3ms) | cf 35 lock6 34 down 37 ann 37 unstick 34 lock6+unstick 34
+8x8 1★ #5: proved true best 20 (simple ✓ 6ms, descent 6ms, cell ✓ 2ms) | cf 32 lock6 29 down 24 ann 20 unstick 20 lock6+unstick 25
+8x8 1★ #6: proved true best 14 (simple ✓ 2ms, descent 3ms, cell ✓ 4ms) | cf 29 lock6 23 down 14 ann 14 unstick 14 lock6+unstick 14
+8x8 1★ #7: proved true best 18 (simple ✓ 9ms, descent 4ms, cell ✓ 5ms) | cf 28 lock6 25 down 20 ann 18 unstick 18 lock6+unstick 18
+8x8 1★ #8: proved true best 20 (simple ✓ 4ms, descent 3ms, cell ✓ 2ms) | cf 22 lock6 22 down 22 ann 20 unstick 22 lock6+unstick 22
+8x8 1★ #9: proved true best 19 (simple ✓ 3ms, descent 2ms, cell ✓ 2ms) | cf 23 lock6 19 down 19 ann 19 unstick 19 lock6+unstick 19
+8x8 1★ #10: proved true best 14 (simple ✓ 4ms, descent 3ms, cell ✓ 6ms) | cf 22 lock6 19 down 19 ann 19 unstick 19 lock6+unstick 14
+8x8 1★ #11: proved true best 24 (simple ✓ 9ms, descent 5ms, cell ✓ 1ms) | cf 24 lock6 24 down 28 ann 24 unstick 24 lock6+unstick 24
+8x8 1★ #12: proved true best 30 (simple ✓ 8ms, descent 5ms, cell ✓ 4ms) | cf 40 lock6 30 down 33 ann 30 unstick 31 lock6+unstick 30
+8x8 1★ #13: proved true best 19 (simple ✓ 11ms, descent 4ms, cell ✓ 3ms) | cf 22 lock6 21 down 22 ann 19 unstick 21 lock6+unstick 21
+8x8 1★ #14: proved true best 20 (simple ✓ 4ms, descent 3ms, cell ✓ 5ms) | cf 22 lock6 22 down 20 ann 20 unstick 22 lock6+unstick 22
+8x8 1★ #15: proved true best 22 (simple ✓ 4ms, descent 3ms, cell ✓ 3ms) | cf 24 lock6 24 down 22 ann 22 unstick 22 lock6+unstick 22
+8x8 1★ #16: proved true best 16 (simple ✓ 4ms, descent 2ms, cell ✓ 4ms) | cf 25 lock6 16 down 16 ann 16 unstick 16 lock6+unstick 16
+8x8 1★ #17: proved true best 24 (simple ✓ 11ms, descent 6ms, cell ✓ 4ms) | cf 27 lock6 27 down 28 ann 26 unstick 27 lock6+unstick 27
+8x8 1★ #18: proved true best 23 (simple ✓ 11ms, descent 3ms, cell ✓ 2ms) | cf 27 lock6 23 down 27 ann 23 unstick 27 lock6+unstick 23
+8x8 1★ #19: proved true best 28 (simple ✓ 7ms, descent 3ms, cell ✓ 7ms) | cf 39 lock6 33 down 31 ann 28 unstick 28 lock6+unstick 33
+10x10 2★ #0: proved true best 70 (simple ✓ 478ms, descent 453ms, cell ✓ 1612ms) | cf 73 lock6 70 down 81 ann 79 unstick 73 lock6+unstick 70
+10x10 2★ #1: proved true best 76 (simple ✓ 590ms, descent 372ms, cell ✓ 1098ms) | cf 94 lock6 93 down 93 ann 104 unstick 76 lock6+unstick 93
+10x10 2★ #2: proved true best 82 (simple ✓ 825ms, descent 574ms, cell ✓ 911ms) | cf 91 lock6 82 down 98 ann 98 unstick 82 lock6+unstick 82
+10x10 2★ #3: proved true best 86 (simple ✓ 59ms, descent 38ms, cell ✓ 173ms) | cf 98 lock6 93 down 94 ann 109 unstick 94 lock6+unstick 93
+10x10 2★ #4: proved true best 78 (simple ✓ 782ms, descent 388ms, cell ✓ 1329ms) | cf 91 lock6 83 down 84 ann 96 unstick 78 lock6+unstick 83
+10x10 2★ #5: proved true best 77 (simple ✓ 458ms, descent 363ms, cell ✓ 912ms) | cf 91 lock6 83 down 89 ann 102 unstick 87 lock6+unstick 82
+10x10 2★ #6: proved true best 67 (simple ✓ 476ms, descent 241ms, cell ✓ 138ms) | cf 77 lock6 68 down 67 ann 76 unstick 67 lock6+unstick 68
+10x10 2★ #7: proved true best 71 (simple ✓ 1384ms, descent 776ms, cell ✓ 1320ms) | cf 85 lock6 72 down 77 ann 84 unstick 76 lock6+unstick 71
+10x10 2★ #8: proved true best 67 (simple ✓ 794ms, descent 555ms, cell ✓ 1115ms) | cf 90 lock6 68 down 76 ann 73 unstick 75 lock6+unstick 68
+10x10 2★ #9: proved true best 68 (simple ✓ 140ms, descent 58ms, cell ✓ 311ms) | cf 108 lock6 73 down 78 ann 68 unstick 95 lock6+unstick 68
+10x10 2★ #10: proved true best 71 (simple ✓ 462ms, descent 262ms, cell ✓ 1591ms) | cf 82 lock6 82 down 71 ann 71 unstick 78 lock6+unstick 71
+10x10 2★ #11: proved true best 81 (simple ✓ 1880ms, descent 1408ms, cell ✓ 818ms) | cf 88 lock6 81 down 82 ann 92 unstick 88 lock6+unstick 81
+10x10 2★ #12: proved true best 69 (simple ✓ 1230ms, descent 931ms, cell ✓ 1000ms) | cf 82 lock6 82 down 81 ann 83 unstick 82 lock6+unstick 82
+10x10 2★ #13: proved true best 70 (simple ✓ 1271ms, descent 923ms, cell ✓ 896ms) | cf 90 lock6 83 down 78 ann 74 unstick 77 lock6+unstick 79
+10x10 2★ #14: proved true best 79 (simple ✓ 573ms, descent 373ms, cell ✓ 1266ms) | cf 83 lock6 83 down 81 ann 101 unstick 79 lock6+unstick 79
+12x12 2★ #0: proved true best 55 (simple ✗ 8000ms, descent 2464ms, cell ✓ 6255ms) | cf 84 lock6 69 down 83 ann 91 unstick 55 lock6+unstick 60
+12x12 2★ #1: proved false best 67 (simple ✗ 8000ms, descent 8000ms, cell ✗ 8001ms) | cf 115 lock6 83 down 81 ann 95 unstick 89 lock6+unstick 69
+12x12 2★ #2: proved true best 64 (simple ✗ 8000ms, descent 4108ms, cell ✓ 5992ms) | cf 85 lock6 81 down 83 ann 86 unstick 71 lock6+unstick 70
+12x12 2★ #3: proved true best 61 (simple ✗ 8002ms, descent 3845ms, cell ✓ 3145ms) | cf 88 lock6 70 down 90 ann 90 unstick 66 lock6+unstick 62
+12x12 2★ #4: proved false best null (simple ✗ 8000ms, descent 8001ms, cell ✗ 8001ms) | cf null lock6 81 down 89 ann 80 unstick null lock6+unstick 81
+12x12 2★ #5: proved false best 65 (simple ✗ 8001ms, descent 8000ms, cell ✓ 2012ms) | cf 82 lock6 72 down 77 ann 75 unstick 65 lock6+unstick 68
+12x12 2★ #6: proved true best 74 (simple ✗ 8001ms, descent 2342ms, cell ✓ 1022ms) | cf 80 lock6 80 down 89 ann 95 unstick 74 lock6+unstick 74
+12x12 2★ #7: proved true best 72 (simple ✗ 8001ms, descent 2540ms, cell ✓ 1915ms) | cf 90 lock6 84 down 89 ann 95 unstick 74 lock6+unstick 81
+12x12 3★ #0: proved true best 202 (simple ✓ 326ms, descent 410ms, cell ✗ 8000ms) | cf null lock6 202 down 202 ann 202 unstick null lock6+unstick 202
+12x12 3★ #1: proved true best 166 (simple ✓ 387ms, descent 479ms, cell ✗ 8000ms) | cf 166 lock6 166 down 166 ann 166 unstick 166 lock6+unstick 166
+12x12 3★ #2: proved true best 161 (simple ✓ 381ms, descent 552ms, cell ✗ 8001ms) | cf null lock6 161 down 161 ann 161 unstick null lock6+unstick 161
+12x12 3★ #3: proved true best 170 (simple ✓ 473ms, descent 650ms, cell ✗ 8001ms) | cf null lock6 170 down 170 ann 170 unstick null lock6+unstick 170
+12x12 3★ #4: proved true best 169 (simple ✓ 1016ms, descent 1452ms, cell ✗ 8001ms) | cf 169 lock6 169 down 169 ann 169 unstick 169 lock6+unstick 169
+12x12 3★ #5: proved true best 188 (simple ✓ 380ms, descent 559ms, cell ✗ 8001ms) | cf null lock6 188 down 188 ann 188 unstick null lock6+unstick 188
+12x12 3★ #6: proved true best 193 (simple ✓ 274ms, descent 357ms, cell ✗ 8001ms) | cf 193 lock6 193 down 193 ann 193 unstick 193 lock6+unstick 193
+12x12 3★ #7: proved true best 172 (simple ✓ 61ms, descent 86ms, cell ✗ 8001ms) | cf 172 lock6 172 down 172 ann 172 unstick 172 lock6+unstick 172
+14x14 2★ #0: proved false best null (simple ✗ 8000ms, descent 8000ms, cell ✗ 8001ms) | cf 108 lock6 87 down 100 ann 94 unstick 85 lock6+unstick 79
+14x14 2★ #1: proved false best 69 (simple ✗ 8001ms, descent 8001ms, cell ✗ 8001ms) | cf 88 lock6 83 down 84 ann 88 unstick 72 lock6+unstick 73
+14x14 2★ #2: proved false best 85 (simple ✗ 8000ms, descent 8001ms, cell ✗ 8001ms) | cf null lock6 96 down 106 ann null unstick null lock6+unstick 84
+14x14 2★ #3: proved false best 79 (simple ✗ 8001ms, descent 8001ms, cell ✗ 8001ms) | cf 102 lock6 90 down 94 ann 94 unstick 87 lock6+unstick 80
+14x14 2★ #4: proved false best 73 (simple ✗ 8000ms, descent 8001ms, cell ✓ 5256ms) | cf 118 lock6 87 down 94 ann 87 unstick 85 lock6+unstick 84
+== cost exit 0
+shot game_board {"x":10,"y":6,"width":370,"height":566.96875}
+shot game_cube_slices {"x":22,"y":1057.296875,"width":346,"height":558.953125}
+shot ol_board_heat {"x":22,"y":788.40625,"width":346,"height":645.890625}
+shot ol_cube_view {"x":22,"y":788.40625,"width":346,"height":750.359375}
+shot layers2_cube {"x":22,"y":740.65625,"width":346,"height":743.046875}
+shot givens_charts {"x":22,"y":1051.234375,"width":346,"height":400.1875}
+shot givens_findings {"x":22,"y":618.4375,"width":346,"height":377.046875}
+shot nonogram_method {"x":22,"y":271.15625,"width":346,"height":749.71875}
+shot starbattle_probe {"x":22,"y":383.59375,"width":346,"height":798.046875}
+shot killer_method {"x":22,"y":289.28125,"width":346,"height":910.953125}
+shot kenken_method {"x":22,"y":175.65625,"width":346,"height":876.46875}
+shot latin_method {"x":22,"y":175.65625,"width":346,"height":736.859375}
+shot queens_solved {"x":22,"y":335.84375,"width":346,"height":514.03125}
+shot map_dots {"x":22,"y":245.03125,"width":346,"height":555.421875}
+shot map_words {"x":22,"y":968,"width":346,"height":469.578125}
+shot map_count {"x":22,"y":245.03125,"width":346,"height":677.203125}
+shot starcost_board {"x":22,"y":436.03125,"width":346,"height":490.640625}
+shot starcost_lookahead {"x":22,"y":522.28125,"width":346,"height":621.015625}
+shot starcost_unstick {"x":22,"y":522.28125,"width":346,"height":1130.25}
+shot starcost_proof {"x":22,"y":522.28125,"width":346,"height":957.359375}
+== shots exit 0
+finished

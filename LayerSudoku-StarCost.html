@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Star Cost Layers</title>
+<style>
+:root{
+  --bg:#f5f4ef; --surface:#ffffff; --ink:#1c1e23; --muted:#6a6e77; --line:#cfd2d8; --line-strong:#1c1e23;
+  --accent:#2455c7; --accent-ink:#fff; --btn:#e9e7e0; --btn-ink:#1c1e23; --ok:#2e9e57; --bad:#c42626;
+  --star:#d99a00; --best:#2e9e57; --regL:90%; --regS:55%; --wcol:120,60,20;
+  --shadow:0 1px 2px rgba(0,0,0,.08),0 4px 14px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#131519; --surface:#1c1f25; --ink:#e7e8eb; --muted:#9aa0aa; --line:#383d46; --line-strong:#c9cdd4;
+    --accent:#6f98ff; --accent-ink:#0d1117; --btn:#2a2e36; --btn-ink:#e7e8eb; --star:#ffc53d; --best:#4cc27a; --regL:24%; --regS:35%; --wcol:255,190,120;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  padding:max(12px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));-webkit-user-select:none;user-select:none}
+.wrap{max-width:620px;margin:0 auto}
+h1{font-size:20px;margin:0}
+.sub{font-size:12px;color:var(--muted);margin-bottom:6px}
+h2{font-size:15px;margin:0 0 6px}
+button,select{font:inherit;color:var(--btn-ink);background:var(--btn);border:0;border-radius:10px;padding:9px 12px;cursor:pointer;max-width:100%;min-width:0}
+select{appearance:none;-webkit-appearance:none}
+button:active{transform:scale(.97)}
+button.primary{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.row select{flex:1}
+@media (max-width:560px){ #size,#stars,#wmode,#givens,#bound,#branch{flex:1 1 100%} }
+.card{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:12px;margin-top:12px}
+.note{font-size:12.5px;color:var(--muted);margin:6px 0}
+.rule{font-size:13.5px;margin:4px 0 0}
+.boardbox{display:flex;justify-content:center;margin-top:8px}
+.board{display:grid;border:3px solid var(--line-strong);border-radius:4px;overflow:hidden;touch-action:manipulation}
+.board .c{position:relative;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--line);border-bottom:1px solid var(--line);cursor:pointer;font-size:var(--sfs);line-height:1}
+.board .c::before{content:"";position:absolute;inset:0;background:rgb(var(--wcol));opacity:var(--w,0);pointer-events:none}
+.board .c .w{position:absolute;left:2px;top:1px;font-size:var(--wfs);font-weight:700;color:var(--ink);opacity:.8;z-index:1}
+.board .c.rr{border-right:3px solid var(--line-strong)} .board .c.rb{border-bottom:3px solid var(--line-strong)}
+.board .c.star::after{content:"★";color:var(--star);position:relative;text-shadow:0 1px 1px rgba(0,0,0,.3);z-index:1}
+.board .c.best::after{content:"★";color:var(--best);position:relative;text-shadow:0 1px 1px rgba(0,0,0,.3);z-index:1}
+.board .c.g.star::after{color:var(--ink)}
+.board .c.x .w{opacity:.3}
+.board .c.bad{box-shadow:inset 0 0 0 3px var(--bad)}
+.board .c.hint{box-shadow:inset 0 0 0 3px var(--ok)}
+.board .c.fc{box-shadow:inset 0 0 0 2px var(--accent)}
+.score{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
+.score div,.stats div{background:var(--bg);border-radius:10px;padding:6px 4px;text-align:center}
+.score b,.stats b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
+.score span,.stats span{font-size:10.5px;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.tools{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.msg{background:var(--bg);border-radius:10px;padding:8px 10px;margin-top:8px;min-height:44px;font-size:14px}
+.msg .no{font-size:11px;color:var(--muted)}
+.log{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;max-height:130px;overflow:auto}
+.log span{font:600 12px -apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);border-radius:6px;padding:3px 7px}
+.log span.back{color:var(--bad)} .log span.good{color:var(--ok)}
+ol{padding-left:20px;margin:6px 0} li{margin:4px 0;font-size:14px}
+.hidden{display:none!important}
+.busy{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:20;color:#fff;font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>⭐💰 Star Cost Layers</h1>
+  <div class="sub">Star Battle with a weights layer: place the stars where the total cost is lowest · option layers + bounds · S. S. Soltan</div>
+
+  <div class="card">
+    <div class="row">
+      <select id="size" aria-label="Size"><option value="6">6×6</option><option value="8" selected>8×8</option><option value="10">10×10</option><option value="12">12×12</option><option value="14">14×14</option></select>
+      <select id="stars" aria-label="Stars"><option value="1" selected>1 star each</option><option value="2">2 stars each</option><option value="3">3 stars each</option></select>
+      <select id="wmode" aria-label="Weights"><option value="random" selected>Weights: random 1–9</option><option value="hills">Weights: hills (smooth)</option><option value="center">Weights: cheap in the middle</option></select>
+      <select id="givens" aria-label="Given stars"></select>
+      <select id="bound" aria-label="Bound"><option value="lag" selected>Bound: + weight descent</option><option value="simple">Bound: simple (cheapest options)</option></select>
+      <select id="branch" aria-label="Branch"><option value="unit" selected>Branch: fewest options (unit)</option><option value="cell">Branch: cheapest cell (your rule)</option></select>
+      <button id="newBtn" class="primary">New puzzle</button>
+    </div>
+    <p class="rule" id="rule"></p>
+    <div class="boardbox"><div id="board" class="board"></div></div>
+    <div class="score">
+      <div><b id="sMine">0</b><span>your total cost</span></div>
+      <div><b id="sBest">–</b><span>cheapest possible</span></div>
+      <div><b id="sStars">0</b><span>stars placed</span></div>
+    </div>
+    <div class="tools">
+      <button id="checkBtn">Check</button>
+      <button id="hintBtn">💡 Hint</button>
+      <button id="restartBtn">Restart</button>
+      <button id="countBtn">🔢 Count placements</button>
+    </div>
+    <div class="msg"><div class="no" id="phase"></div><div id="text"></div></div>
+  </div>
+
+  <div class="card">
+    <h2>Watch the method find the cheapest placement</h2>
+    <div class="row" style="margin-top:0">
+      <button id="solveBtn" class="primary">▶ Find the cheapest</button>
+      <button id="stepBtn">Step ▶|</button>
+      <button id="greedyBtn">⚡ Cheapest-first</button>
+      <button id="lockBtn">🔒 Lock cheapest</button>
+      <select id="look" aria-label="Look ahead" style="flex:0 0 auto"><option value="1">Look ahead: none</option><option value="3">Look ahead: 3 cells</option><option value="6" selected>Look ahead: 6 cells</option></select>
+      <button id="downBtn">⛰ Downhill + Unstick</button>
+      <button id="backBtn">⏮ Back to my board</button>
+      <select id="speed" aria-label="Speed" style="flex:0 0 auto"><option value="slow">Slow</option><option value="normal" selected>Normal</option><option value="fast">Fast</option><option value="turbo">Turbo</option></select>
+    </div>
+    <div class="stats">
+      <div><b id="sBound">–</b><span>lower bound</span></div>
+      <div><b id="sFound">–</b><span>best found so far</span></div>
+      <div><b id="sNodes">0</b><span>branches tried</span></div>
+      <div><b id="sPruned">0</b><span>branches cut by the bound</span></div>
+    </div>
+    <div id="log" class="log"></div>
+    <p class="note">Gold stars: the branch being tried. Green stars: the cheapest placement found so far. The unit being branched on is outlined. During ⛰ Downhill: gold stars are the current placement, the outlined cells are the stars just moved, "best found so far" is the current cost and "branches tried" counts the moves; green stars at the end show the proven cheapest.</p>
+  </div>
+
+  <div class="card">
+    <h2>How it works — layers with a weights layer on top</h2>
+    <ol>
+      <li><b>Stars each</b>: 1, 2 or 3 stars in every row, column and region (3 stars need at least a 12×12 board).</li>
+      <li><b>The rules</b> are Star Battle's: every row, column and region gets its stars, and no two stars touch. Each cell also has a <b>cost</b> (the number in its corner; darker = costlier). Many placements follow the rules — we want the one with the <b>lowest total cost</b>, like choosing the best sites to build on.</li>
+      <li><b>Option layers with costs</b>: every unit's options (ways to place its stars) now carry a cost — the sum of their cells' weights. The layer rules still cut options: stars can't touch, a full unit empties its other cells, a unit with one option left is locked.</li>
+      <li><b>Lower bound</b>: every star lies in exactly one row, so the total can't be less than the sum of each row's cheapest option. The same holds for columns and for regions — the method uses the highest of the three.</li>
+      <li><b>Givens</b> (optional): some stars are already placed (dark) and must stay — like sites that already exist. They come from a valid placement, not necessarily the cheapest, so the cheapest total with them can be higher; the page shows both.</li>
+      <li><b>Cheapest first</b>: branch on the unit with the fewest options, trying its cheapest option first — the first complete placement is usually already good.</li>
+      <li><b>Weight descent (a better bound)</b>: put a price on every column and region, let each row simply take its cheapest cells under <i>weight + prices</i>, then adjust the prices step by step like gradient descent — a column with too many stars gets dearer, one with too few gets cheaper. Every set of prices gives a lower bound, and the descent pushes it up, so more branches are cut.</li>
+      <li><b>⚡ Cheapest-first</b> (your rule): put a star on the cheapest free cell of the whole board, let the layer rules empty its neighbours and fill in what follows; if a row, column or region can then no longer get its stars, that cell stays empty and the next cheapest is tried. Instant, and much closer to the cheapest than a random start.</li>
+      <li><b>🔒 Lock cheapest</b> (your rule): go through the cells from the cheapest up; lock a star on a free cell only if your layer method can still fit every other star with it (it finds a full valid placement), otherwise that cell stays empty. Locked stars are never revisited — like a locked layer — so nothing is undone and the result is always valid. <b>Look ahead</b>: before locking, try the 3 or 6 cheapest free cells, finish the placement from each with the cheapest-first rule, and lock the one whose finished total is lowest — much closer to the cheapest.</li>
+      <li><b>⛰ Downhill + Unstick</b>: from the cheapest-first placement (or a random one), keep swapping the columns of two stars whenever that lowers the cost — until stuck in a valley. Then <b>Unstick</b>: free about 60% of the rows (or columns), keep the other stars, and let your layer method rebuild the freed band at the cheapest cost — a huge, always-valid move. Repeat with other bands. Fast and usually close to the cheapest, but only the bound can prove it.</li>
+      <li><b>Branch</b> menu: the proof search can branch on the unit with the fewest options, or on your rule — the cheapest free cell (star there, or not). Both always prove the cheapest; which is faster depends on the board.</li>
+      <li><b>Cut by the bound</b>: once a placement costing <i>C</i> is found, any branch whose lower bound is already <i>C</i> or more can't beat it and is cut without looking inside. When no branch is left, the best placement found is <b>proved</b> to be the cheapest.</li>
+    </ol>
+  </div>
+</div>
+<div id="busy" class="busy hidden">Working…</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const LETTERS = "ABCDEFGHIJKLMNOP";
+const touching = (a, b, N) => Math.abs(((a / N) | 0) - ((b / N) | 0)) <= 1 && Math.abs(a % N - b % N) <= 1;
+function geo(N) {
+  const nb = [], n4 = [];
+  for (let i = 0; i < N * N; i++) { const r = (i / N) | 0, c = i % N, a = [], b = []; for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) { if (!dr && !dc) continue; const rr = r + dr, cc = c + dc; if (rr >= 0 && rr < N && cc >= 0 && cc < N) { a.push(rr * N + cc); if (!dr || !dc) b.push(rr * N + cc); } } nb.push(a); n4.push(b); }
+  return { nb, n4 };
+}
+
+/* ---------- puzzle: stars first, regions grown around them (so at least one placement exists) ---------- */
+// every way to pick K columns of a row with at least one gap between them
+function rowChoices(N, K) { const out = [], pick = []; const rec = a => { if (pick.length === K) { out.push(pick.slice()); return; } for (let c = a; c < N; c++) { pick.push(c); rec(c + 2); pick.pop(); } }; rec(0); return out; }
+function placeStars(N, K) {
+  const cols = new Array(N).fill(0), stars = []; let nodes = 0;
+  const all = rowChoices(N, K), choices = () => shuffle(all.slice());
+  const rec = (r, prev) => { if (++nodes > 60000) return false; if (r === N) return cols.every(x => x === K); for (const ch of choices()) { if (ch.some(c => cols[c] >= K || prev.some(p => Math.abs(p - c) <= 1))) continue; ch.forEach(c => { cols[c]++; stars.push(r * N + c); }); if (rec(r + 1, ch)) return true; ch.forEach(c => { cols[c]--; stars.pop(); }); } return false; };
+  return rec(0, []) ? stars : null;
+}
+function growRegions(N, K, stars) {
+  const NC = N * N, G = geo(N), reg = new Int16Array(NC).fill(-1), isStar = new Uint8Array(NC); stars.forEach(i => isStar[i] = 1); let g = 0;
+  if (K === 1) stars.forEach(i => { reg[i] = g++; });
+  else {   // K stars per region: start at a star, then join the nearest free stars one by one with short paths
+    const left = new Set(stars), dist = (x, y) => Math.abs(((x / N) | 0) - ((y / N) | 0)) + Math.abs(x % N - y % N);
+    while (left.size) {
+      const a = [...left][0]; left.delete(a); reg[a] = g; const cells = [a];
+      for (let m = 1; m < K; m++) {
+        const bs = [...left].sort((x, y) => Math.min(...cells.map(c => dist(c, x))) - Math.min(...cells.map(c => dist(c, y))));
+        let ok = false;
+        for (const b of bs) {
+          const prev = new Int32Array(NC).fill(-2), q = []; cells.forEach(c => { prev[c] = -1; q.push(c); });
+          while (q.length && prev[b] === -2) { const x = q.shift(); for (const y of shuffle(G.n4[x].slice())) if (prev[y] === -2 && reg[y] < 0 && (y === b || !isStar[y])) { prev[y] = x; q.push(y); } }
+          if (prev[b] === -2) continue;
+          for (let x = b; x !== -1 && reg[x] !== g; x = prev[x]) { reg[x] = g; cells.push(x); }
+          left.delete(b); ok = true; break;
+        }
+        if (!ok) return null;
+      }
+      g++;
+    }
+  }
+  for (let guard = 0; guard < NC * 50 && reg.includes(-1); guard++) { const sizes = new Array(N).fill(0); reg.forEach(x => x >= 0 && sizes[x]++); const front = []; for (let i = 0; i < NC; i++) if (reg[i] < 0 && !isStar[i]) for (const j of G.n4[i]) if (reg[j] >= 0) front.push([i, reg[j]]); if (!front.length) return null; front.sort((x, y) => sizes[x[1]] - sizes[y[1]] + (Math.random() - 0.5) * 6); const [i, r] = front[0]; reg[i] = r; }
+  return reg.includes(-1) ? null : reg;
+}
+function makeWeights(N, mode) {
+  const w = new Int16Array(N * N);
+  if (mode === "random") for (let i = 0; i < N * N; i++) w[i] = 1 + Math.floor(Math.random() * 9);
+  else if (mode === "center") for (let i = 0; i < N * N; i++) { const r = (i / N) | 0, c = i % N, d = Math.hypot(r - (N - 1) / 2, c - (N - 1) / 2) / (N / 2 * Math.SQRT2); w[i] = Math.max(1, Math.min(9, Math.round(1 + 8 * d + (Math.random() - 0.5) * 2))); }
+  else { const hills = [...Array(3 + Math.floor(Math.random() * 3))].map(() => ({ x: Math.random() * N, y: Math.random() * N, s: N / 3 + Math.random() * N / 3, h: Math.random() < 0.5 ? 1 : -1 })); const raw = []; for (let i = 0; i < N * N; i++) { const r = (i / N) | 0, c = i % N; raw.push(hills.reduce((a, h) => a + h.h * Math.exp(-((r - h.y) ** 2 + (c - h.x) ** 2) / (2 * h.s * h.s)), 0)); } const lo = Math.min(...raw), hi = Math.max(...raw); for (let i = 0; i < N * N; i++) w[i] = 1 + Math.round(8 * (raw[i] - lo) / (hi - lo || 1)); }
+  return w;
+}
+
+/* ---------- the method: option layers with costs + branch and bound ---------- */
+// P = { N, K, reg, w }; mode = { emit, budgetMs, init (user state) }
+function solveCost(P, mode) {
+  const N = P.N, K = P.K, NC = N * N, G = geo(N), W = P.w;
+  const units = [];
+  for (let r = 0; r < N; r++) units.push({ fam: 0, name: `Row ${r + 1}`, cells: [...Array(N).keys()].map(c => r * N + c) });
+  for (let c = 0; c < N; c++) units.push({ fam: 1, name: `Column ${c + 1}`, cells: [...Array(N).keys()].map(r => r * N + c) });
+  for (let g = 0; g < N; g++) units.push({ fam: 2, name: `Region ${LETTERS[g]}`, cells: [...Array(NC).keys()].filter(i => P.reg[i] === g) });
+  const U = units.length, ev = [], MAXEV = 3000, st = { nodes: 0, pruned: 0, dead: 0 }, t0 = performance.now();
+  let best = null, bestCost = Infinity, stopped = false;
+  const snap = (cell, extra) => { if (!mode.emit) return; if (ev.length >= MAXEV && !["done", "best"].includes(extra.kind)) { st.truncated = true; return; } ev.push({ ...extra, cell: cell.slice(), best: best ? best.slice() : null, bestCost, st: { ...st } }); };
+  const setStar = (s, i) => { if (s[i] === 0) return false; if (s[i] === 1) return true; s[i] = 1; for (const j of G.nb[i]) { if (s[j] === 1) return false; s[j] = 0; } return true; };
+  function options(s, u) {
+    const cells = units[u].cells, stars = cells.filter(i => s[i] === 1), cand = cells.filter(i => s[i] < 0), need = K - stars.length, out = [];
+    if (need < 0) return out;
+    if (need === 0) { out.push(stars.slice()); return out; }
+    const pick = [];   // choose the missing stars from the free cells, none touching
+    const rec = a => { if (out.length > 20000) return; if (pick.length === need) { out.push([...stars, ...pick]); return; } for (let j = a; j < cand.length; j++) { if (pick.some(x => touching(x, cand[j], N))) continue; pick.push(cand[j]); rec(j + 1); pick.pop(); } };
+    rec(0);
+    return out;
+  }
+  const extra = (s, o) => o.reduce((a, i) => a + (s[i] === 1 ? 0 : W[i]), 0);
+  // propagate the layer rules; returns false on a contradiction
+  function propagate(s) {
+    for (let guard = 0; guard < 400; guard++) {
+      let changed = false;
+      for (let u = 0; u < U && !changed; u++) {
+        const opts = options(s, u); if (!opts.length) return false;
+        const cells = units[u].cells;
+        if (opts.length === 1 || cells.filter(i => s[i] === 1).length === K) { // lock / full unit
+          for (const i of opts[0]) if (s[i] !== 1) { if (!setStar(s, i)) return false; changed = true; }
+          for (const i of cells) if (s[i] < 0) { s[i] = 0; changed = true; }
+          continue;
+        }
+        const cnt = new Map(); for (const o of opts) for (const i of o) cnt.set(i, (cnt.get(i) || 0) + 1);
+        for (const i of cells) if (s[i] < 0) { const k = cnt.get(i) || 0; if (k === opts.length) { if (!setStar(s, i)) return false; changed = true; } else if (!k) { s[i] = 0; changed = true; } }
+      }
+      if (!changed) return true;
+    }
+    return true;
+  }
+  // lower bound: placed stars + each family's sum of cheapest options (take the highest family)
+  // weight descent: put a price on every column and region, let each row take its cheapest cells under
+  // weight + prices, and adjust the prices (gradient steps) so too-full columns/regions get dearer. Any prices give a lower bound.
+  const RC = rowChoices(N, K), lam = new Float64Array(N), mu = new Float64Array(N);
+  function lagBound(s, iters) {
+    const ro = [];
+    for (let r = 0; r < N; r++) { ro.push(RC.filter(o => { for (let c = 0; c < N; c++) { const v = s[r * N + c], inO = o.includes(c); if ((v === 1 && !inO) || (v === 0 && inO)) return false; } return true; })); if (!ro[r].length) return Infinity; }
+    let best = -Infinity, theta = 1;
+    for (let it = 0; it < iters; it++) {
+      let L = 0; for (let x = 0; x < N; x++) L -= K * (lam[x] + mu[x]);
+      const cc = new Float64Array(N), gc = new Float64Array(N);
+      for (let r = 0; r < N; r++) { let bv = Infinity, bo = null; for (const o of ro[r]) { let v = 0; for (const c of o) { const i = r * N + c; v += W[i] + lam[c] + mu[P.reg[i]]; } if (v < bv) { bv = v; bo = o; } } L += bv; for (const c of bo) { cc[c]++; gc[P.reg[r * N + c]]++; } }
+      if (L > best) best = L; else theta *= 0.9;
+      let g2 = 0; for (let x = 0; x < N; x++) g2 += (cc[x] - K) ** 2 + (gc[x] - K) ** 2;
+      if (!g2) return best;
+      const step = theta * ((bestCost < Infinity ? bestCost : L + N) - L) / g2;
+      for (let x = 0; x < N; x++) { lam[x] += step * (cc[x] - K); mu[x] += step * (gc[x] - K); }
+    }
+    return best;
+  }
+  function bound(s, iters = 12) {
+    let placed = 0; for (let i = 0; i < NC; i++) if (s[i] === 1) placed += W[i];
+    let lb = 0;
+    for (let f = 0; f < 3; f++) { let sum = 0; for (let u = 0; u < U; u++) if (units[u].fam === f) { const o = options(s, u); if (!o.length) return Infinity; sum += Math.min(...o.map(x => extra(s, x))); } lb = Math.max(lb, sum); }
+    if (!mode.lagr) return placed + lb;
+    return Math.max(placed + lb, Math.ceil(lagBound(s, iters) - 1e-6));
+  }
+  function search(s, depth) {
+    if (stopped) return;
+    if (performance.now() - t0 > mode.budgetMs) { stopped = true; return; }
+    st.nodes++;
+    if (!propagate(s)) { st.dead++; snap(s, { kind: "dead" }); return; }
+    const lb = bound(s);
+    if (lb >= bestCost) { st.pruned++; snap(s, { kind: "prune", lb }); return; }
+    if (s.every(v => v >= 0)) { const cost = s.reduce((a, v, i) => a + (v === 1 ? W[i] : 0), 0); if (cost < bestCost) { bestCost = cost; best = Int8Array.from(s, v => v === 1 ? 1 : 0); snap(s, { kind: "best", cost }); if (mode.first) stopped = true; } return; }
+    // her rule: put a star on the cheapest free cell of the whole board; if the layer rules then fail, that cell is empty and the next cheapest is tried
+    if (mode.branch === "cell") {
+      let ci = -1; for (let i = 0; i < NC; i++) if (s[i] < 0 && (ci < 0 || W[i] < W[ci])) ci = i;
+      if (ci < 0) return;
+      const t = s.slice();
+      if (setStar(t, ci)) { snap(t, { kind: "cell", cell1: ci, cost: W[ci], lb: bound(t) }); search(t, depth + 1); if (stopped) return; }
+      const e = s.slice(); e[ci] = 0; snap(e, { kind: "skip", cell1: ci }); search(e, depth + 1);
+      return;
+    }
+    // branch: the unit with the fewest options, cheapest option first
+    let bu = -1, bn = Infinity, bo = null;
+    for (let u = 0; u < U; u++) { if (units[u].cells.filter(i => s[i] === 1).length === K) continue; const o = options(s, u); if (o.length > 1 && o.length < bn) { bn = o.length; bu = u; bo = o; } }
+    if (bu < 0) return;
+    bo.sort((a, b) => extra(s, a) - extra(s, b));
+    for (let k = 0; k < bo.length; k++) {
+      const t = s.slice(); let ok = true;
+      for (const i of bo[k]) if (!setStar(t, i)) { ok = false; break; }
+      if (ok) for (const i of units[bu].cells) if (t[i] < 0) t[i] = 0;
+      if (!ok) continue;
+      snap(t, { kind: "try", unit: bu, k: k + 1, of: bo.length, cost: extra(s, bo[k]), lb: bound(t) });
+      search(t, depth + 1);
+      if (stopped) return;
+    }
+  }
+  const s0 = new Int8Array(NC).fill(-1);
+  if (mode.init) for (let i = 0; i < NC; i++) if (mode.init[i] === 1 && !setStar(s0, i)) return { ok: false, ev, st, units, bad: true };
+  const lb0 = bound(s0, 200);
+  snap(s0, { kind: "start", lb: lb0 });
+  search(s0, 0);
+  snap(best || s0, { kind: "done", proved: !stopped, lb: lb0 });
+  return { ok: !!best, best, bestCost, proved: !stopped, lb0, ev, st, units };
+}
+// every valid placement (for counting): cost min / average / max
+function countPlacements(P, budgetMs) {
+  const N = P.N, K = P.K, NC = N * N, G = geo(N), t0 = performance.now();
+  const rows = [...Array(N).keys()], colCnt = new Int8Array(N), regCnt = new Int8Array(N), stars = [];
+  let n = 0, min = Infinity, max = -Infinity, sum = 0, stopped = false, nodes = 0, atMin = 0;
+  const rowOpts = () => rowChoices(N, K);
+  const RO = rowOpts(), must = [...Array(N)].map((_, r) => P.givens ? [...Array(N).keys()].filter(c => P.givens[r * N + c] === 1) : []);
+  const rec = (r, cost) => {
+    if (stopped) return;
+    if ((++nodes & 4095) === 0 && performance.now() - t0 > budgetMs) { stopped = true; return; }
+    if (r === N) { if (colCnt.every(x => x === K) && regCnt.every(x => x === K)) { n++; sum += cost; if (cost < min) { min = cost; atMin = 0; } if (cost === min) atMin++; if (cost > max) max = cost; } return; }
+    for (const o of RO) {
+      if (!must[r].every(c => o.includes(c))) continue;   // given stars must stay
+      const cells = o.map(c => r * N + c);
+      if (cells.some(i => colCnt[i % N] >= K || regCnt[P.reg[i]] >= K || stars.some(j => touching(i, j, N)))) continue;
+      cells.forEach(i => { colCnt[i % N]++; regCnt[P.reg[i]]++; stars.push(i); });
+      const left = N - r - 1; let feasible = true;
+      for (let c = 0; c < N && feasible; c++) if (colCnt[c] + left * K < K) feasible = false;
+      if (feasible) rec(r + 1, cost + cells.reduce((a, i) => a + P.w[i], 0));
+      cells.forEach(i => { colCnt[i % N]--; regCnt[P.reg[i]]--; stars.pop(); });
+    }
+  };
+  rec(0, 0);
+  return { n, min, max, atMin, avg: n ? sum / n : 0, done: !stopped };
+}
+
+/* ---------- downhill (local search): move stars to cheaper cells while every rule still holds ---------- */
+// a move swaps the columns of two stars in different rows: (r1,c1),(r2,c2) → (r1,c2),(r2,c1). Rows and columns keep their counts;
+// it is allowed when the regions keep their counts and no star touches another. Steepest descent: take the move that saves most.
+function randomStart(P) {
+  const w = new Int16Array(P.N * P.N); for (let i = 0; i < w.length; i++) w[i] = 1 + Math.floor(Math.random() * 50);
+  const r = solveCost({ ...P, w }, { emit: false, budgetMs: 1000, init: P.givens, first: true }); return r.best;
+}
+function downhill(P, start, emit) {
+  const N = P.N, cur = Int8Array.from(start), ev = [];
+  let cost = 0; for (let i = 0; i < cur.length; i++) if (cur[i]) cost += P.w[i];
+  const snapD = (extra) => { if (emit) ev.push({ ...extra, cell: Int8Array.from(cur), cost, bestCost: cost, st: { nodes: ev.filter(x => x.kind === "move").length + (extra.kind === "move" ? 1 : 0), pruned: 0 } }); };
+  snapD({ kind: "dstart" });
+  for (let step = 0; step < 500; step++) {
+    const S = [...cur.keys()].filter(i => cur[i] === 1);
+    let bd = 0, bm = null;
+    for (let x = 0; x < S.length; x++) for (let y = x + 1; y < S.length; y++) {
+      const a = S[x], b = S[y], r1 = (a / N) | 0, c1 = a % N, r2 = (b / N) | 0, c2 = b % N;
+      if (r1 === r2 || c1 === c2 || P.givens[a] === 1 || P.givens[b] === 1) continue;
+      const n1 = r1 * N + c2, n2 = r2 * N + c1;
+      if (cur[n1] || cur[n2]) continue;
+      const d = P.w[n1] + P.w[n2] - P.w[a] - P.w[b];
+      if (d >= bd) continue;
+      const ra = [P.reg[a], P.reg[b]].sort().join(), rb = [P.reg[n1], P.reg[n2]].sort().join();
+      if (ra !== rb || touching(n1, n2, N)) continue;
+      if (S.some(o => o !== a && o !== b && (touching(o, n1, N) || touching(o, n2, N)))) continue;
+      bd = d; bm = [a, b, n1, n2];
+    }
+    if (!bm) break;
+    cur[bm[0]] = 0; cur[bm[1]] = 0; cur[bm[2]] = 1; cur[bm[3]] = 1; cost += bd;
+    snapD({ kind: "move", from: [bm[0], bm[1]], to: [bm[2], bm[3]], delta: bd });
+  }
+  snapD({ kind: "stuck", best: OPT && OPT.best ? OPT.best : null });
+  return { cost, cur, ev };
+}
+
+function unstick(P, start, rounds) {
+  const N = P.N, band = Math.max(2, Math.round(N * 0.6)), ev = [];
+  let cur = Int8Array.from(start), cost = 0; for (let i = 0; i < cur.length; i++) if (cur[i]) cost += P.w[i];
+  const push = (x, extra) => ev.push({ ...extra, cell: Int8Array.from(cur), cost, bestCost: cost, st: { nodes: x, pruned: 0 } });
+  for (let t = 0; t < rounds; t++) {
+    const byCol = t % 2 === 1, a = Math.floor(Math.random() * (N - band + 1)), inBand = i => { const x = byCol ? i % N : (i / N) | 0; return x >= a && x < a + band; };
+    const init = new Int8Array(N * N).fill(-1);
+    for (let i = 0; i < N * N; i++) if (P.givens[i] === 1 || (cur[i] && !inBand(i))) init[i] = 1;
+    push(t + 1, { kind: "free", band: [a, a + band - 1], byCol, to: [...cur.keys()].filter(i => cur[i] && inBand(i) && P.givens[i] !== 1) });
+    const r = solveCost(P, { emit: false, budgetMs: 400, init, lagr: true });
+    if (r.best && r.bestCost < cost) {
+      const moved = [...r.best.keys()].filter(i => r.best[i] && !cur[i]), d = r.bestCost - cost;
+      cur = Int8Array.from(r.best); cost = r.bestCost; push(t + 1, { kind: "rebuilt", delta: d, to: moved });
+    } else push(t + 1, { kind: "same" });
+  }
+  push(rounds, { kind: "unstuck", best: OPT && OPT.best ? OPT.best : null });
+  return { ev, cost };
+}
+
+// her rule: take the cheapest free cell; lock a star there if the layer method can still fit every other star with it
+// (a full valid placement is found); otherwise the cell stays empty. Locked stars are never revisited.
+function lockCheapest(P, m = 1) {
+  const N = P.N, K = P.K, NC = N * N, G = geo(N), ev = [], lockedArr = new Int8Array(NC).fill(-1);
+  for (let i = 0; i < NC; i++) if (P.givens[i] === 1) lockedArr[i] = 1;
+  const units = []; for (let r = 0; r < N; r++) units.push([...Array(N).keys()].map(c => r * N + c)); for (let c = 0; c < N; c++) units.push([...Array(N).keys()].map(r => r * N + c)); for (let g = 0; g < N; g++) units.push([...Array(NC).keys()].filter(i => P.reg[i] === g));
+  const unitsOf = i => units.filter(u => u.includes(i));
+  let cost = 0, checks = 0, locks = 0; for (let i = 0; i < NC; i++) if (lockedArr[i] === 1) cost += P.w[i];
+  const push = extra => ev.push({ ...extra, cell: Int8Array.from(lockedArr, v => v === 1 ? 1 : 0), cost, bestCost: cost, st: { nodes: checks, pruned: locks } });
+  push({ kind: "lstart" });
+  const order = [...Array(NC).keys()].sort((a, b) => P.w[a] - P.w[b] || a - b), t0 = performance.now(), deadline = t0 + 6000;
+  const left = () => deadline - performance.now();
+  const blocked = c => lockedArr[c] === 1 || G.nb[c].some(j => lockedArr[j] === 1) || unitsOf(c).some(u => u.filter(i => lockedArr[i] === 1).length >= K);
+  // look ahead: among the m cheapest free cells that still fit, lock the one whose cheapest-first completion is cheapest
+  const noFit = new Set();   // a cell that can't fit stays that way as more stars are locked
+  while (m > 1 && lockedArr.filter(v => v === 1).length < N * K && left() > 2500) {
+    const cands = [];
+    for (const c of order) {
+      if (blocked(c) || noFit.has(c)) continue;
+      checks++;
+      const init = Int8Array.from(lockedArr); init[c] = 1;
+      const r = solveCost(P, { emit: false, budgetMs: Math.min(250, left()), init, branch: "cell", first: true });
+      if (r.best) cands.push({ c, total: r.bestCost }); else if (r.proved) { noFit.add(c); push({ kind: "nofit", c, w: P.w[c], to: [c] }); }
+      if (left() < 2500) break;
+      if (cands.length >= m) break;
+    }
+    if (!cands.length) break;
+    const pick = cands.slice().sort((a, b) => a.total - b.total || P.w[a.c] - P.w[b.c])[0];
+    push({ kind: "look", cands, pick: pick.c, to: cands.map(x => x.c) });
+    lockedArr[pick.c] = 1; cost += P.w[pick.c]; locks++; push({ kind: "lock", c: pick.c, w: P.w[pick.c], to: [pick.c], total: pick.total });
+  }
+  for (const c of order) {
+    if (lockedArr.filter(v => v === 1).length >= N * K || left() < 1500) break;
+    if (lockedArr[c] === 1) continue;
+    // blocked already: touches a locked star, or one of its units is full
+    if (G.nb[c].some(j => lockedArr[j] === 1) || unitsOf(c).some(u => u.filter(i => lockedArr[i] === 1).length >= K)) continue;
+    checks++;
+    const init = Int8Array.from(lockedArr); init[c] = 1;
+    const r = solveCost(P, { emit: false, budgetMs: Math.min(250, left()), init, first: true });
+    if (r.best) { lockedArr[c] = 1; cost += P.w[c]; locks++; push({ kind: "lock", c, w: P.w[c], to: [c] }); }
+    else if (r.proved) push({ kind: "nofit", c, w: P.w[c], to: [c] });
+  }
+  // out of time: the layer method completes the remaining stars in one go (keeping every locked star)
+  if (lockedArr.filter(v => v === 1).length < N * K) {
+    const r = solveCost(P, { emit: false, budgetMs: 3000, init: Int8Array.from(lockedArr), first: true });
+    if (r.best) { const add = [...r.best.keys()].filter(i => r.best[i] && lockedArr[i] !== 1); add.forEach(i => { lockedArr[i] = 1; cost += P.w[i]; }); push({ kind: "finish", n: add.length, to: add }); }
+  }
+  push({ kind: "ldone", best: OPT && OPT.best ? OPT.best : null });
+  return { ev, cost, placement: Int8Array.from(lockedArr, v => v === 1 ? 1 : 0) };
+}
+
+/* ---------- state + board ---------- */
+let P = null, user = null, OPT = null, mode = "play";
+const V = { cells: [], snap: null, hint: -1, bad: null };
+function newPuzzle() {
+  const N = +$("size").value, K = +$("stars").value;
+  $("busy").classList.remove("hidden");
+  setTimeout(() => {
+    let reg = null, sol = null; for (let t = 0; t < 200 && !reg; t++) { sol = placeStars(N, K); if (sol) reg = growRegions(N, K, sol); }
+    P = { N, K, reg, w: makeWeights(N, $("wmode").value), sol };
+    OPT0 = solveCost(P, { emit: false, budgetMs: 5000, lagr: LAGR(), branch: BR() });   // cheapest without givens
+    applyGivens();
+    $("busy").classList.add("hidden");
+    stop(); mode = "play"; V.snap = null; V.hint = -1; V.bad = null; A.ev = null; $("log").innerHTML = "";
+    $("rule").innerHTML = `Put <b>${K} star${K > 1 ? "s" : ""}</b> in every row, column and colored region; stars may not touch, not even diagonally. Each cell's cost is its small number — make the <b>total cost as low as possible</b>.`;
+    layout(); render(); score(); introText();
+  }, 30);
+}
+// given stars: a few stars of a valid placement that must stay (like sites that already exist)
+let OPT0 = null;
+const LAGR = () => $("bound").value === "lag";
+const BR = () => $("branch").value;
+function applyGivens() {
+  const NC = P.N * P.N, k = +$("givens").value, gv = new Int8Array(NC).fill(-1);
+  shuffle(P.sol.slice()).slice(0, k).forEach(i => gv[i] = 1);
+  P.givens = gv;
+  OPT = k ? solveCost(P, { emit: false, budgetMs: 5000, init: gv, lagr: LAGR(), branch: BR() }) : OPT0;
+  user = Int8Array.from(gv); V.hint = -1; V.bad = null;
+  $("sBest").textContent = OPT.ok ? (OPT.proved ? "" : "≤ ") + OPT.bestCost : "–";
+}
+function introText() {
+  const ng = [...P.givens].filter(v => v === 1).length;
+  say("Your turn", `Tap cells to place stars. Many placements follow the rules — find the cheapest. ${ng ? `${ng} dark star${ng > 1 ? "s are" : " is"} given and must stay. ` : ""}${OPT.proved ? `The cheapest possible total is <b>${OPT.bestCost}</b>${ng ? ` (without the givens it would be ${OPT0.bestCost}${OPT.bestCost > OPT0.bestCost ? ` — the givens cost ${OPT.bestCost - OPT0.bestCost} extra` : " — the givens are part of a cheapest placement"})` : ""}.` : `The best total found is <b>${OPT.bestCost}</b> — this board has so many valid placements that the method could not prove it is the cheapest in the time allowed (the lower bound is ${OPT.lb0}).`}`);
+}
+function fillGivens() {
+  const N = +$("size").value, K = +$("stars").value, keep = $("givens").value;
+  $("givens").innerHTML = [...Array(N * K).keys()].map(k => `<option value="${k}">${k ? `${k} given star${k > 1 ? "s" : ""} (must stay)` : "No given stars"}</option>`).join("");
+  $("givens").value = keep && +keep < N * K ? keep : "0";
+}
+function layout() {
+  const N = P.N, b = $("board"), avail = Math.min(480, b.parentElement.clientWidth || 340);
+  const cs = Math.max(20, Math.min(54, Math.floor((avail - 6) / N)));
+  b.style.gridTemplateColumns = `repeat(${N}, ${cs}px)`; b.style.gridTemplateRows = `repeat(${N}, ${cs}px)`;
+  b.style.setProperty("--sfs", Math.round(cs * 0.6) + "px"); b.style.setProperty("--wfs", Math.max(9, Math.round(cs * 0.3)) + "px");
+  b.innerHTML = ""; V.cells = [];
+  for (let i = 0; i < N * N; i++) {
+    const e = document.createElement("div"), r = (i / N) | 0, c = i % N; e.className = "c"; e.dataset.i = i;
+    e.style.backgroundColor = `hsl(${Math.round(P.reg[i] * 360 / N + 15)} var(--regS) var(--regL))`;
+    e.style.setProperty("--w", (0.05 + 0.5 * (P.w[i] - 1) / 8).toFixed(2));
+    if (c < N - 1 && P.reg[i + 1] !== P.reg[i]) e.classList.add("rr"); if (c === N - 1) e.style.borderRight = "0";
+    if (r < N - 1 && P.reg[i + N] !== P.reg[i]) e.classList.add("rb"); if (r === N - 1) e.style.borderBottom = "0";
+    const w = document.createElement("span"); w.className = "w"; w.textContent = P.w[i]; e.appendChild(w);
+    if (P.givens[i] === 1) e.classList.add("g");
+    e.addEventListener("click", () => tap(i));
+    b.appendChild(e); V.cells.push(e);
+  }
+}
+function render() {
+  const N = P.N, sn = mode === "solver" ? V.snap : null, s = sn ? sn.cell : user;
+  const focus = sn && sn.to ? new Set(sn.to) : sn && sn.unit !== undefined && A.units ? new Set(A.units[sn.unit].cells) : null;
+  for (let i = 0; i < N * N; i++) {
+    const e = V.cells[i], showBest = sn && sn.best && sn.best[i] === 1 && s[i] !== 1;
+    e.classList.toggle("star", s[i] === 1); e.classList.toggle("best", !!showBest); e.classList.toggle("x", s[i] === 0 && !showBest);
+    e.classList.toggle("fc", !!(focus && focus.has(i)));
+    e.classList.toggle("bad", !!(V.bad && V.bad.has(i)));
+    e.classList.toggle("hint", mode === "play" && V.hint === i);
+  }
+}
+function score() {
+  const stars = [...user.keys()].filter(i => user[i] === 1);
+  $("sMine").textContent = stars.reduce((a, i) => a + P.w[i], 0); $("sStars").textContent = `${stars.length}/${P.N * P.K}`;
+}
+function say(p, t) { $("phase").textContent = p; $("text").innerHTML = t; }
+const rcName = i => `r${((i / P.N) | 0) + 1}c${i % P.N + 1}`;
+
+/* ---------- play ---------- */
+function unitsOf() { const N = P.N, out = []; for (let r = 0; r < N; r++) out.push([...Array(N).keys()].map(c => r * N + c)); for (let c = 0; c < N; c++) out.push([...Array(N).keys()].map(r => r * N + c)); for (let g = 0; g < N; g++) out.push([...Array(N * N).keys()].filter(i => P.reg[i] === g)); return out; }
+function problems() { const N = P.N, bad = new Set(), stars = [...user.keys()].filter(i => user[i] === 1); for (let a = 0; a < stars.length; a++) for (let b = a + 1; b < stars.length; b++) if (touching(stars[a], stars[b], N)) { bad.add(stars[a]); bad.add(stars[b]); } for (const cs of unitsOf()) { const st = cs.filter(i => user[i] === 1); if (st.length > P.K) st.forEach(i => bad.add(i)); } return bad; }
+function tap(i) {
+  if (mode !== "play") toPlay();
+  if (P.givens[i] === 1) { say("Your turn", `The star at ${rcName(i)} is given and must stay.`); return; }
+  user[i] = user[i] === 1 ? -1 : 1; V.hint = -1; V.bad = null; render(); score(); checkWin();
+}
+function checkWin() {
+  const stars = [...user.keys()].filter(i => user[i] === 1);
+  if (stars.length !== P.N * P.K || problems().size || !unitsOf().every(cs => cs.filter(i => user[i] === 1).length === P.K)) return;
+  const cost = stars.reduce((a, i) => a + P.w[i], 0);
+  say(cost === OPT.bestCost ? "🎉 Cheapest!" : "✓ Valid placement", cost === OPT.bestCost ? `Every rule is kept and the total cost is <b>${cost}</b> — the cheapest possible.` : `Every rule is kept, total cost <b>${cost}</b>. The cheapest possible is <b>${OPT.bestCost}</b> — ${cost - OPT.bestCost} less. Can you find it?`);
+}
+$("checkBtn").addEventListener("click", () => {
+  toPlay(); const bad = problems(); V.bad = bad.size ? bad : null; render();
+  say("Check", bad.size ? `${bad.size} star${bad.size > 1 ? "s break" : " breaks"} a rule (red): touching, or too many in a row, column or region.` : "No rule is broken so far ✓");
+  setTimeout(() => { V.bad = null; render(); }, 2500);
+});
+$("restartBtn").addEventListener("click", () => { toPlay(); user = Int8Array.from(P.givens); V.hint = -1; V.bad = null; render(); score(); say("Restarted", "The board is empty again."); });
+$("hintBtn").addEventListener("click", () => {
+  toPlay();
+  const bad = problems(); if (bad.size) { V.bad = bad; render(); say("💡 Hint", "Fix the red stars first."); return; }
+  // cheapest placement that keeps your stars
+  const t = solveCost(P, { emit: false, budgetMs: 4000, init: user, lagr: LAGR(), branch: BR() });
+  if (!t.ok) { say("💡 Hint", "Your stars can't all be part of a valid placement — remove one."); return; }
+  const wrongForBest = [...user.keys()].filter(i => user[i] === 1 && OPT.best[i] !== 1);
+  const i = [...t.best.keys()].filter(j => t.best[j] === 1 && user[j] !== 1).sort((a, b) => P.w[a] - P.w[b])[0];
+  if (i === undefined) { say("💡 Hint", "Nothing to add."); return; }
+  user[i] = 1; V.hint = i; render(); score();
+  say("💡 Hint", `A star at ${rcName(i)} (cost ${P.w[i]}, green) — the cheapest placement that keeps your stars costs <b>${t.bestCost}</b>${t.bestCost > OPT.bestCost ? `, but the overall cheapest is ${OPT.bestCost}${wrongForBest.length ? ` — your star at ${rcName(wrongForBest[0])} is not in it` : ""}` : " — the cheapest possible"}.`);
+  checkWin();
+});
+$("countBtn").addEventListener("click", () => {
+  toPlay(); say("🔢 Counting…", "Counting every valid placement — one moment.");
+  setTimeout(() => {
+    const c = countPlacements(P, 4000);
+    say("🔢 Placements", c.n ? `${c.done ? "" : "At least "}<b>${c.n.toLocaleString()}</b> placement${c.n === 1 ? "" : "s"} follow the rules${[...P.givens].some(v => v === 1) ? " and keep the given stars" : ""}${c.done ? "" : " (too many to count them all here)"}. Their total costs run from <b>${c.min}</b> to <b>${c.max}</b> (average ${c.avg.toFixed(1)}). ${c.done ? `<b>${c.atMin}</b> of them cost${c.atMin === 1 ? "s" : ""} the minimum ${c.min} — about ${(100 * c.atMin / c.n).toPrecision(2)}% of all valid placements.` : ""}` : "No placement found in the time available.");
+  }, 30);
+});
+
+/* ---------- the method, animated ---------- */
+const A = { ev: null, k: 0, timer: null, running: false, units: null };
+const SPEEDS = { slow: 1000, normal: 380, fast: 80, turbo: 0 };
+function toPlay() { stop(); mode = "play"; V.snap = null; render(); $("solveBtn").textContent = "▶ Find the cheapest"; }
+function stop() { if (A.timer) clearTimeout(A.timer); A.timer = null; A.running = false; }
+function prepareRun() { A.greedy = false; const t = solveCost(P, { emit: true, budgetMs: 8000, init: P.givens, lagr: LAGR(), branch: BR() }); A.ev = t.ev; A.units = t.units; A.k = 0; $("log").innerHTML = ""; mode = "solver"; }
+function explain(e) {
+  const un = e.unit !== undefined ? A.units[e.unit].name : "";
+  switch (e.kind) {
+    case "start": return ["Start", `Every row, column and region lists its options with their costs. Adding each row's cheapest option (or each column's, or each region's — the highest of the three) gives a <b>lower bound of ${e.lb}</b>: no placement can cost less.`];
+    case "try": return ["Branch", `${un} has the fewest options (${e.of}); try option ${e.k} — cost ${e.cost} (${e.k === 1 ? "the cheapest" : "the next cheapest"}). The layer rules then fill in what follows; lower bound now ${e.lb}.`];
+    case "dead": return ["Contradiction", "Some row, column or region has no option left — this branch can't work."];
+    case "prune": return ["Cut by the bound", `This branch can't cost less than <b>${e.lb}</b>, and a placement costing <b>${e.bestCost}</b> is already known — cut without looking inside.`];
+    case "best": return ["New best", `A complete placement costing <b>${e.cost}</b> (green stars) — the best so far. From now on, any branch whose bound reaches ${e.cost} is cut.`];
+    case "lstart": return ["🔒 Lock cheapest", `Go through the cells from the cheapest up. For each free cell, ask your layer method: <i>with a star here and the stars already locked, can every other star still fit?</i> If yes, lock it for good; if not, the cell stays empty.`];
+    case "finish": return ["Finish in one go", `Time is short on this big board, so the layer method places the last ${e.n} star${e.n === 1 ? "" : "s"} in one go (outlined), keeping every locked star. Cost now <b>${e.cost}</b>.`];
+    case "look": return ["Look ahead", `The ${e.cands.length} cheapest free cells that still fit (outlined): finishing the placement from each gives totals ${e.cands.map(x => `${rcName(x.c)} → ${x.total}`).join(", ")}. The best finish is from <b>${rcName(e.pick)}</b>.`];
+    case "lock": return ["🔒 Locked", `${rcName(e.c)} (cost ${e.w}): ${e.total !== undefined ? `its finished placement is the cheapest of the ones looked at (${e.total}), so` : "the layer method found a full valid placement with a star here, so"} it is <b>locked</b> and never revisited. Cost so far <b>${e.cost}</b>.`];
+    case "nofit": return ["Can't fit", `${rcName(e.c)} (cost ${e.w}) is cheap, but with a star here the other stars can no longer all fit — it stays empty. Next cheapest.`];
+    case "ldone": return ["🔒 All stars locked", `Every star is locked: total cost <b>${e.cost}</b>, after ${e.st.nodes} fit check${e.st.nodes === 1 ? "" : "s"}. ${OPT && OPT.ok ? (e.cost === OPT.bestCost ? `That is the cheapest possible${OPT.proved ? " (proved)" : ""} 🎉` : `The cheapest is <b>${OPT.bestCost}</b> (green stars) — ${e.cost - OPT.bestCost} away: locking cheap cells first can block a cheaper combination later${+$("look").value < 6 ? " — try Look ahead: 6 cells" : ""}.`) : ""}`];
+    case "cell": return ["Cheapest free cell", `The cheapest free cell is ${rcName(e.cell1)} (cost ${e.cost}) — put a star there; its neighbours become empty and the layer rules fill in what follows. Lower bound now ${e.lb}.`];
+    case "skip": return ["Move to the next cheapest", `A star at ${rcName(e.cell1)} made some row, column or region unable to get its stars — so that cell stays empty and the next cheapest free cell is tried.`];
+    case "free": return ["Unstick: free a big band", `Free the stars in ${e.byCol ? "columns" : "rows"} ${e.band[0] + 1}–${e.band[1] + 1} (outlined) and keep all the others. Your layer method now rebuilds this band at the cheapest possible cost.`];
+    case "rebuilt": return ["Unstick: rebuilt cheaper", `The band was rebuilt ${-e.delta} cheaper (new stars outlined) — cost now <b>${e.cost}</b>. A move far bigger than any single swap.`];
+    case "same": return ["Unstick: no better", `This band was already as cheap as it can be with the other stars kept — cost stays <b>${e.cost}</b>. Try another band.`];
+    case "unstuck": return ["Unstick done", `After rebuilding big bands, the cost is <b>${e.cost}</b>. ${OPT && OPT.ok ? (e.cost === OPT.bestCost ? `That is the cheapest (${OPT.bestCost}${OPT.proved ? ", proved by the bound" : ""}) 🎉` : `The cheapest is <b>${OPT.bestCost}</b> (green stars) — ${e.cost - OPT.bestCost} away.`) : ""} ${A.restarts || ""}`];
+    case "dstart": return ["⛰ Downhill: start", `${A.fromGreedy ? "Your last placement (cheapest-first / lock cheapest)" : "A random valid placement"} costing <b>${e.cost}</b>. Now keep making the move that saves the most: swap the columns of two stars (outlined when moved), as long as every rule still holds.`];
+    case "move": return ["Downhill move", `Stars moved to ${e.to.map(rcName).join(" and ")} (outlined) — saves ${-e.delta}, cost now <b>${e.cost}</b>.`];
+    case "stuck": return ["Stuck in a valley", `No single swap lowers the cost any more: <b>${e.cost}</b>${OPT && OPT.ok && e.cost > OPT.bestCost ? ` (the cheapest is ${OPT.bestCost})` : ""}. Now <b>Unstick</b>: free big bands and rebuild them with your layer method.`];
+    case "done": if (A.greedy) return ["⚡ Cheapest-first placement", `Stars on the cheapest cells first, moving on only when the layer rules failed: total cost <b>${e.bestCost}</b>. ${OPT && OPT.ok ? (e.bestCost === OPT.bestCost ? "That is the cheapest possible 🎉" : `The cheapest is <b>${OPT.bestCost}</b> (green stars) — ${e.bestCost - OPT.bestCost} away. Press ⛰ Downhill + Unstick to improve it from here.`) : ""}`];
+      return [e.proved ? "Cheapest, proved" : "Stopped", e.proved ? `No branch is left, so <b>${e.bestCost}</b> is proved to be the cheapest total. ${e.st.nodes.toLocaleString()} branches were opened and ${e.st.pruned.toLocaleString()} were cut by the bound.` : `Time ran out; the best total found is ${e.bestCost}.`];
+  }
+  return ["", ""];
+}
+function chip(e) {
+  const f = { finish: () => `⏩ +${e.n} → ${e.cost}`, look: () => `👀 ${e.cands.map(x => x.total).join("/")}`, lock: () => `🔒${rcName(e.c)}:${e.w}`, nofit: () => `✗${rcName(e.c)}:${e.w}`, ldone: () => `▪ ${e.cost}`, cell: () => `★${rcName(e.cell1)}:${e.cost}`, skip: () => `✗${rcName(e.cell1)}`, free: () => `⟳ ${e.byCol ? "C" : "R"}${e.band[0] + 1}–${e.band[1] + 1}`, rebuilt: () => `↘ ${e.delta} → ${e.cost}`, same: () => "=", unstuck: () => `▪ ${e.cost}`, dstart: () => `⛰ ${e.cost}`, move: () => `↘ ${e.delta} → ${e.cost}`, stuck: () => `▪ ${e.cost}`, try: () => `${A.units[e.unit].name.replace("Row ", "R").replace("Column ", "C").replace("Region ", "")}#${e.k}:${e.cost}`, dead: () => "✗", prune: () => `✂ ≥${e.lb}`, best: () => `★ ${e.cost}`, done: () => e.proved ? `✓ ${e.bestCost}` : "■" }[e.kind];
+  const t = f && f(); if (!t) return;
+  const s = document.createElement("span"); s.textContent = t; if (e.kind === "dead" || e.kind === "prune") s.className = "back"; if (e.kind === "best" || e.kind === "done") s.className = "good";
+  const l = $("log"); l.appendChild(s); while (l.children.length > 250) l.removeChild(l.firstChild); l.scrollTop = l.scrollHeight;
+}
+function showEvent(e) {
+  V.snap = e; render(); const [p, t] = explain(e); say(p, t);
+  $("sBound").textContent = e.lb !== undefined ? e.lb : $("sBound").textContent; $("sFound").textContent = e.bestCost === Infinity ? "–" : e.bestCost;
+  $("sNodes").textContent = e.st.nodes.toLocaleString(); $("sPruned").textContent = e.st.pruned.toLocaleString();
+}
+function tick(single) {
+  if (!A.ev || mode !== "solver") prepareRun();
+  const sp = SPEEDS[$("speed").value]; let e, n = 0;
+  do { e = A.ev[A.k++]; if (!e) break; chip(e); } while (sp === 0 && !single && ++n < 200 && A.k < A.ev.length);
+  if (!e) { stop(); $("solveBtn").textContent = "↺ Again"; return -1; }
+  showEvent(e);
+  if (A.k >= A.ev.length) { stop(); $("solveBtn").textContent = "↺ Again"; return -1; }
+  return ["best", "done", "start", "dstart", "stuck", "free", "rebuilt", "unstuck", "lstart", "ldone"].includes(e.kind) ? Math.max(sp, 300) * 2 : sp;
+}
+function loop() { const w = tick(false); if (w < 0 || !A.running) return; A.timer = setTimeout(loop, w); }
+$("solveBtn").addEventListener("click", () => { if (A.running) { stop(); $("solveBtn").textContent = "▶ Continue"; return; } if (mode !== "solver" || !A.ev || A.k >= A.ev.length) A.ev = null; A.running = true; $("solveBtn").textContent = "⏸ Pause"; loop(); });
+$("stepBtn").addEventListener("click", () => { stop(); if (mode !== "solver" || (A.ev && A.k >= A.ev.length)) A.ev = null; tick(true); if (A.ev && A.k < A.ev.length) $("solveBtn").textContent = "▶ Continue"; });
+$("greedyBtn").addEventListener("click", () => {
+  stop();
+  const t = solveCost(P, { emit: true, budgetMs: 3000, init: P.givens, branch: "cell", first: true });
+  if (!t.best) { say("⚡ Cheapest-first", "No placement found."); return; }
+  const last = t.ev[t.ev.length - 1]; if (last && OPT && OPT.best) last.best = OPT.best;   // show the cheapest in green at the end
+  A.ev = t.ev; A.units = t.units; A.k = 0; A.greedy = true; A.greedyP = P; A.greedyBest = t.best; $("log").innerHTML = ""; mode = "solver";
+  A.running = true; $("solveBtn").textContent = "⏸ Pause"; loop();
+});
+$("lockBtn").addEventListener("click", () => {
+  stop(); $("busy").classList.remove("hidden");
+  setTimeout(() => {
+    const r = lockCheapest(P, +$("look").value);
+    A.ev = r.ev; A.units = null; A.k = 0; A.greedy = false; A.greedyP = P; A.greedyBest = r.placement; $("log").innerHTML = ""; mode = "solver";   // Downhill + Unstick can continue from it
+    $("busy").classList.add("hidden");
+    A.running = true; $("solveBtn").textContent = "⏸ Pause"; loop();
+  }, 30);
+});
+$("downBtn").addEventListener("click", () => {
+  stop(); $("busy").classList.remove("hidden");
+  setTimeout(() => {
+    A.fromGreedy = A.greedyP === P && !!A.greedyBest;
+    const start = A.fromGreedy ? A.greedyBest : randomStart(P); if (!start) { $("busy").classList.add("hidden"); say("⛰ Downhill", "Couldn't find a starting placement."); return; }
+    const run = downhill(P, start, true);
+    const un = unstick(P, run.cur, 12); run.ev.push(...un.ev);
+    // 20 more random starts: how often does downhill reach the cheapest?
+    const ends = []; for (let t = 0; t < 20; t++) { const s0 = randomStart(P); if (s0) ends.push(downhill(P, s0, false).cost); }
+    const hit = OPT && OPT.ok ? ends.filter(c => c === OPT.bestCost).length : 0;
+    A.restarts = ends.length ? `(For comparison: from 20 random starts, plain downhill ended between <b>${Math.min(...ends)}</b> and <b>${Math.max(...ends)}</b>${OPT && OPT.ok ? ` and reached the cheapest ${hit} time${hit === 1 ? "" : "s"}` : ""}.) Only the bound can prove the best.` : "";
+    A.ev = run.ev; A.units = null; A.k = 0; A.greedy = false; $("log").innerHTML = ""; mode = "solver";
+    $("busy").classList.add("hidden");
+    A.running = true; $("solveBtn").textContent = "⏸ Pause"; loop();
+  }, 30);
+});
+$("branch").addEventListener("change", () => $("bound").dispatchEvent(new Event("change")));
+$("bound").addEventListener("change", () => { if (!P) return; toPlay(); A.ev = null; $("busy").classList.remove("hidden"); setTimeout(() => { OPT0 = solveCost(P, { emit: false, budgetMs: 5000, lagr: LAGR(), branch: BR() }); applyGivens(); $("busy").classList.add("hidden"); render(); score(); introText(); }, 30); });
+$("backBtn").addEventListener("click", () => { toPlay(); A.ev = null; say("Your turn", "Back to your own board — your stars are as you left them."); });
+
+$("newBtn").addEventListener("click", newPuzzle);
+$("size").addEventListener("change", newPuzzle);
+$("wmode").addEventListener("change", newPuzzle);
+// sizes that are big enough for the chosen number of stars
+const MIN_SIZE = { 1: 6, 2: 8, 3: 12 };
+function fitSizes() {
+  const K = +$("stars").value;
+  [...$("size").options].forEach(o => o.disabled = +o.value < MIN_SIZE[K]);
+  if (+$("size").value < MIN_SIZE[K]) $("size").value = String(MIN_SIZE[K]);
+}
+fitSizes(); fillGivens();
+$("size").addEventListener("change", fillGivens);
+$("stars").addEventListener("change", () => { fitSizes(); fillGivens(); newPuzzle(); });
+$("givens").addEventListener("change", () => { if (!P) return; toPlay(); A.ev = null; $("log").innerHTML = ""; applyGivens(); layout(); render(); score(); introText(); });
+window.addEventListener("resize", () => { if (P) { layout(); render(); } });
+newPuzzle();
+</script>
+</body>
+</html>

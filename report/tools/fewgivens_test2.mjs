@@ -1,0 +1,28 @@
+// Drive the Few Givens Race page: one race at "one per number", then every fill; check tables, errors, phone layout.
+import { launch } from "./cdp.mjs";
+const b = await launch(9352);
+await b.viewport(860, 1000, 2, false);
+await b.open("C:/Sudoku_shaimaa/LayerSudoku-FewGivens.html", "typeof drawLines === 'function'");
+await b.send("Runtime.evaluate", { expression: `window.__errs = []; window.addEventListener("error", e => __errs.push(e.message)); true` });
+const wait = async () => { for (let t = 0; t < 900; t++) { await new Promise(r => setTimeout(r, 1000)); if (await b.eval(`!$("run").disabled`)) return; } };
+const table = sel => b.eval(`[...document.querySelectorAll("${sel} tr")].map(r => [...r.children].map(c => c.textContent).join(" | ")).join(" ## ")`);
+const clip = sel => b.eval(`(() => { const a = ${sel}.getBoundingClientRect(); return { x: a.left - 6, y: a.top + scrollY - 6, width: a.width + 12, height: a.height + 12 }; })()`);
+let t0 = Date.now();
+await b.eval(`__seed(4); $("fill").value = "one"; $("count").value = "30"; $("use_leanBig").checked = true; $("capSel").value = "50"; $("capSel").dispatchEvent(new Event("change")); $("run").click(); true`); await wait();
+console.log(`race (one per number) in ${((Date.now() - t0) / 1000).toFixed(0)} s: ${await b.eval(`$("status").textContent`)}`);
+console.log((await table("#tbl")).split(" ## ").join("\n"));
+console.log((await b.eval(`[...document.querySelectorAll("#find li")].map(l => "- " + l.textContent).join(" ## ")`)).split(" ## ").join("\n"));
+await b.shot("C:/Sudoku_shaimaa/report/shots/fewgivens_race.png", await clip(`$("find").closest(".card")`));
+await b.eval(`$("board").scrollIntoView(); true`);
+await b.shot("C:/Sudoku_shaimaa/report/shots/fewgivens_board.png", await clip(`$("board").closest(".card")`));
+t0 = Date.now();
+await b.eval(`__seed(5); $("count").value = "30"; $("runAll").click(); true`); await wait();
+console.log(`\nevery fill in ${((Date.now() - t0) / 1000).toFixed(0)} s: ${await b.eval(`$("status").textContent`)}`);
+console.log((await table("#tblAll")).split(" ## ").join("\n"));
+await b.shot("C:/Sudoku_shaimaa/report/shots/fewgivens_lines.png", await clip(`$("outAll")`));
+console.log("errors:", JSON.stringify(await b.eval("__errs")));
+await b.viewport(390, 844, 2, true); await new Promise(r => setTimeout(r, 600));
+console.log("phone sideways scroll:", await b.eval(`document.documentElement.scrollWidth > 390`));
+const c2 = await b.eval(`(() => { const a = $("outAll").getBoundingClientRect(); return { x: 0, y: a.top + scrollY - 6, width: 390, height: Math.min(a.height + 12, 1400) }; })()`);
+await b.shot("C:/Sudoku_shaimaa/report/shots/fewgivens_phone.png", c2);
+b.close();

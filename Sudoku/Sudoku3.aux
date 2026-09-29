@@ -1,0 +1,101 @@
+\relax 
+\bibstyle{plainnat}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}Grid Structure and Box Shapes}{1}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Layer-Based Propagation}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Concept}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Three-step layer propagation diagram}{2}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Three-step illustration of layer propagation for a digit $d$.}}{2}{}\protected@file@percent }
+\newlabel{fig:layer}{{1}{2}{}{figure.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Single-Missing Deduction}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}MRV Candidate Selection}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Concept}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}MRV diagram with candidate sets}{3}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces MRV selection: the cell with the smallest candidate set is chosen for branching.}}{3}{}\protected@file@percent }
+\newlabel{fig:mrv}{{2}{3}{}{figure.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Branching with Forbidden-Value Learning}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}Concept}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}Branching tree diagram}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}Pseudocode for Major Algorithms}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}Layer Construction}{3}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Branching on the MRV cell: some values lead to conflicts and are forbidden; one branch survives.}}{4}{}\protected@file@percent }
+\newlabel{fig:branch}{{3}{4}{}{figure.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}Layer Propagation}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}MRV Selection}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.4}Shallow Branching Solver}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {8}Complexity Analysis}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.1}Layer Propagation}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.2}Candidate Computation}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.3}MRV Selection}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.4}Shallow Branching}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {8.5}Comparison}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {9}Experimental Results}{6}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Empirical solve times for the hybrid solver (implementation-based measurements).}}{6}{}\protected@file@percent }
+\newlabel{tab:times}{{1}{6}{}{table.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {10}Experimental Results}{6}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Empirical solve times for the hybrid solver on randomly generated puzzles (45\% clues). Measurements taken directly from the implementation.}}{6}{}\protected@file@percent }
+\newlabel{tab:times}{{2}{6}{}{table.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {11}Experimental Results at 35\% Clues}{7}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Empirical solve times for the hybrid solver on randomly generated puzzles with 35\% clues. Lower clue density increases branching depth and reduces the effectiveness of deterministic propagation.}}{7}{}\protected@file@percent }
+\newlabel{tab:times35}{{3}{7}{}{table.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {12}Experimental Results at 25\% Clues}{7}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Empirical solve times for the hybrid solver on randomly generated puzzles with 25\% clues. Lower clue density substantially increases branching depth and reduces the effectiveness of deterministic propagation.}}{7}{}\protected@file@percent }
+\newlabel{tab:times25}{{4}{7}{}{table.4}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {13}Discussion: Influence of Clue Density on Solver Behavior and Complexity}{7}{}\protected@file@percent }
+\citation{knuth2000dlx}
+\citation{een2003sat,soos2010cryptominisat}
+\citation{russellnorvig}
+\citation{berthier2007}
+\citation{knuth2000dlx}
+\citation{een2003sat,soos2010cryptominisat}
+\citation{russellnorvig}
+\citation{berthier2007}
+\@writefile{toc}{\contentsline {section}{\numberline {14}Comparison with Established $N \times N$ Sudoku Solvers}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {14.1}Overview of Solver Families}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {14.2}Narrative Comparison}{8}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Comparison of major Sudoku solver families and their behavior on large $N \times N$ grids.}}{9}{}\protected@file@percent }
+\newlabel{tab:solvercomparison}{{5}{9}{}{table.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {14.3}Synthesis}{9}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {15}36×36 Generator and Structural Constraints}{10}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {15.1}Generator Pipeline}{10}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {15.2}Structural Constraints}{10}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {15.3}Generator structure diagram}{10}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Structure of the 36×36 puzzle generator with structural constraints and solvability check.}}{10}{}\protected@file@percent }
+\newlabel{fig:gen}{{4}{10}{}{figure.4}{}}
+\citation{knuth2000dlx}
+\citation{een2003sat,soos2010cryptominisat}
+\citation{russellnorvig}
+\citation{berthier2007}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Qualitative comparison of asymptotic complexity for different solver families. Values for DLX and backtracking are illustrative, emphasizing relative growth rather than exact counts.}}{11}{}\protected@file@percent }
+\newlabel{fig:complexity-curves}{{5}{11}{}{figure.5}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {16}Related Work}{11}{}\protected@file@percent }
+\bibcite{knuth2000dlx}{{1}{}{{}}{{}}}
+\bibcite{een2003sat}{{2}{}{{}}{{}}}
+\bibcite{soos2010cryptominisat}{{3}{}{{}}{{}}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Solve times versus grid size for the hybrid solver (measured at 45\% clues), compared with illustrative curves for DLX and SAT-based solvers. Non-hybrid curves are schematic and emphasize qualitative scaling rather than exact benchmarks.}}{12}{}\protected@file@percent }
+\newlabel{fig:timings-vs-families}{{6}{12}{}{figure.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {17}Conclusion}{12}{}\protected@file@percent }
+\bibcite{russellnorvig}{{4}{}{{}}{{}}}
+\bibcite{berthier2007}{{5}{}{{}}{{}}}
+\providecommand\NAT@force@numbers{}\NAT@force@numbers
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Initial 9x9 grid.}}{13}{}\protected@file@percent }
+\newlabel{fig:myimage}{{7}{13}{}{figure.7}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces solved 9x9 grid}}{14}{}\protected@file@percent }
+\newlabel{fig:myimage}{{8}{14}{}{figure.8}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces initial 16x16 grid unsolvable.}}{15}{}\protected@file@percent }
+\newlabel{fig:myimage}{{9}{15}{}{figure.9}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces unSolved 16x16 grid.}}{16}{}\protected@file@percent }
+\newlabel{fig:myimage}{{10}{16}{}{figure.10}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces initial 16x16 grid.}}{17}{}\protected@file@percent }
+\newlabel{fig:myimage}{{11}{17}{}{figure.11}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces Solved 16x16 grid.}}{18}{}\protected@file@percent }
+\newlabel{fig:myimage}{{12}{18}{}{figure.12}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces Initial 25x25 grid.}}{19}{}\protected@file@percent }
+\newlabel{fig:myimage}{{13}{19}{}{figure.13}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Solved 25x25 grid.}}{20}{}\protected@file@percent }
+\newlabel{fig:myimage}{{14}{20}{}{figure.14}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces Initial 36x36 grid.}}{21}{}\protected@file@percent }
+\newlabel{fig:myimage}{{15}{21}{}{figure.15}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces Solved 36x36 grid.}}{21}{}\protected@file@percent }
+\newlabel{fig:myimage}{{16}{21}{}{figure.16}{}}
+\gdef \@abspage@last{21}

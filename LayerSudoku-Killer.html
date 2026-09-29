@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Killer Layers</title>
+<style>
+:root{
+  --bg:#f5f4ef; --surface:#ffffff; --ink:#1c1e23; --muted:#6a6e77; --line:#cfd2d8; --line-strong:#1c1e23;
+  --accent:#2455c7; --accent-ink:#fff; --btn:#e9e7e0; --btn-ink:#1c1e23; --ok:#2e9e57; --bad:#c42626; --cellbg:#ffffff;
+  --cage:#7a808c; --sel:#dfe8fb; --focus:#e3ebfd; --placed:#2455c7;
+  --shadow:0 1px 2px rgba(0,0,0,.08),0 4px 14px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#131519; --surface:#1c1f25; --ink:#e7e8eb; --muted:#9aa0aa; --line:#383d46; --line-strong:#c9cdd4;
+    --accent:#6f98ff; --accent-ink:#0d1117; --btn:#2a2e36; --btn-ink:#e7e8eb; --cellbg:#1c1f25;
+    --cage:#8e95a3; --sel:#2a3650; --focus:#26324a; --placed:#8fb0ff; --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  padding:max(12px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));-webkit-user-select:none;user-select:none}
+.wrap{max-width:620px;margin:0 auto}
+h1{font-size:20px;margin:0}
+.sub{font-size:12px;color:var(--muted);margin-bottom:6px}
+h2{font-size:15px;margin:0 0 6px}
+button,select{font:inherit;color:var(--btn-ink);background:var(--btn);border:0;border-radius:10px;padding:9px 12px;cursor:pointer;max-width:100%;min-width:0}
+select{appearance:none;-webkit-appearance:none}
+button:active{transform:scale(.97)}
+button.primary{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.row select{flex:1}
+.card{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:12px;margin-top:12px}
+.note{font-size:12.5px;color:var(--muted);margin:6px 0}
+/* board */
+.board{display:grid;width:100%;max-width:470px;aspect-ratio:1/1;margin:8px auto 0;border:3px solid var(--line-strong);border-radius:4px;overflow:hidden;background:var(--cellbg)}
+.board .c{position:relative;border-right:1px solid var(--line);border-bottom:1px solid var(--line);cursor:pointer;min-width:0;min-height:0}
+.board .c.br{border-right:2.5px solid var(--line-strong)} .board .c.bb{border-bottom:2.5px solid var(--line-strong)}
+.board .c.lc{border-right:0} .board .c.lr{border-bottom:0}
+.board .c .cg{position:absolute;border:1.2px dashed var(--cage);pointer-events:none}
+.board .c .sum{position:absolute;left:2px;top:1px;font-size:var(--sumfs);font-weight:700;color:var(--ink);background:var(--cellbg);padding:0 1px;line-height:1;z-index:2;border-radius:2px}
+.board .c .v{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:var(--vfs);font-weight:600;color:var(--placed)}
+.board .c.gv .v{color:var(--ink);font-weight:800}
+.board .c .pm{position:absolute;inset:14% 6% 4% 6%;display:grid;grid-template-columns:repeat(var(--pmc),1fr);font-size:var(--pmfs);color:var(--muted);line-height:1;text-align:center;align-items:center}
+.board .c.sel{background:var(--sel)}
+.board .c.fc{background:var(--focus)}
+.board .c::before{content:"";position:absolute;inset:0;background:var(--accent);opacity:var(--h,0);pointer-events:none}
+.board .c.bad .v{color:var(--bad)}
+.board .c.hint{box-shadow:inset 0 0 0 3px var(--ok)}
+.board .c.new .v{animation:pop .45s}
+@keyframes pop{40%{transform:scale(1.3)}}
+.pad{display:grid;gap:6px;margin-top:10px}
+.pad button{height:44px;padding:0;font-size:20px;font-weight:600;background:var(--surface);box-shadow:var(--shadow);color:var(--accent)}
+.tools{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.msg{background:var(--bg);border-radius:10px;padding:8px 10px;margin-top:8px;min-height:44px;font-size:14px}
+.msg .no{font-size:11px;color:var(--muted)}
+.units{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+.units span{font-size:12px;font-weight:700;border-radius:7px;padding:3px 7px;background:var(--bg);color:var(--muted);font-variant-numeric:tabular-nums}
+.units span small{font-weight:500;margin-left:3px}
+.units span.cur{outline:2px solid var(--accent);color:var(--ink)}
+.units span.ok{color:var(--ok)}
+.units b{font-size:11px;color:var(--muted);width:100%;margin-top:4px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.stats div{background:var(--bg);border-radius:10px;padding:6px 4px;text-align:center}
+.stats b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
+.stats span{font-size:10.5px;color:var(--muted)}
+.log{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;max-height:130px;overflow:auto}
+.log span{font:600 12px -apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);border-radius:6px;padding:3px 7px}
+.log span.back{color:var(--bad)}
+ol{padding-left:20px;margin:6px 0} li{margin:4px 0;font-size:14px}
+@media (max-width:560px){ #givens{flex:1 1 100%} }
+.hidden{display:none!important}
+.busy{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:20;color:#fff;font-weight:600}
+.sptbl{border-collapse:collapse;font-size:12.5px;width:100%;font-variant-numeric:tabular-nums}
+.sptbl th,.sptbl td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.sptbl th{font-size:11px;color:var(--muted);font-weight:600}
+.sptbl th:first-child,.sptbl td:first-child{text-align:left}
+.sptbl td.best{color:var(--ok, #2e9e57);font-weight:700} .sptbl td.warn{color:#c42626;font-weight:700}
+.spscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🔪 Killer Layers</h1>
+  <div class="sub">Killer Sudoku solved with option layers: number layers + cage layers, AND, cut, lock · S. S. Soltan</div>
+
+  <div class="card">
+    <div class="row">
+      <select id="size" aria-label="Size"><option value="6">6×6</option><option value="9" selected>9×9</option></select>
+      <select id="givens" aria-label="Given numbers"><option value="0" selected>No given numbers</option><option value="5">5% of cells given</option><option value="10">10% of cells given</option><option value="20">20% of cells given</option><option value="30">30% of cells given</option></select>
+      <button id="newBtn" class="primary">New puzzle</button>
+    </div>
+    <p class="note" id="info"></p>
+    <div id="board" class="board"></div>
+    <div class="pad" id="pad"></div>
+    <div class="tools">
+      <button id="checkBtn">Check</button>
+      <button id="hintBtn">💡 Hint</button>
+      <button id="restartBtn">Restart</button>
+    </div>
+    <div class="msg"><div class="no" id="phase"></div><div id="text"></div></div>
+  </div>
+
+  <div class="card">
+    <h2>Watch the method</h2>
+    <div class="row" style="margin-top:0">
+      <button id="solveBtn" class="primary">▶ Show the method</button>
+      <button id="stepBtn">Step ▶|</button>
+      <button id="backBtn">⏮ Back to my game</button>
+      <select id="speed" aria-label="Speed" style="flex:0 0 auto"><option value="slow">Slow</option><option value="normal" selected>Normal</option><option value="fast">Fast</option><option value="turbo">Turbo</option></select>
+    </div>
+    <div class="units" id="units"></div>
+    <div class="stats">
+      <div><b id="sUnits">0</b><span>layers built</span></div>
+      <div><b id="sBuilt">0</b><span>options built</span></div>
+      <div><b id="sLocked">0</b><span>layers locked 🔒</span></div>
+      <div><b id="sGuess">0 · 0</b><span>guesses · go-backs</span></div>
+    </div>
+    <div id="log" class="log"></div>
+    <p class="note">While the method runs, empty cells show their candidates. The chips show each number layer and each cage (by its sum) with the options it still has (– = not built yet, ✓ = locked). The layer being worked on is tinted on the board; for a number layer, cells are shaded by the share of its options that use them.</p>
+  </div>
+
+  <div class="card">
+    <h2>⚡ Speed test — lean option layers</h2>
+    <p class="note">The <b>lean</b> method keeps only the core: <b>build</b> the 2 (or 3) thinnest layers first — number layers or cages, whichever have the fewest options — <b>cut</b> options a cell no longer allows, <b>AND</b> (a cell in every option of a number layer gets it; a number no option puts in a cell leaves it; one option left = locked) and the <b>pillar</b> rule (a cell with one number left gets it). It adds the next thinnest layer only when stuck — a layer with more than 1,000 options waits until the cuts shrink it — and guesses last. Left out: the step log, the row/column/box singles and the "all layers together" probe.</p>
+    <div class="row">
+      <select id="spStart" aria-label="Start with"><option value="2" selected>Lean starts with the top 2 layers</option><option value="3">Lean starts with the top 3 layers</option></select>
+      <select id="spCount" aria-label="Puzzles"><option value="5">5 puzzles</option><option value="10" selected>10 puzzles</option><option value="20">20 puzzles</option></select>
+    </div>
+    <div class="row">
+      <button id="spRun" class="primary">⚡ Run speed test</button>
+      <button id="spOne">⏱ Time this puzzle</button>
+      <button id="spStop" disabled>■ Stop</button>
+    </div>
+    <p class="note" id="spStatus">The test makes new puzzles of the size chosen above (each with one solution), then times the three methods on the same puzzles. Short solves are repeated and averaged. Every answer is checked against the true solution.</p>
+    <div class="spscroll"><table class="sptbl" id="spTbl"></table></div>
+    <p id="spFind" style="font-size:14px"></p>
+  </div>
+
+  <div class="card">
+    <h2>How it works — your Sudoku layers plus cage layers</h2>
+    <ol>
+      <li><b>Two kinds of layers.</b> <b>Number layers</b> as in your Sudoku method: every way to put a number once in each row, column and box. <b>Cage layers</b>: every way to fill a cage with different numbers that add up to its sum. Each cell is where the layers meet — like a pillar — and keeps the numbers (candidates) that every layer still allows.</li>
+      <li><b>Thinnest layers first</b>: start with the 2 layers that have the fewest options — usually small cages — and open the next thinnest when the cuts stop.</li>
+      <li><b>Cut</b> options that use a number a cell no longer allows.</li>
+      <li><b>Narrow</b>: a number that no option of a layer puts in a cell is removed from that cell. <b>AND</b>: a cell used by all options of a number layer gets that number.</li>
+      <li><b>Singles</b>: a cell with one candidate left, or a number with one place left in a row, column or box, is placed.</li>
+      <li><b>🔒 Lock</b> a layer when one option is left — its numbers are placed and its list is dropped.</li>
+      <li><b>All layers together</b>: when the cuts stop, test each option of the unlocked layers on its own — if assuming it breaks another layer, it is cut. Nothing is guessed.</li>
+      <li>Only if even that stops: <b>guess</b> and go back if it fails.</li>
+    </ol>
+  </div>
+</div>
+<div id="busy" class="busy hidden">Making a puzzle with one solution…</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const bitsOf = m => { const o = []; for (let v = 1; v <= 16; v++) if ((m >> v) & 1) o.push(v); return o; };
+const popc = m => { let k = 0; while (m) { m &= m - 1; k++; } return k; };
+
+/* ---------- geometry ---------- */
+function geometry(N) {
+  const [BR, BC] = N === 6 ? [2, 3] : [3, 3], NC = N * N;
+  const R = [], C = [], B = [], rows = [...Array(N)].map(() => []), cols = [...Array(N)].map(() => []), boxes = [...Array(N)].map(() => []);
+  for (let i = 0; i < NC; i++) { R[i] = (i / N) | 0; C[i] = i % N; B[i] = Math.floor(R[i] / BR) * (N / BC) + Math.floor(C[i] / BC); rows[R[i]].push(i); cols[C[i]].push(i); boxes[B[i]].push(i); }
+  const n4 = [...Array(NC)].map((_, i) => [i - N, i + N, C[i] > 0 ? i - 1 : -1, C[i] < N - 1 ? i + 1 : -1].filter(j => j >= 0 && j < NC));
+  return { N, BR, BC, NC, R, C, B, rows, cols, boxes, n4 };
+}
+const rcName = (i, N) => `r${((i / N) | 0) + 1}c${i % N + 1}`;
+
+/* ---------- the option-layers solver ---------- */
+// P = { N, cages: [{cells, sum}], cageOf }; mode = { emit, limit, maxGuess, noProbe }
+function killerSolve(P, init, mode) {
+  const Gm = geometry(P.N), { N, NC, R, C, B, rows, cols, boxes } = Gm, W = Math.ceil(NC / 32), FULL = (1 << (N + 1)) - 2, CAP = 20000;
+  const has = (t, i) => (t[i >> 5] >>> (i & 31)) & 1;
+  const disjointOK = null;
+  const cages = P.cages, M = cages.length;
+  const peers = [...Array(NC)].map((_, i) => { const s = new Set([...rows[R[i]], ...cols[C[i]], ...boxes[B[i]], ...cages[P.cageOf[i]].cells]); s.delete(i); return [...s]; });
+  const units = [];
+  for (let d = 1; d <= N; d++) units.push({ kind: "layer", d, name: `Number ${d}`, short: String(d) });
+  cages.forEach((cg, k) => units.push({ kind: "cage", k, name: `Cage ${cg.sum} at ${rcName(Math.min(...cg.cells), N)}`, short: String(cg.sum), cells: cg.cells }));
+  const U = units.length, ev = [], MAXEV = 5000, sols = [];
+  const st = { built: 0, listed: 0, guesses: 0, back: 0, probes: 0 };
+  const copy = S => ({ g: S.g.slice(), cand: S.cand.slice(), T: S.T.slice(), done: S.done.slice() });
+  const snap = (S, focus, extra) => {
+    if (!mode.emit) return;
+    if (ev.length >= MAXEV) { st.truncated = true; return; }
+    const counts = units.map((_, u) => S.done[u] ? -2 : S.T[u] ? S.T[u].length : -1);
+    let heat = null;
+    if (focus >= 0 && units[focus].kind === "layer" && S.T[focus] && S.T[focus].length) {
+      heat = new Float32Array(NC); for (const t of S.T[focus]) for (let i = 0; i < NC; i++) if (has(t, i)) heat[i]++;
+      for (let i = 0; i < NC; i++) heat[i] /= S.T[focus].length;
+    }
+    ev.push({ ...extra, focus, g: S.g.slice(), cand: S.cand.slice(), counts, heat, st: { ...st } });
+  };
+  const place = (S, i, v, nc) => {
+    if (S.g[i] === v) return true;
+    if (S.g[i] || !((S.cand[i] >> v) & 1)) return false;
+    S.g[i] = v; S.cand[i] = 1 << v; nc && nc.push(i);
+    for (const j of peers[i]) { if (S.g[j] === v) return false; if ((S.cand[j] >> v) & 1) { S.cand[j] &= ~(1 << v); if (!S.cand[j]) return false; } }
+    return true;
+  };
+  // number layer: one cell per box, no repeats in rows/columns, only cells that still allow the number
+  function enumLayer(S, d, cap, countOnly) {
+    const opts = []; let est = 1;
+    for (let b = 0; b < N; b++) {
+      const fixed = boxes[b].find(i => S.g[i] === d);
+      const o = fixed !== undefined ? [fixed] : boxes[b].filter(i => !S.g[i] && ((S.cand[i] >> d) & 1));
+      if (!o.length) return [];
+      opts.push(o); est *= o.length;
+    }
+    if (countOnly && est > 3e5) return { length: Infinity };
+    const ord = [...Array(N).keys()].sort((a, b) => opts[a].length - opts[b].length);
+    const list = [], uR = new Uint8Array(N), uC = new Uint8Array(N), bits = new Uint32Array(W);
+    (function rec(k) { if (list.length > cap) return; if (k === N) { list.push(bits.slice()); return; } for (const i of opts[ord[k]]) { if (uR[R[i]] || uC[C[i]]) continue; uR[R[i]] = uC[C[i]] = 1; bits[i >> 5] |= 1 << (i & 31); rec(k + 1); bits[i >> 5] &= ~(1 << (i & 31)); uR[R[i]] = uC[C[i]] = 0; } })(0);
+    return list.length > cap ? { length: Infinity } : list;
+  }
+  // cage layer: different numbers adding up to the sum, each one still allowed in its cell
+  function enumCage(S, k, cap) {
+    const cells = cages[k].cells, n = cells.length, out = [], val = new Array(n); let used = 0;
+    const rec = (p, rem) => {
+      if (out.length > cap) return;
+      if (p === n) { if (rem === 0) out.push(val.slice()); return; }
+      const left = n - p - 1;
+      for (let v = 1; v <= N; v++) {
+        if ((used >> v) & 1 || !((S.cand[cells[p]] >> v) & 1)) continue;
+        const r2 = rem - v; if (r2 < 0) break;
+        if (r2 < left * (left + 1) / 2 || r2 > left * (2 * N - left + 1) / 2) continue;
+        used |= 1 << v; val[p] = v; rec(p + 1, r2); used &= ~(1 << v);
+      }
+    };
+    rec(0, cages[k].sum);
+    return out.length > cap ? { length: Infinity } : out;
+  }
+  const enumUnit = (S, u, countOnly) => units[u].kind === "layer" ? enumLayer(S, units[u].d, CAP, countOnly) : enumCage(S, units[u].k, CAP);
+  function build(S, u, why) { const l = enumUnit(S, u, false); S.T[u] = l; st.built++; st.listed += l.length; snap(S, u, { kind: "build", unit: u, n: l.length, why }); }
+  function propagate(S, allowBuild, quiet) {
+    for (;;) {
+      let changed = false;
+      // 1) cut options that use a number a cell no longer allows
+      const AL = {};
+      const allowOf = d => { if (AL[d]) return AL[d]; const A = new Uint32Array(W), F = new Uint32Array(W); for (let i = 0; i < NC; i++) { if (S.g[i] === d) { F[i >> 5] |= 1 << (i & 31); A[i >> 5] |= 1 << (i & 31); } else if (!S.g[i] && ((S.cand[i] >> d) & 1)) A[i >> 5] |= 1 << (i & 31); } return (AL[d] = { A, F }); };
+      for (let u = 0; u < U; u++) if (S.T[u]) {
+        const before = S.T[u].length; let keep;
+        if (units[u].kind === "layer") { const { A, F } = allowOf(units[u].d); keep = S.T[u].filter(t => { for (let w = 0; w < W; w++) if ((t[w] & ~A[w]) || ((F[w] & ~t[w]) >>> 0)) return false; return true; }); }
+        else { const cells = units[u].cells; keep = S.T[u].filter(o => o.every((v, p) => (S.cand[cells[p]] >> v) & 1)); }
+        if (keep.length !== before) { S.T[u] = keep; changed = true; if (!quiet) snap(S, u, { kind: "cut", unit: u, before, after: keep.length }); if (!keep.length) return { fail: u }; }
+      }
+      if (changed) continue;
+      // 2) lock a layer with one option left
+      for (let u = 0; u < U; u++) if (S.T[u] && S.T[u].length === 1) {
+        const o = S.T[u][0], nc = [];
+        if (units[u].kind === "layer") { for (let i = 0; i < NC; i++) if (has(o, i) && !place(S, i, units[u].d, nc)) return { fail: u }; }
+        else for (let p = 0; p < o.length; p++) if (!place(S, units[u].cells[p], o[p], nc)) return { fail: u };
+        S.T[u] = null; S.done[u] = 1;
+        if (!quiet) snap(S, u, { kind: "lock", unit: u, cells: nc });
+        changed = true; break;
+      }
+      if (changed) continue;
+      // 3) narrow: a number no option of a layer puts in a cell leaves that cell
+      for (let u = 0; u < U; u++) if (S.T[u]) {
+        const nc = []; let removed = 0;
+        if (units[u].kind === "layer") {
+          const d = units[u].d, un = new Uint32Array(W); for (const t of S.T[u]) for (let w = 0; w < W; w++) un[w] |= t[w];
+          for (let i = 0; i < NC; i++) if (!S.g[i] && ((S.cand[i] >> d) & 1) && !has(un, i)) { S.cand[i] &= ~(1 << d); removed++; nc.push(i); if (!S.cand[i]) return { fail: u }; }
+        } else {
+          const cells = units[u].cells;
+          cells.forEach((i, p) => { if (S.g[i]) return; let m = 0; for (const o of S.T[u]) m |= 1 << o[p]; const nm = S.cand[i] & m; if (nm !== S.cand[i]) { removed += popc(S.cand[i] & ~nm); S.cand[i] = nm; nc.push(i); } });
+          if (nc.some(i => !S.cand[i])) return { fail: u };
+        }
+        if (removed) { if (!quiet) snap(S, u, { kind: "narrow", unit: u, cells: nc, removed }); changed = true; break; }
+      }
+      if (changed) continue;
+      // 4) AND: a cell used by every option of a number layer
+      for (let u = 0; u < N; u++) if (S.T[u]) {
+        const d = u + 1, core = S.T[u][0].slice(); for (const t of S.T[u]) for (let w = 0; w < W; w++) core[w] &= t[w];
+        const nc = []; for (let i = 0; i < NC; i++) if (has(core, i) && !S.g[i]) { if (!place(S, i, d, nc)) return { fail: u }; }
+        if (nc.length) { if (!quiet) snap(S, u, { kind: "and", unit: u, cells: nc, n: S.T[u].length }); changed = true; break; }
+      }
+      if (changed) continue;
+      // 5) singles
+      for (let i = 0; i < NC && !changed; i++) if (!S.g[i] && popc(S.cand[i]) === 1) { const v = bitsOf(S.cand[i])[0], nc = []; if (!place(S, i, v, nc)) return { fail: -2, cell: i }; if (!quiet) snap(S, v - 1, { kind: "single", how: "cell", cells: nc, cell: i, v }); changed = true; }
+      if (changed) continue;
+      for (const [name, list] of [["row", rows], ["column", cols], ["box", boxes]]) {
+        for (let k = 0; k < N && !changed; k++) for (let d = 1; d <= N && !changed; d++) {
+          if (list[k].some(i => S.g[i] === d)) continue;
+          const pl = list[k].filter(i => !S.g[i] && ((S.cand[i] >> d) & 1));
+          if (!pl.length) return { fail: d - 1 };
+          if (pl.length === 1) { const nc = []; if (!place(S, pl[0], d, nc)) return { fail: d - 1 }; if (!quiet) snap(S, d - 1, { kind: "single", how: name, k, cells: nc, cell: pl[0], v: d }); changed = true; }
+        }
+        if (changed) break;
+      }
+      if (changed) continue;
+      if (S.g.every(v => v)) { for (const cg of cages) { const vs = cg.cells.map(i => S.g[i]); if (vs.reduce((a, b) => a + b, 0) !== cg.sum || new Set(vs).size !== vs.length) return { fail: -2 }; } return { ok: true }; }
+      if (!allowBuild) return { stuck: true };
+      // 6) open the next thinnest layer
+      let best = -1, bc = Infinity;
+      for (let u = 0; u < U; u++) if (!S.T[u] && !S.done[u]) { const n = enumUnit(S, u, true).length; if (n === 0) return { fail: u }; if (n < bc) { bc = n; best = u; } }
+      if (best < 0 || bc === Infinity) return { stuck: true };
+      build(S, best, "stuck");
+    }
+  }
+  function probeCut(S) {
+    const act = [...Array(U).keys()].filter(u => S.T[u] && S.T[u].length > 1).sort((a, b) => S.T[a].length - S.T[b].length);
+    let work = 0;
+    for (const u of act) {
+      const before = S.T[u].length, keep = [];
+      for (const o of S.T[u]) {
+        if (++work > 1500) { keep.push(o); continue; }
+        const X = copy(S); X.T[u] = [o];
+        if (propagate(X, false, true).fail !== undefined) st.probes++; else keep.push(o);
+      }
+      if (keep.length !== before) { S.T[u] = keep; snap(S, u, { kind: "probe", unit: u, before, after: keep.length }); return true; }
+      if (work > 1500) break;
+    }
+    return false;
+  }
+  function solve(S) {
+    for (;;) {
+      const r = propagate(S, true, false);
+      if (r.fail !== undefined) { snap(S, r.fail >= 0 ? r.fail : -1, { kind: "fail", unit: r.fail }); return; }
+      if (r.ok) { sols.push(S.g.slice()); snap(S, -1, { kind: "done" }); return; }
+      if (mode.noProbe || !probeCut(S)) break;
+    }
+    const act = [...Array(U).keys()].filter(u => S.T[u] && S.T[u].length > 1).sort((a, b) => S.T[a].length - S.T[b].length);
+    let branches;
+    if (act.length) { const u = act[0]; branches = S.T[u].map((o, k) => ({ u, o, k })); }
+    else { // nothing built can branch: use the cell with the fewest candidates
+      let bi = -1, bn = 99; for (let i = 0; i < NC; i++) if (!S.g[i] && popc(S.cand[i]) < bn) { bn = popc(S.cand[i]); bi = i; }
+      if (bi < 0) return; branches = bitsOf(S.cand[bi]).map((v, k) => ({ cell: bi, v, k }));
+    }
+    for (const br of branches) {
+      if (sols.length >= mode.limit || st.aborted) return;
+      if (mode.maxGuess && st.guesses >= mode.maxGuess) { st.aborted = true; return; }
+      st.guesses++;
+      const X = copy(S);
+      if (br.o) X.T[br.u] = [br.o]; else if (!place(X, br.cell, br.v)) { st.back++; continue; }
+      snap(X, br.u !== undefined ? br.u : br.v - 1, { kind: "guess", unit: br.u, cell: br.cell, v: br.v, k: br.k + 1, of: branches.length });
+      solve(X);
+      if (sols.length >= mode.limit) return;
+      st.back++; snap(S, br.u !== undefined ? br.u : -1, { kind: "back", unit: br.u, k: br.k + 1 });
+    }
+  }
+  const S0 = { g: new Int8Array(NC), cand: new Uint16Array(NC).fill(FULL), T: new Array(U).fill(null), done: new Uint8Array(U) };
+  for (let i = 0; i < NC; i++) if (init[i] && !place(S0, i, init[i])) { return { ev, sols, st, units, bad: true }; }
+  snap(S0, -1, { kind: "start" });
+  const order = [...Array(U).keys()].map(u => ({ u, n: enumUnit(S0, u, true).length })).sort((a, b) => a.n - b.n);
+  for (const { u, n } of order.slice(0, 2)) if (n < Infinity) build(S0, u, "start");
+  solve(S0);
+  return { ev, sols, st, units };
+}
+
+/* ---------- making puzzles ---------- */
+function fullGrid(Gm) {
+  const { N, NC, R, C, B } = Gm, g = new Int8Array(NC), rm = new Int32Array(N), cm = new Int32Array(N), bm = new Int32Array(N), full = (1 << (N + 1)) - 2;
+  const rec = () => {
+    let best = -1, bc = 99, bmask = 0;
+    for (let i = 0; i < NC; i++) if (!g[i]) { const m = full & ~(rm[R[i]] | cm[C[i]] | bm[B[i]]), k = popc(m); if (k < bc) { bc = k; best = i; bmask = m; if (k < 2) break; } }
+    if (best < 0) return true; if (!bc) return false;
+    for (const v of shuffle(bitsOf(bmask))) { const b = 1 << v; g[best] = v; rm[R[best]] |= b; cm[C[best]] |= b; bm[B[best]] |= b; if (rec()) return true; g[best] = 0; rm[R[best]] &= ~b; cm[C[best]] &= ~b; bm[B[best]] &= ~b; }
+    return false;
+  };
+  rec(); return g;
+}
+function cagesFrom(cageOf, sol, NC) {
+  const map = new Map(); for (let i = 0; i < NC; i++) { if (!map.has(cageOf[i])) map.set(cageOf[i], []); map.get(cageOf[i]).push(i); }
+  const cages = [...map.values()].map(cells => ({ cells, sum: cells.reduce((a, i) => a + sol[i], 0) })), co = new Int16Array(NC);
+  cages.forEach((cg, k) => cg.cells.forEach(i => co[i] = k));
+  return { cages, cageOf: co };
+}
+function makeCages(Gm, sol) {
+  const { NC, n4 } = Gm, cageOf = new Int16Array(NC).fill(-1); let k = 0;
+  for (const seed of shuffle([...Array(NC).keys()])) {
+    if (cageOf[seed] >= 0) continue;
+    const size = [2, 2, 2, 3, 3, 3, 4][Math.floor(Math.random() * 7)], cells = [seed], vals = new Set([sol[seed]]); cageOf[seed] = k;
+    while (cells.length < size) {
+      const front = []; for (const c of cells) for (const j of n4[c]) if (cageOf[j] < 0 && !vals.has(sol[j])) front.push(j);
+      if (!front.length) break;
+      const j = front[Math.floor(Math.random() * front.length)]; cageOf[j] = k; cells.push(j); vals.add(sol[j]);
+    }
+    k++;
+  }
+  mergeSingles(cageOf, sol, Gm, null);
+  return cagesFrom(cageOf, sol, NC);
+}
+// join single-cell cages to a neighbouring cage (different numbers, at most 5 cells); keep(cageOf) may veto a join
+function mergeSingles(cageOf, sol, Gm, keep) {
+  const { NC, n4 } = Gm;
+  for (const c of shuffle([...Array(NC).keys()])) {
+    if (cageOf.filter(x => x === cageOf[c]).length !== 1) continue;
+    for (const j of shuffle(n4[c].slice())) {
+      const k = cageOf[j], cells = [...Array(NC).keys()].filter(i => cageOf[i] === k);
+      if (cells.length >= 5 || cells.some(i => sol[i] === sol[c])) continue;
+      const old = cageOf[c]; cageOf[c] = k;
+      if (keep && !keep(cageOf)) { cageOf[c] = old; continue; }
+      break;
+    }
+  }
+}
+function splitCell(P, Gm, sol, c) {   // split cell c off its cage (with one neighbour when the cage is big enough); the rest splits into its connected parts
+  const old = P.cageOf[c], cageOf = Int16Array.from(P.cageOf); let next = Math.max(...cageOf) + 1;
+  const mates = P.cages[old].cells.length >= 3 ? Gm.n4[c].filter(j => P.cageOf[j] === old) : [];
+  const part = mates.length ? [c, mates[Math.floor(Math.random() * mates.length)]] : [c];
+  const pid = next++; part.forEach(i => cageOf[i] = pid);
+  const rest = P.cages[old].cells.filter(i => !part.includes(i)), seen = new Set();
+  for (const s of rest) { if (seen.has(s)) continue; const q = [s]; seen.add(s); const id = next++; while (q.length) { const x = q.pop(); cageOf[x] = id; for (const y of Gm.n4[x]) if (rest.includes(y) && !seen.has(y)) { seen.add(y); q.push(y); } } }
+  return cagesFrom(cageOf, sol, Gm.NC);
+}
+function makePuzzle(N, budgetMs) {
+  const Gm = geometry(N), t0 = performance.now();
+  while (performance.now() - t0 < budgetMs) {
+    const sol = fullGrid(Gm); let P = { N, ...makeCages(Gm, sol) };
+    for (let it = 0; it < 30 && performance.now() - t0 < budgetMs; it++) {
+      const t = killerSolve(P, new Int8Array(Gm.NC), { emit: false, limit: 2, maxGuess: N > 6 ? 400 : 200, noProbe: true });
+      if (!t.st.aborted && t.sols.length === 1) {
+        const co = Int16Array.from(P.cageOf);
+        mergeSingles(co, sol, Gm, x => { const Q = { N, ...cagesFrom(x, sol, Gm.NC) }, u = killerSolve(Q, new Int8Array(Gm.NC), { emit: false, limit: 2, maxGuess: N > 6 ? 400 : 200, noProbe: true }); return !u.st.aborted && u.sols.length === 1; });
+        return { P: { N, ...cagesFrom(co, sol, Gm.NC) }, sol, unique: true };
+      }
+      let c;
+      if (t.sols.length === 2) { const diff = [...Array(Gm.NC).keys()].filter(i => t.sols[0][i] !== t.sols[1][i]); c = diff[Math.floor(Math.random() * diff.length)]; }
+      else { const big = P.cages.filter(cg => cg.cells.length > 1).sort((a, b) => b.cells.length - a.cells.length)[0]; if (!big) break; c = big.cells[Math.floor(Math.random() * big.cells.length)]; }
+      P = { N, ...splitCell(P, Gm, sol, c) };
+    }
+  }
+  return null;
+}
+
+/* ---------- Killer cages for the lean engine ---------- */
+// every filling of a cage: different numbers adding up to its sum; allow(p, v) = cell p may still take v
+function killerFill(cg, cells, allow, N, cap, collect) {
+  const n = cells.length, val = new Int8Array(n), out = collect ? [] : null; let used = 0, count = 0, over = false;
+  const rec = (p, rem) => {
+    if (over) return;
+    if (p === n) { if (rem === 0) { if (count >= cap) { over = true; return; } count++; if (out) for (let q = 0; q < n; q++) out.push(val[q]); } return; }
+    const left = n - p - 1;
+    for (let v = 1; v <= N; v++) {
+      if ((used >> v) & 1 || !allow(p, v)) continue;
+      const r2 = rem - v; if (r2 < 0) break;
+      if (r2 < left * (left + 1) / 2 || r2 > left * (2 * N - left + 1) / 2) continue;
+      used |= 1 << v; val[p] = v; rec(p + 1, r2); used &= ~(1 << v);
+    }
+  };
+  rec(0, cg.sum);
+  return { over, count, out };
+}
+const LEAN_CAGE = {
+  peers: (Gm, P) => [...Array(Gm.NC)].map((_, i) => { const s = new Set([...Gm.rows[Gm.R[i]], ...Gm.cols[Gm.C[i]], ...Gm.boxes[Gm.B[i]], ...P.cages[P.cageOf[i]].cells]); s.delete(i); return [...s]; }),
+  list: (cg, cells, allow, Gm, cap) => { const r = killerFill(cg, cells, allow, Gm.N, cap, true); return r.over ? null : { flat: Int8Array.from(r.out), n: r.count }; },
+  count: (cg, cells, allow, Gm, cap) => { const r = killerFill(cg, cells, allow, Gm.N, cap, false); return r.over ? cap + 1 : r.count; },
+  ok: (cg, v) => v.reduce((a, b) => a + b, 0) === cg.sum && new Set(v).size === v.length,
+  // for the classic backtracking: can cell i of cage k take v, given the cage so far
+  fits: (cg, k, i, v, T) => { if ((T.used[k] >> v) & 1) return false; const left = cg.cells.length - T.cnt[k] - 1, rem = cg.sum - T.sum[k] - v; return left === 0 ? rem === 0 : rem >= left * (left + 1) / 2 && rem <= left * (2 * T.N - left + 1) / 2; },
+};
+
+/* ---------- lean option layers: build · cut · AND (+ pillar), guess last — no step log, no singles, no probe ---------- */
+// units 0..N-1 are the number layers (number u+1); units N.. are the cages. Number layers are bit sets; cage options are flat Int8Arrays.
+function leanSolve(P, init, opt = {}) {
+  const Gm = geometry(P.N), { N, NC, R, C, B, boxes } = Gm, W = Math.ceil(NC / 32), FULL = (1 << (N + 1)) - 2;
+  const cap = opt.cap || 1000, startK = opt.start || 2   /* cage puzzles: a layer with more than 1,000 options waits until the cuts shrink it */, cages = P.cages, M = cages.length, U = N + M;
+  const peers = LEAN_CAGE.peers(Gm, P);
+  const st = { built: 0, layers: 0, guesses: 0 };
+  const clone = S => ({ g: S.g.slice(), cand: S.cand.slice(), T: S.T.slice(), cnt: S.cnt.slice(), done: S.done.slice(), big: S.big.slice(), left: S.left });
+  const place = (S, i, v) => {
+    if (S.g[i] === v) return true;
+    if (S.g[i] || !((S.cand[i] >> v) & 1)) return false;
+    S.g[i] = v; S.cand[i] = 1 << v; S.left--;
+    for (const j of peers[i]) { if (S.g[j] === v) return false; if ((S.cand[j] >> v) & 1) { S.cand[j] &= ~(1 << v); if (!S.cand[j]) return false; } }
+    return true;
+  };
+  const allows = (S, i, v) => S.g[i] === v || (!S.g[i] && ((S.cand[i] >> v) & 1));
+  // how big a unit would be: log of the options (number layer: product of open cells per box; cage: its real count)
+  function sizeOf(S, u) {
+    if (u < N) { const d = u + 1; let s = 0; for (const bx of boxes) { let k = 0; for (const i of bx) if (allows(S, i, d)) k++; if (!k) return -1; s += Math.log(k); } return s; }
+    const k = u - N, n = LEAN_CAGE.count(cages[k], cages[k].cells, (p, v) => allows(S, cages[k].cells[p], v), Gm, 5000);
+    return n ? Math.log(n) : -1;
+  }
+  function nextUnits(S, k) {
+    const c = [];
+    for (let u = 0; u < U; u++) { if (S.T[u] || S.done[u] || S.big[u]) continue; const e = sizeOf(S, u); if (e < 0) return null; c.push([e, u]); }
+    return c.sort((a, b) => a[0] - b[0]).slice(0, k).map(x => x[1]);
+  }
+  function build(S, u) {
+    if (u < N) {
+      const d = u + 1, opts = boxes.map(bx => { const f = bx.find(i => S.g[i] === d); return f !== undefined ? [f] : bx.filter(i => allows(S, i, d)); });
+      if (opts.some(o => !o.length)) return false;
+      opts.sort((a, b) => a.length - b.length);
+      let out = new Uint32Array(W * 256), n = 0, over = false; const bits = new Uint32Array(W);
+      (function rec(k, uR, uC) {
+        if (over) return;
+        if (k === N) { if (n >= cap) { over = true; return; } if ((n + 1) * W > out.length) { const o2 = new Uint32Array(out.length * 2); o2.set(out); out = o2; } out.set(bits, n * W); n++; return; }
+        for (const i of opts[k]) { const rb = 1 << R[i], cb = 1 << C[i]; if ((uR & rb) || (uC & cb)) continue; bits[i >> 5] |= 1 << (i & 31); rec(k + 1, uR | rb, uC | cb); bits[i >> 5] &= ~(1 << (i & 31)); }
+      })(0, 0, 0);
+      if (over) { S.big[u] = 1; return true; }     // too many options: leave it unbuilt (never use a cut-off list)
+      S.T[u] = out.subarray(0, n * W); S.cnt[u] = n; st.built += n; st.layers++;
+      return n > 0;
+    }
+    const cg = cages[u - N], L = LEAN_CAGE.list(cg, cg.cells, (p, v) => allows(S, cg.cells[p], v), Gm, cap);
+    if (!L) { S.big[u] = 1; return true; }
+    S.T[u] = L.flat; S.cnt[u] = L.n; st.built += L.n; st.layers++;
+    return L.n > 0;
+  }
+  function propagate(S) {
+    const and = new Uint32Array(W), or = new Uint32Array(W), A = new Uint32Array(W);
+    for (;;) {
+      let changed = false;
+      // pillar: a cell with one number left gets it
+      for (let i = 0; i < NC; i++) if (!S.g[i]) { const c = S.cand[i]; if (!c) return false; if (!(c & (c - 1))) { if (!place(S, i, 31 - Math.clz32(c))) return false; changed = true; } }
+      // number layers: cut, then AND (certain cells) and OR (narrow)
+      for (let u = 0; u < N; u++) {
+        if (S.done[u] || !S.T[u]) continue;
+        const d = u + 1, T = S.T[u], n0 = S.cnt[u];
+        A.fill(0); for (let i = 0; i < NC; i++) if (allows(S, i, d)) A[i >> 5] |= 1 << (i & 31);
+        let k = 0, T2 = null;
+        for (let t = 0; t < n0; t++) {
+          let ok = true; for (let w = 0; w < W; w++) if (T[t * W + w] & ~A[w]) { ok = false; break; }
+          if (!ok) { if (!T2) { T2 = new Uint32Array(n0 * W); T2.set(T.subarray(0, t * W)); k = t; } continue; }
+          if (T2) { T2.set(T.subarray(t * W, t * W + W), k * W); k++; }
+        }
+        let TT = T, n = n0; if (T2) { n = k; TT = T2.subarray(0, n * W); S.T[u] = TT; S.cnt[u] = n; changed = true; if (!n) return false; }
+        and.fill(0xFFFFFFFF); or.fill(0);
+        for (let t = 0; t < n; t++) for (let w = 0; w < W; w++) { const x = TT[t * W + w]; and[w] &= x; or[w] |= x; }
+        for (let i = 0; i < NC; i++) {
+          if (S.g[i]) continue;
+          const bit = 1 << (i & 31), w = i >> 5;
+          if ((S.cand[i] >> d) & 1 && !(or[w] & bit)) { S.cand[i] &= ~(1 << d); if (!S.cand[i]) return false; changed = true; }
+          if (and[w] & bit) { if (!place(S, i, d)) return false; changed = true; }
+        }
+        if (n === 1) { S.done[u] = 1; S.T[u] = null; }
+      }
+      // cages: cut, then OR per cell (narrow); one option left = lock
+      for (let u = N; u < U; u++) {
+        if (S.done[u] || !S.T[u]) continue;
+        const cells = cages[u - N].cells, m = cells.length, T = S.T[u], n0 = S.cnt[u];
+        let k = 0, T2 = null;
+        for (let t = 0; t < n0; t++) {
+          let ok = true; for (let p = 0; p < m; p++) if (!allows(S, cells[p], T[t * m + p])) { ok = false; break; }
+          if (!ok) { if (!T2) { T2 = new Int8Array(n0 * m); T2.set(T.subarray(0, t * m)); k = t; } continue; }
+          if (T2) { T2.set(T.subarray(t * m, t * m + m), k * m); k++; }
+        }
+        let TT = T, n = n0; if (T2) { n = k; TT = T2.subarray(0, n * m); S.T[u] = TT; S.cnt[u] = n; changed = true; if (!n) return false; }
+        for (let p = 0; p < m; p++) {
+          const i = cells[p]; if (S.g[i]) continue;
+          let mask = 0; for (let t = 0; t < n; t++) mask |= 1 << TT[t * m + p];
+          const nm = S.cand[i] & mask; if (nm !== S.cand[i]) { S.cand[i] = nm; if (!nm) return false; changed = true; }
+        }
+        if (n === 1) { for (let p = 0; p < m; p++) if (!place(S, cells[p], TT[p])) return false; S.done[u] = 1; S.T[u] = null; changed = true; }
+      }
+      if (!S.left) { for (const cg of cages) if (!LEAN_CAGE.ok(cg, cg.cells.map(i => S.g[i]))) return false; return true; }
+      if (changed) continue;
+      // stuck: add the next thinnest layer
+      const nx = nextUnits(S, 1); if (nx === null) return false;
+      if (!nx.length) return true;
+      if (!build(S, nx[0])) return false;
+    }
+  }
+  function solve(S) {
+    if (!propagate(S)) return null;
+    if (!S.left) return S;
+    let bu = -1; for (let u = 0; u < U; u++) if (S.T[u] && !S.done[u] && S.cnt[u] > 1 && (bu < 0 || S.cnt[u] < S.cnt[bu])) bu = u;
+    if (bu >= 0) {
+      const T = S.T[bu], sz = bu < N ? W : cages[bu - N].cells.length;
+      for (let t = 0; t < S.cnt[bu]; t++) { st.guesses++; const X = clone(S); X.T[bu] = T.subarray(t * sz, t * sz + sz); X.cnt[bu] = 1; const r = solve(X); if (r) return r; }
+      return null;
+    }
+    // every open layer is too big to list: guess on the cell with the fewest numbers
+    let bi = -1, bn = 99; for (let i = 0; i < NC; i++) if (!S.g[i]) { const k = popc(S.cand[i]); if (k < bn) { bn = k; bi = i; } }
+    for (const v of bitsOf(S.cand[bi])) { st.guesses++; const X = clone(S); X.big.fill(0); if (!place(X, bi, v)) continue; const r = solve(X); if (r) return r; }
+    return null;
+  }
+  const S0 = { g: new Int8Array(NC), cand: new Uint16Array(NC).fill(FULL), T: new Array(U).fill(null), cnt: new Int32Array(U), done: new Uint8Array(U), big: new Uint8Array(U), left: NC };
+  for (let i = 0; i < NC; i++) if (init[i] && !place(S0, i, init[i])) return { grid: null, ...st };
+  const first = nextUnits(S0, startK); if (first === null) return { grid: null, ...st };
+  for (const u of first) if (!build(S0, u)) return { grid: null, ...st };
+  const r = solve(S0);
+  return { grid: r ? Array.from(r.g) : null, ...st };
+}
+// the classic way: backtracking on the cell with the fewest numbers, with row/column/box masks and running cage totals
+function cageBacktrack(P, init, nodeCap = 3e6) {
+  const Gm = geometry(P.N), { N, NC, R, C, B } = Gm, g = Int8Array.from(init), full = (1 << (N + 1)) - 2, cages = P.cages, cageOf = P.cageOf, M = cages.length;
+  const rm = new Int32Array(N), cm = new Int32Array(N), bm = new Int32Array(N), used = new Int32Array(M), sum = new Float64Array(M), prod = new Float64Array(M).fill(1), cnt = new Int16Array(M);
+  const put = (i, v, s) => { const b = 1 << v, k = cageOf[i]; rm[R[i]] ^= b; cm[C[i]] ^= b; bm[B[i]] ^= b; used[k] ^= b; sum[k] += s * v; prod[k] = s > 0 ? prod[k] * v : prod[k] / v; cnt[k] += s; };
+  for (let i = 0; i < NC; i++) if (g[i]) put(i, g[i], 1);
+  const fits = (i, v) => LEAN_CAGE.fits(cages[cageOf[i]], cageOf[i], i, v, { used, sum, prod, cnt, g, N });
+  let nodes = 0, aborted = false;
+  const rec = () => {
+    if (++nodes > nodeCap) { aborted = true; return false; }
+    let best = -1, bc = 99, opts = null;
+    for (let i = 0; i < NC; i++) if (!g[i]) { const m = full & ~(rm[R[i]] | cm[C[i]] | bm[B[i]]), o = []; for (let v = 1; v <= N; v++) if ((m >> v) & 1 && fits(i, v)) o.push(v); if (o.length < bc) { bc = o.length; best = i; opts = o; if (bc < 2) break; } }
+    if (best < 0) return true; if (!bc) return false;
+    for (const v of opts) { g[best] = v; put(best, v, 1); if (rec()) return true; put(best, v, -1); g[best] = 0; if (aborted) return false; }
+    return false;
+  };
+  const ok = rec();
+  return { grid: ok && !aborted ? Array.from(g) : null, guesses: nodes - 1 };
+}
+
+/* ---------- state + board ---------- */
+let P = null, SOL = null, user = null, sel = -1, mode = "play", Gm = null;
+const V = { cells: [], snap: null, hint: -1, bad: null };
+function newPuzzle() {
+  const N = +$("size").value;
+  $("busy").classList.remove("hidden");
+  setTimeout(() => {
+    const m = makePuzzle(N, N > 6 ? 12000 : 4000);
+    $("busy").classList.add("hidden");
+    if (!m) { say("Sorry", "Couldn't make a puzzle with one solution in time — press New puzzle again."); return; }
+    P = m.P; SOL = m.sol; Gm = geometry(N); pickGivens(); user = Int8Array.from(P.givens); sel = -1;
+    stop(); mode = "play"; V.snap = null; V.hint = -1; V.bad = null; A.ev = null; $("log").innerHTML = ""; $("units").innerHTML = "";
+    const singles = P.cages.filter(c => c.cells.length === 1).length;
+    showInfo();
+    layout(); render(); say("Your turn", "Tap a cell, then a number. Every row, column and box has each number once; each dashed cage holds different numbers adding up to its small sum.");
+  }, 30);
+}
+// given numbers: a share of the cells, picked at random from the solution (the cages alone already give one solution)
+function pickGivens() {
+  const NC = SOL.length, gv = new Int8Array(NC), k = Math.round(NC * +$("givens").value / 100);
+  const idx = [...Array(NC).keys()]; for (let i = NC - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+  idx.slice(0, k).forEach(i => gv[i] = SOL[i]); P.givens = gv;
+}
+function showInfo() {
+  const N = Gm.N, singles = P.cages.filter(c => c.cells.length === 1).length, ng = [...P.givens].filter(Boolean).length;
+  $("info").textContent = `${N}×${N} · ${P.cages.length} cages${singles ? ` (${singles} single-cell)` : ""}${ng ? ` · ${ng} given number${ng > 1 ? "s" : ""}` : ""} · one solution ✓ · each cage: different numbers that add up to its sum`;
+}
+function layout() {
+  const { N, BR, BC, NC } = Gm, b = $("board");
+  b.style.gridTemplateColumns = `repeat(${N},1fr)`; b.style.gridTemplateRows = `repeat(${N},1fr)`;
+  const W = Math.min(470, b.clientWidth || 340), cs = W / N;
+  b.style.setProperty("--vfs", cs * 0.55 + "px"); b.style.setProperty("--sumfs", Math.max(8, cs * 0.24) + "px"); b.style.setProperty("--pmfs", Math.max(6, cs * (N > 6 ? 0.2 : 0.22)) + "px"); b.style.setProperty("--pmc", N > 6 ? 3 : 3);
+  b.innerHTML = ""; V.cells = [];
+  const first = new Set(P.cages.map(c => Math.min(...c.cells)));
+  for (let i = 0; i < NC; i++) {
+    const e = document.createElement("div");
+    const r = Gm.R[i], c = Gm.C[i]; e.className = "c"; if (P.givens[i]) e.classList.add("gv"); e.dataset.i = i;
+    if (c === N - 1) e.classList.add("lc"); else if ((c + 1) % BC === 0) e.classList.add("br");
+    if (r === N - 1) e.classList.add("lr"); else if ((r + 1) % BR === 0) e.classList.add("bb");
+    const k = P.cageOf[i], same = j => j >= 0 && j < NC && P.cageOf[j] === k;
+    const sT = r > 0 && same(i - N), sB = r < N - 1 && same(i + N), sL = c > 0 && same(i - 1), sR = c < N - 1 && same(i + 1);
+    const cg = document.createElement("div"); cg.className = "cg";
+    Object.assign(cg.style, { top: sT ? "-1px" : "3px", bottom: sB ? "-1px" : "3px", left: sL ? "-1px" : "3px", right: sR ? "-1px" : "3px",
+      borderTopStyle: sT ? "none" : "dashed", borderBottomStyle: sB ? "none" : "dashed", borderLeftStyle: sL ? "none" : "dashed", borderRightStyle: sR ? "none" : "dashed" });
+    e.appendChild(cg);
+    if (first.has(i)) { const s = document.createElement("span"); s.className = "sum"; s.textContent = P.cages[k].sum; e.appendChild(s); }
+    const v = document.createElement("div"); v.className = "v"; e.appendChild(v);
+    const pm = document.createElement("div"); pm.className = "pm"; e.appendChild(pm);
+    e.addEventListener("click", () => { if (mode !== "play") return; sel = i; V.hint = -1; render(); });
+    b.appendChild(e); V.cells.push(e);
+  }
+  const pad = $("pad"); pad.innerHTML = ""; pad.style.gridTemplateColumns = `repeat(${N + 1},1fr)`;
+  for (let d = 1; d <= N; d++) { const bt = document.createElement("button"); bt.textContent = d; bt.addEventListener("click", () => enter(d)); pad.appendChild(bt); }
+  const er = document.createElement("button"); er.textContent = "⌫"; er.addEventListener("click", () => enter(0)); pad.appendChild(er);
+}
+function render() {
+  const { N, NC } = Gm, sn = mode === "solver" ? V.snap : null, g = sn ? sn.g : user;
+  const focusCells = sn && sn.focus >= 0 && A.units[sn.focus].kind === "cage" ? new Set(A.units[sn.focus].cells) : null, newSet = new Set(sn && sn.cells ? sn.cells : []);
+  for (let i = 0; i < NC; i++) {
+    const e = V.cells[i], v = g[i];
+    e.querySelector(".v").textContent = v ? v : "";
+    const pm = e.querySelector(".pm");
+    pm.innerHTML = sn && !v ? [...Array(N)].map((_, k) => `<span>${(sn.cand[i] >> (k + 1)) & 1 ? k + 1 : ""}</span>`).join("") : "";
+    e.classList.toggle("sel", mode === "play" && i === sel);
+    e.classList.toggle("fc", !!(focusCells && focusCells.has(i)));
+    e.style.setProperty("--h", sn && sn.heat && !v && sn.heat[i] > 0 ? (0.08 + 0.45 * sn.heat[i]).toFixed(2) : 0);
+    e.classList.toggle("bad", !!(V.bad && V.bad.has(i)));
+    e.classList.toggle("hint", mode === "play" && V.hint === i);
+    if (newSet.has(i)) { e.classList.remove("new"); void e.offsetWidth; e.classList.add("new"); }
+  }
+  if (sn) {
+    const chipOf = k => { const n = sn.counts[k]; return `<span class="${k === sn.focus ? "cur" : ""}${n === -2 ? " ok" : ""}">${A.units[k].short}<small>${n === -2 ? "✓" : n < 0 ? "–" : n.toLocaleString()}</small></span>`; };
+    $("units").innerHTML = `<b>Number layers</b>${[...Array(N).keys()].map(chipOf).join("")}<b>Cage layers (by sum)</b>${A.units.map((u, k) => u.kind === "cage" ? chipOf(k) : "").join("")}`;
+  }
+}
+function say(p, t) { $("phase").textContent = p; $("text").innerHTML = t; }
+
+/* ---------- play ---------- */
+function enter(d) {
+  if (mode !== "play") { toPlay(); }
+  if (sel < 0) { say("Your turn", "Tap a cell first."); return; }
+  if (P.givens[sel]) { say("Your turn", "That number is given — pick an empty cell."); return; }
+  user[sel] = d; V.hint = -1; V.bad = null; render();
+  if (user.every((v, i) => v === SOL[i])) say("🎉 Solved!", "Every row, column, box and cage is right.");
+}
+document.addEventListener("keydown", e => {
+  if (!P || mode !== "play") return;
+  const N = Gm.N;
+  if (e.key >= "1" && e.key <= String(N)) enter(+e.key);
+  else if (e.key === "Backspace" || e.key === "Delete" || e.key === "0") enter(0);
+  else if (sel >= 0 && e.key.startsWith("Arrow")) { const dr = e.key === "ArrowUp" ? -N : e.key === "ArrowDown" ? N : e.key === "ArrowLeft" ? -1 : 1; const j = sel + dr; if (j >= 0 && j < N * N) { sel = j; render(); } e.preventDefault(); }
+});
+$("restartBtn").addEventListener("click", () => { toPlay(); user = Int8Array.from(P.givens); V.hint = -1; V.bad = null; render(); say("Restarted", "Back to the start — only the given numbers are left."); });
+$("checkBtn").addEventListener("click", () => {
+  toPlay();
+  const bad = new Set(); for (let i = 0; i < user.length; i++) if (user[i] && user[i] !== SOL[i]) bad.add(i);
+  V.bad = bad; render(); say("Check", bad.size ? `${bad.size} number${bad.size > 1 ? "s are" : " is"} wrong (red).` : "Everything so far is right ✓");
+  setTimeout(() => { V.bad = null; render(); }, 2500);
+});
+$("hintBtn").addEventListener("click", () => {
+  toPlay();
+  const w = [...user.keys()].find(i => user[i] && user[i] !== SOL[i]);
+  if (w !== undefined) { V.bad = new Set([w]); render(); say("💡 Hint", `${rcName(w, Gm.N)} is wrong — clear it first.`); return; }
+  const t = killerSolve(P, user, { emit: true, limit: 1 });
+  const sure = t.ev.slice(0, (t.ev.findIndex(x => x.kind === "guess") + 1 || t.ev.length + 1) - 1);   // only steps before the first guess are certain
+  const e = sure.find(x => x.cells && ["lock", "and", "single"].includes(x.kind) && x.cells.some(i => !user[i]));
+  if (!e) { say("💡 Hint", "Nothing new to find."); return; }
+  const i = e.cells.find(j => !user[j]), v = e.g[i], un = e.unit >= 0 && t.units[e.unit] ? t.units[e.unit].name : "";
+  user[i] = v; sel = i; V.hint = i; render();
+  const where = rcName(i, Gm.N);
+  say("💡 Hint", e.kind === "lock" ? `${un} has only one option left that fits, so ${where} is <b>${v}</b> (green).`
+    : e.kind === "and" ? `All ${e.n.toLocaleString()} option layers of number ${v} use ${where} — so it is <b>${v}</b> (green).`
+    : e.how === "cell" ? `After the layers narrowed the candidates, ${where} can only be <b>${v}</b> (green).`
+    : `${v} has only one place left in its ${e.how} — ${where} (green).`);
+  if (user.every((x, j) => x === SOL[j])) say("🎉 Solved!", "Every row, column, box and cage is right.");
+});
+
+/* ---------- the method, animated ---------- */
+const A = { ev: null, k: 0, timer: null, running: false, units: null };
+const SPEEDS = { slow: 1100, normal: 420, fast: 90, turbo: 0 };
+function toPlay() { stop(); mode = "play"; V.snap = null; $("units").innerHTML = ""; render(); $("solveBtn").textContent = "▶ Show the method"; }
+function stop() { if (A.timer) clearTimeout(A.timer); A.timer = null; A.running = false; }
+function prepareRun() { const t = killerSolve(P, P.givens, { emit: true, limit: 1 }); A.ev = t.ev; A.units = t.units; A.k = 0; $("log").innerHTML = ""; mode = "solver"; }
+function explain(e) {
+  const un = e.unit !== undefined && e.unit >= 0 && A.units[e.unit] ? A.units[e.unit].name : "", isCage = e.unit >= 0 && A.units[e.unit] && A.units[e.unit].kind === "cage";
+  switch (e.kind) {
+    case "start": return ["Start", `${[...P.givens].some(Boolean) ? "The given numbers are placed and removed from their rows', columns', boxes' and cages' candidates." : "No numbers are given — only the cages."} Every number layer and cage layer is counted; the 2 thinnest are built first (small cages usually have the fewest options).`];
+    case "build": return [e.why === "stuck" ? "Open the next thinnest layer" : "Build option layers", `${un}: <b>${e.n.toLocaleString()}</b> option${e.n === 1 ? "" : "s"} — ${isCage ? "ways to fill the cage with different numbers adding up to its sum" : "ways to put the number once in every row, column and box"}, using only candidates still allowed. ${e.why === "stuck" ? "The cuts stopped, so this layer — now the thinnest — is added." : "It is one of the 2 thinnest layers."}`];
+    case "cut": return ["Cut", `${un}: options that use a number a cell no longer allows are cut: <b>${e.before.toLocaleString()} → ${e.after.toLocaleString()}</b>.`];
+    case "narrow": return ["Narrow the candidates", `${un}: ${e.removed} candidate${e.removed > 1 ? "s" : ""} that no option ${isCage ? "of this cage" : "of this number"} uses ${e.removed > 1 ? "are" : "is"} removed from ${e.cells.length} cell${e.cells.length > 1 ? "s" : ""}.`];
+    case "and": return ["AND · certain cells", `All ${e.n.toLocaleString()} options of ${un} use ${e.cells.map(i => rcName(i, Gm.N)).join(", ")} — placed.`];
+    case "single": return ["Single", e.how === "cell" ? `${rcName(e.cell, Gm.N)} has only one candidate left — <b>${e.v}</b>.` : `${e.v} has only one place left in ${e.how} ${e.k + 1} — ${rcName(e.cell, Gm.N)}.`];
+    case "lock": return ["🔒 Locked", `${un} has one option left — its numbers are placed and its list is dropped. It is never visited again.`];
+    case "probe": return ["All layers together", `The cuts stopped. ${un}: ${e.before - e.after} option${e.before - e.after > 1 ? "s" : ""}, when assumed one at a time, broke another layer — cut (<b>${e.before.toLocaleString()} → ${e.after.toLocaleString()}</b>). Nothing was guessed.`];
+    case "guess": return ["Guess", e.unit !== undefined ? `The cuts stopped. ${un} has the fewest options (${e.of}); try option ${e.k} of ${e.of}.` : `The cuts stopped. Try ${e.v} at ${rcName(e.cell, Gm.N)} (option ${e.k} of ${e.of}).`];
+    case "fail": return ["Contradiction", "A layer or cell has no option left — the last guess was wrong."];
+    case "back": return ["Go back", "Undo the last guess and try the next option."];
+    case "done": return ["Solved", `The grid is complete. ${e.st.listed.toLocaleString()} options were built for ${e.st.built} of ${A.units.length} layers; ${e.st.guesses ? `${e.st.guesses} guess${e.st.guesses > 1 ? "es" : ""}` : "<b>no guessing</b>"}.`];
+  }
+  return ["", ""];
+}
+function chip(e) {
+  const nm = e.unit >= 0 && A.units[e.unit] ? (A.units[e.unit].kind === "cage" ? `cage ${A.units[e.unit].short}` : `#${A.units[e.unit].d}`) : "";
+  const t = { build: `${e.why === "stuck" ? "+ " : ""}${nm}: ${e.n}`, cut: `${nm}: ${e.before}→${e.after}`, narrow: `${nm}: −${e.removed}`, and: `${nm}: +${e.cells ? e.cells.length : 0}`, single: `${e.v}@${rcName(e.cell, Gm.N)}`, lock: `🔒 ${nm}`, probe: `${nm}: ${e.before}→${e.after} (all)`, guess: `? ${nm || rcName(e.cell, Gm.N)} ${e.k}/${e.of}`, fail: "✗", back: "↩", done: "✓ solved" }[e.kind];
+  if (!t) return; const s = document.createElement("span"); s.textContent = t; if (e.kind === "fail" || e.kind === "back") s.className = "back";
+  const l = $("log"); l.appendChild(s); while (l.children.length > 250) l.removeChild(l.firstChild); l.scrollTop = l.scrollHeight;
+}
+function showEvent(e) {
+  V.snap = e; render(); const [p, t] = explain(e); say(p, t);
+  $("sUnits").textContent = `${e.st.built}/${A.units.length}`; $("sBuilt").textContent = e.st.listed.toLocaleString();
+  $("sLocked").textContent = String(e.counts.filter(x => x === -2).length); $("sGuess").textContent = `${e.st.guesses} · ${e.st.back}`;
+}
+function tick(single) {
+  if (!A.ev || mode !== "solver") prepareRun();
+  const sp = SPEEDS[$("speed").value]; let e, n = 0;
+  do { e = A.ev[A.k++]; if (!e) break; chip(e); } while (sp === 0 && !single && ++n < 200 && A.k < A.ev.length);
+  if (!e) { stop(); $("solveBtn").textContent = "↺ Again"; return -1; }
+  showEvent(e);
+  if (A.k >= A.ev.length) { stop(); $("solveBtn").textContent = "↺ Again"; return -1; }
+  return ["lock", "guess", "back", "probe"].includes(e.kind) ? Math.max(sp, 200) * 1.4 : sp;
+}
+function loop() { const w = tick(false); if (w < 0 || !A.running) return; A.timer = setTimeout(loop, w); }
+$("solveBtn").addEventListener("click", () => {
+  if (A.running) { stop(); $("solveBtn").textContent = "▶ Continue"; return; }
+  if (mode !== "solver" || !A.ev || A.k >= A.ev.length) A.ev = null;
+  A.running = true; $("solveBtn").textContent = "⏸ Pause"; loop();
+});
+$("stepBtn").addEventListener("click", () => { stop(); if (mode !== "solver" || (A.ev && A.k >= A.ev.length)) A.ev = null; tick(true); if (A.ev && A.k < A.ev.length) $("solveBtn").textContent = "▶ Continue"; });
+$("backBtn").addEventListener("click", () => { toPlay(); A.ev = null; say("Your turn", "Back to your own game — your numbers are as you left them."); });
+
+/* ---------- setup ---------- */
+$("newBtn").addEventListener("click", newPuzzle);
+$("size").addEventListener("change", newPuzzle);
+$("givens").addEventListener("change", () => { if (!P) return; toPlay(); A.ev = null; $("log").innerHTML = ""; pickGivens(); user = Int8Array.from(P.givens); sel = -1; V.hint = -1; V.bad = null; showInfo(); layout(); render(); say("Givens changed", "Same cages, new given numbers."); });
+window.addEventListener("resize", () => { if (P) { layout(); render(); } });
+newPuzzle();
+/* ---------- ⚡ speed test: lean option layers vs this page's method vs classic backtracking ---------- */
+const SP = { stop: false };
+const spMedian = a => { const s = a.slice().sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+const spFmt = ms => ms >= 100 ? ms.toFixed(0) + " ms" : ms >= 1 ? ms.toFixed(2) + " ms" : ms >= 0.1 ? ms.toFixed(3) + " ms" : Math.round(ms * 1000) + " µs";
+function spTime(fn) {   // short solves are repeated and averaged, so times below the 0.1 ms timer step are still measured
+  let t0 = performance.now(); const res = fn(); let ms = performance.now() - t0;
+  if (ms < 4) { const reps = Math.min(200, Math.ceil(8 / Math.max(ms, 0.01))); t0 = performance.now(); for (let k = 0; k < reps; k++) fn(); ms = (performance.now() - t0) / reps; }
+  return { res, ms };
+}
+const SP_METHODS = [
+  { key: "lean", name: "Lean option layers (build · cut · AND)", run: (Q, init) => leanSolve(Q, init, { start: +$("spStart").value }) },
+  { key: "full", name: "Full option layers (the method shown above)", run: (Q, init) => { const t = killerSolve(Q, init, { emit: false, limit: 1 }); return { grid: t.sols[0] ? Array.from(t.sols[0]) : null, guesses: t.st.guesses, built: t.st.listed }; } },
+  { key: "bt", name: "Cage backtracking (classic)", run: (Q, init) => cageBacktrack(Q, init) },
+];
+function spShow(rows, note) {
+  const S = SP_METHODS.map(m => { const r = rows.map(z => z[m.key]); return { m, n: r.length, ok: r.filter(x => x.ok).length, med: spMedian(r.map(x => x.ms)), avg: r.reduce((a, x) => a + x.ms, 0) / r.length, max: Math.max(...r.map(x => x.ms)), guessed: r.filter(x => x.guesses > 0).length, built: r[0].built != null ? spMedian(r.map(x => x.built)) : null }; });
+  const best = Math.min(...S.map(s => s.med));
+  $("spTbl").innerHTML = `<tr><th>Method</th><th>Correct</th><th>Median</th><th>Average</th><th>Slowest</th><th>Guessed</th><th>Options built</th></tr>` +
+    S.map(s => `<tr><td>${s.m.name}</td><td class="${s.ok < s.n ? "warn" : ""}">${s.ok}/${s.n}</td><td class="${s.med === best ? "best" : ""}">${spFmt(s.med)}</td><td>${spFmt(s.avg)}</td><td>${spFmt(s.max)}</td><td>${s.m.key === "bt" ? "–" : s.guessed}</td><td>${s.built == null ? "–" : Math.round(s.built).toLocaleString()}</td></tr>`).join("");
+  const L = S[0], F = S[1], T = S[2], x = (a, b) => a.med <= b.med ? `<b>${(b.med / a.med).toFixed(1)}× faster</b>` : `${(a.med / b.med).toFixed(1)}× slower`;
+  $("spFind").innerHTML = `${note} ${S.every(s => s.ok === s.n) ? "Every method solved every puzzle correctly." : "<b>Some answers were wrong — see the table.</b>"} At the median, lean is ${x(L, F)} than the full method and ${x(L, T)} than classic backtracking. Lean guessed on ${L.guessed} of ${L.n} puzzle${L.n === 1 ? "" : "s"}${F.guessed ? `, the full method on ${F.guessed}` : ", the full method on none"}.`;
+}
+async function spRun() {
+  const N = +$("size").value, count = +$("spCount").value, pct = $("givens") ? +$("givens").value : 0, rows = [];
+  SP.stop = false; $("spRun").disabled = $("spOne").disabled = true; $("spStop").disabled = false;
+  for (let k = 0; k < count && !SP.stop; k++) {
+    $("spStatus").textContent = `Making puzzle ${k + 1} of ${count} (${N}×${N})…`; await new Promise(r => setTimeout(r, 20));
+    const m = makePuzzle(N, N > 6 ? 12000 : 6000); if (!m) continue;
+    const init = new Int8Array(N * N); if (pct) { const idx = shuffle([...Array(N * N).keys()]).slice(0, Math.round(N * N * pct / 100)); idx.forEach(i => init[i] = m.sol[i]); }
+    $("spStatus").textContent = `Timing puzzle ${k + 1} of ${count}…`; await new Promise(r => setTimeout(r, 20));
+    if (!rows.length) for (const me of SP_METHODS) me.run(m.P, init);   // warm up
+    const z = {};
+    for (const me of SP_METHODS) { const { res, ms } = spTime(() => me.run(m.P, init)); z[me.key] = { ms, ok: !!res.grid && res.grid.every((v, i) => v === m.sol[i]), guesses: res.guesses || 0, built: res.built }; }
+    rows.push(z); spShow(rows, `${rows.length} new ${N}×${N} puzzle${rows.length === 1 ? "" : "s"}${pct ? ` with ${pct}% givens` : ""}.`);
+  }
+  $("spRun").disabled = $("spOne").disabled = false; $("spStop").disabled = true;
+  $("spStatus").textContent = SP.stop ? `Stopped after ${rows.length} puzzles.` : `Done — ${rows.length} puzzles.`;
+}
+function spOne() {
+  if (!P || !SOL) { $("spStatus").textContent = "Make a puzzle first."; return; }
+  const init = P.givens || new Int8Array(P.N * P.N), z = {};
+  for (const me of SP_METHODS) { me.run(P, init); const { res, ms } = spTime(() => me.run(P, init)); z[me.key] = { ms, ok: !!res.grid && res.grid.every((v, i) => v === SOL[i]), guesses: res.guesses || 0, built: res.built }; }
+  spShow([z], "The puzzle on the board.");
+  $("spStatus").textContent = "Timed the puzzle on the board.";
+}
+$("spRun").onclick = spRun; $("spOne").onclick = spOne; $("spStop").onclick = () => { SP.stop = true; };
+</script>
+</body>
+</html>

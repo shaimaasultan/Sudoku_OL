@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Language Solver</title>
+<style>
+:root{
+  --bg:#f5f4ef; --surface:#ffffff; --ink:#1c1e23; --muted:#6a6e77; --line:#cfd2d8; --line-strong:#1c1e23;
+  --accent:#2455c7; --accent-ink:#fff; --btn:#e9e7e0; --btn-ink:#1c1e23; --plastic:#1b1c20; --ok:#2e9e57; --bad:#c42626;
+  --w1:#2e9e57; --w2:#2455c7; --w3:#8a4fd6; --w4:#d9822b; --g1:#1c1e23;
+  --shadow:0 1px 2px rgba(0,0,0,.08),0 4px 14px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#131519; --surface:#1c1f25; --ink:#e7e8eb; --muted:#9aa0aa; --line:#383d46; --line-strong:#c9cdd4;
+    --accent:#6f98ff; --accent-ink:#0d1117; --btn:#2a2e36; --btn-ink:#e7e8eb; --plastic:#050608;
+    --w1:#4cc27a; --w2:#6f98ff; --w3:#b184f0; --w4:#f0a04b; --g1:#e7e8eb; --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  padding:max(12px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));touch-action:manipulation;-webkit-user-select:none;user-select:none}
+.wrap{max-width:620px;margin:0 auto}
+h1{font-size:20px;margin:0}
+.sub{font-size:12px;color:var(--muted);margin-bottom:6px}
+h2{font-size:15px;margin:0 0 6px}
+button,select{font:inherit;color:var(--btn-ink);background:var(--btn);border:0;border-radius:10px;padding:9px 12px;cursor:pointer}
+select{appearance:none;-webkit-appearance:none}
+button:active{transform:scale(.97)}
+button.primary{background:var(--accent);color:var(--accent-ink);font-weight:600}
+button.on{background:var(--accent);color:var(--accent-ink)}
+button:disabled{opacity:.4}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.row select{flex:1;min-width:0}
+.card{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:12px;margin-top:12px}
+.note{font-size:12.5px;color:var(--muted);margin:6px 0}
+label.chk{display:flex;align-items:center;gap:6px;font-size:13.5px}
+.words{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin:6px 0}
+.words label{font-size:13px}
+.sw{display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:-1px}
+
+/* puzzle editor */
+.pgrid{display:grid;width:100%;max-width:360px;aspect-ratio:1/1;margin:6px auto 0;border:2px solid var(--line-strong);border-radius:4px;overflow:hidden;background:var(--surface)}
+.pgrid div{display:flex;align-items:center;justify-content:center;border-right:1px solid var(--line);border-bottom:1px solid var(--line);font-size:var(--pfs);font-weight:700;cursor:pointer;min-width:0;min-height:0}
+.pgrid div.br{border-right:2px solid var(--line-strong)} .pgrid div.bb{border-bottom:2px solid var(--line-strong)}
+.pgrid div.lc{border-right:0} .pgrid div.lr{border-bottom:0}
+.pgrid div.sel{background:#c9dbff;color:#1c1e23}
+.pad{display:grid;gap:6px;margin-top:8px}
+.pad button{height:42px;padding:0;font-size:19px;background:var(--surface);box-shadow:var(--shadow);color:var(--accent)}
+
+/* board */
+.rboard{position:relative;width:100%;max-width:470px;aspect-ratio:1/1;margin:8px auto 0;background:var(--plastic);border-radius:12px;padding:6px}
+.rinner{position:relative;width:100%;height:100%}
+.tile{position:absolute;display:flex;align-items:center;justify-content:center;border-radius:5px;font-weight:800;color:#15161a;font-size:var(--rfs);
+  transition:top .45s cubic-bezier(.3,.7,.3,1),left .45s cubic-bezier(.3,.7,.3,1),background-color .3s;box-shadow:inset 0 -2px 0 rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.35)}
+.quick .tile{transition-duration:.1s}
+.tile.hot{z-index:3;box-shadow:0 0 0 3px #ffd43b,0 4px 12px rgba(0,0,0,.5)}
+.tile.conf{box-shadow:inset 0 0 0 2px #ff2d2d}
+.tile.pin::after,.tile.lpin::after{content:"";position:absolute;top:9%;left:9%;width:18%;height:18%;border-radius:50%}
+.tile.pin::after{background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.tile.lpin::after{background:#15161a;box-shadow:0 0 0 1.5px #fff}
+.nonum .tile{color:transparent}
+.ghost{position:absolute;pointer-events:none;display:flex;align-items:flex-start;justify-content:flex-end;padding:1px 3px;font-size:var(--gfs);font-weight:700;color:#fff;z-index:4;text-shadow:0 0 3px #000}
+.ghost.hit{box-shadow:inset 0 0 0 2px var(--ok);border-radius:5px}
+.frame{position:absolute;pointer-events:none;border:2px solid rgba(255,255,255,.55);border-radius:6px;z-index:5}
+.hl{position:absolute;pointer-events:none;border:3px solid #ffd43b;border-radius:7px;z-index:6;transition:all .25s}
+
+.ctl{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.ctl button{padding:8px 13px}
+.stage{display:flex;gap:6px;margin:8px 0 0}
+.stage span{flex:1;text-align:center;font-size:12px;font-weight:600;padding:6px 4px;border-radius:8px;background:var(--bg);color:var(--muted)}
+.stage span.on{background:var(--accent);color:var(--accent-ink)}
+.stage span.done{background:var(--ok);color:#fff}
+.step{background:var(--bg);border-radius:10px;padding:8px 10px;margin-top:8px;min-height:56px;font-size:14px}
+.step .no{font-size:11px;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.stats div{background:var(--bg);border-radius:10px;padding:6px 4px;text-align:center}
+.stats b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
+.stats span{font-size:10.5px;color:var(--muted)}
+.total{font-size:13px;margin-top:8px;line-height:1.55;font-variant-numeric:tabular-nums}
+.total b{font-size:15px}
+.total .grp{display:block;margin:2px 0}
+.total .dim{color:var(--muted)}
+.minbox{margin-top:10px;background:var(--bg);border-radius:10px;padding:8px 10px;font-size:13px}
+.minbox h3{margin:0 0 4px;font-size:14px}
+.minbox .big{font-size:22px;font-weight:800;color:var(--ok)}
+.minbox table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;margin-top:4px}
+.minbox td{padding:4px 2px;border-bottom:1px solid var(--line);vertical-align:top}
+.minbox td.n{text-align:right;font-weight:700;white-space:nowrap}
+.minbox td .k{display:block;color:var(--muted);font-size:11.5px}
+.minbox tr.best td{color:var(--ok)}
+.wordstats{font-size:12px;color:var(--muted);margin-top:6px;font-variant-numeric:tabular-nums;line-height:1.6}
+.log{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;max-height:150px;overflow:auto}
+.log span{font:600 12px ui-monospace,Menlo,Consolas,monospace;background:var(--bg);border-radius:6px;padding:3px 6px;border-left:3px solid var(--c,transparent)}
+.log span.hd{background:none;border:0;font:700 11px -apple-system,Segoe UI,Roboto,sans-serif;color:var(--muted);padding:3px 2px}
+table.notation{border-collapse:collapse;font-size:13px;width:100%}
+table.notation td{padding:4px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+table.notation td:first-child{font:600 12.5px ui-monospace,Menlo,Consolas,monospace;white-space:nowrap}
+table.notation td.sec{font:600 12px -apple-system,Segoe UI,Roboto,sans-serif;color:var(--muted);white-space:normal;padding-top:10px}
+.busy{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:20;color:#fff;font-weight:600}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🗣️ Language Solver</h1>
+  <div class="sub">One static home grid → the solution, using the full move language · S. S. Soltan</div>
+
+  <div class="card">
+    <div class="row">
+      <select id="size" aria-label="Size"><option value="4">4×4</option><option value="6">6×6</option><option value="9" selected>9×9</option><option value="12">12×12</option><option value="16">16×16</option></select>
+      <select id="level" aria-label="Clues"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select>
+    </div>
+    <div class="row">
+      <button id="newVaried" class="primary">New varied puzzle</button>
+      <button id="newClassic">New classic puzzle</button>
+      <button id="editBtn">✎ Enter my own</button>
+      <button id="clearBtn">Clear</button>
+    </div>
+    <div id="pgrid" class="pgrid"></div>
+    <div id="pad" class="pad hidden"></div>
+    <p class="note" id="clueCount"></p>
+  </div>
+
+  <div class="card">
+    <h2>Words to use</h2>
+    <div class="row" style="margin-top:0">
+      <label class="chk"><input type="checkbox" id="optRubik" checked> 🧩 Global words first (Rubik moves)</label>
+      <label class="chk"><input type="checkbox" id="optLogic" checked> Logic first</label>
+    </div>
+    <div class="note" style="margin:2px 0">🎨 Local words:</div>
+    <div class="words">
+      <label class="chk"><input type="checkbox" id="wBox" checked><span class="sw" style="background:var(--w1)"></span> 3⇄7 in box k</label>
+      <label class="chk"><input type="checkbox" id="wRow" checked><span class="sw" style="background:var(--w2)"></span> 3⇄7 in row i</label>
+      <label class="chk"><input type="checkbox" id="wCol" checked><span class="sw" style="background:var(--w3)"></span> 3⇄7 in column j</label>
+      <label class="chk"><input type="checkbox" id="wCross" checked><span class="sw" style="background:var(--w4)"></span> 3⇄7 in row i + column j</label>
+    </div>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="optNums" checked> Show numbers</label>
+      <select id="speed" aria-label="Speed" style="flex:0 0 auto"><option value="slow">Slow</option><option value="normal" selected>Normal</option><option value="fast">Fast</option><option value="turbo">Turbo</option></select>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="stage"><span id="st0">Home grid</span><span id="st1">🧩 Global words</span><span id="st2">📌 Pin</span><span id="st3">🎨 Local words</span></div>
+    <div id="board" class="rboard"><div id="inner" class="rinner"></div></div>
+    <div class="ctl">
+      <button id="reset">⏮ Reset</button>
+      <button id="play" class="primary">▶ Solve</button>
+      <button id="stepBtn">Step ▶|</button>
+    </div>
+    <div class="stats">
+      <div><b id="sGivens">–</b><span>givens matched</span></div>
+      <div><b id="sRepeats">–</b><span>repeats</span></div>
+      <div><b id="sPinned">0</b><span>pinned</span></div>
+      <div><b id="sMoves">0</b><span>language words</span></div>
+    </div>
+    <div class="step"><div class="no" id="phase"></div><div id="text"></div></div>
+    <div class="total" id="wordsTotal"></div>
+    <div class="minbox hidden" id="minBox"></div>
+    <div class="wordstats" id="wordStats"></div>
+    <div id="log" class="log"></div>
+  </div>
+
+  <div class="card">
+    <h2>The language</h2>
+    <table class="notation">
+      <tr><td colspan="2" class="sec">🧩 Global words — move whole lines; the grid stays a valid Sudoku</td></tr>
+      <tr><td>R1↔R3 · C4↔C6</td><td>Swap two rows (same band) or two columns (same stack)</td></tr>
+      <tr><td>B1↔B3 · S1↔S2</td><td>Swap bands (3 rows with 3 rows) or stacks</td></tr>
+      <tr><td>R1→R2→R3</td><td>Rotate rows / columns / bands / stacks one place</td></tr>
+      <tr><td>T</td><td>Turn: rows ⇄ columns</td></tr>
+      <tr><td>3⇄7</td><td>Swap two numbers everywhere</td></tr>
+      <tr><td colspan="2" class="sec">🎨 Local words — change one place; can reach every family</td></tr>
+      <tr><td>3⇄7 b4</td><td>Swap 3 and 7 inside box 4 only</td></tr>
+      <tr><td>3⇄7 r2</td><td>Swap 3 and 7 inside row 2 only</td></tr>
+      <tr><td>3⇄7 c5</td><td>Swap 3 and 7 inside column 5 only</td></tr>
+      <tr><td>3⇄7 r2c5</td><td>The 3 at row 2, column 5 becomes 7: swap in row 2 and column 5</td></tr>
+    </table>
+    <ol style="padding-left:20px;font-size:14px">
+      <li><b>Home grid</b> — the same start for every puzzle: (r·b + ⌊r/a⌋ + c) mod N + 1.</li>
+      <li><b>Global words</b> move and rename whole lines to match as many givens as possible. A Classic puzzle is solved right here.</li>
+      <li><b>Pin</b> the givens (white) and, with Logic first, every cell logic can prove (dark) — using local swaps, so nothing else moves.</li>
+      <li><b>Local words</b> swap numbers in one place at a time until no row, column or box repeats a number. A swap that makes things worse is sometimes kept, to escape dead ends.</li>
+    </ol>
+  </div>
+</div>
+<div id="busy" class="busy hidden">Working…</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const SYMBOLS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const sym = v => v > 0 ? SYMBOLS[v] : "";
+function boxShape(n) { let best = null; for (let r = 1; r <= n; r++) if (n % r === 0) { const c = n / r; if (r <= c) { const d = Math.abs(r - Math.sqrt(n)); if (!best || d < best[0]) best = [d, r, c]; } } return [best[1], best[2]]; }
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+function perms(n) { if (n === 1) return [[0]]; const out = []; for (const p of perms(n - 1)) for (let i = 0; i <= p.length; i++) out.push([...p.slice(0, i), n - 1, ...p.slice(i)]); return out; }
+let N = 9, BR = 3, BC = 3, puzzle = new Array(81).fill(0), editing = false, sel = -1;
+const boxOf = (r, c) => Math.floor(r / BR) * (N / BC) + Math.floor(c / BC);
+const home = (r, c) => (r * BC + Math.floor(r / BR) + c) % N + 1;
+const hue = d => Math.round((d - 1) * 360 / N);
+
+/* ---------- puzzles ---------- */
+function countSolutions(p, limit, budget) {
+  const g = p.slice(), rm = new Int32Array(N), cm = new Int32Array(N), bm = new Int32Array(N), full = (1 << (N + 1)) - 2;
+  for (let i = 0; i < N * N; i++) if (g[i]) { const b = 1 << g[i], r = (i / N) | 0, c = i % N; if ((rm[r] | cm[c] | bm[boxOf(r, c)]) & b) return 0; rm[r] |= b; cm[c] |= b; bm[boxOf(r, c)] |= b; }
+  let count = 0, nodes = 0;
+  (function rec() {
+    if (count >= limit || ++nodes > budget) return;
+    let best = -1, bc = 99, bmask = 0;
+    for (let i = 0; i < N * N; i++) if (!g[i]) { const r = (i / N) | 0, c = i % N, m = full & ~(rm[r] | cm[c] | bm[boxOf(r, c)]); let k = 0, x = m; while (x) { x &= x - 1; k++; } if (k < bc) { bc = k; best = i; bmask = m; if (k < 2) break; } }
+    if (best < 0) { count++; return; }
+    const r = (best / N) | 0, c = best % N, b0 = boxOf(r, c);
+    for (let d = 1; d <= N; d++) if (bmask & (1 << d)) { const b = 1 << d; g[best] = d; rm[r] |= b; cm[c] |= b; bm[b0] |= b; rec(); g[best] = 0; rm[r] &= ~b; cm[c] &= ~b; bm[b0] &= ~b; if (count >= limit) return; }
+  })();
+  return nodes > budget ? -1 : count;
+}
+function carve(sol, level) {
+  const ratio = { easy: 0.5, medium: 0.4, hard: 0.32 }[level], target = Math.round(N * N * ratio), p = sol.slice(), budget = N <= 9 ? 20000 : 4000;
+  let clues = N * N; const pairs = []; for (let i = 0; i <= (N * N - 1) / 2; i++) pairs.push([i, N * N - 1 - i]);
+  for (const [a, b] of shuffle(pairs)) { if (clues <= target) break; const va = p[a], vb = p[b]; p[a] = 0; p[b] = 0; if (countSolutions(p, 2, budget) === 1) clues -= a === b ? 1 : 2; else { p[a] = va; p[b] = vb; } }
+  return p;
+}
+function classicPuzzle(level) {
+  const nb = N / BR, ns = N / BC;
+  const ro = shuffle([...Array(nb).keys()]).flatMap(b => shuffle([...Array(BR).keys()]).map(k => b * BR + k));
+  const co = shuffle([...Array(ns).keys()]).flatMap(s => shuffle([...Array(BC).keys()]).map(k => s * BC + k));
+  const rl = shuffle([...Array(N).keys()].map(i => i + 1)), turn = BR === BC && Math.random() < 0.5, sol = [];
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) sol.push(rl[(turn ? home(co[c], ro[r]) : home(ro[r], co[c])) - 1]);
+  return carve(sol, level);
+}
+function variedPuzzle(level) {
+  const g = new Array(N * N).fill(0), rm = new Int32Array(N), cm = new Int32Array(N), bm = new Int32Array(N), full = (1 << (N + 1)) - 2; let nodes = 0;
+  const rec = () => {
+    if (++nodes > 200000) return false;
+    let best = -1, bc = 99, bmask = 0;
+    for (let i = 0; i < N * N; i++) if (!g[i]) { const r = (i / N) | 0, c = i % N, m = full & ~(rm[r] | cm[c] | bm[boxOf(r, c)]); let k = 0, x = m; while (x) { x &= x - 1; k++; } if (k < bc) { bc = k; best = i; bmask = m; if (k < 2) break; } }
+    if (best < 0) return true; if (!bc) return false;
+    const r = (best / N) | 0, c = best % N, b0 = boxOf(r, c), ds = []; for (let d = 1; d <= N; d++) if (bmask & (1 << d)) ds.push(d);
+    for (const d of shuffle(ds)) { const b = 1 << d; g[best] = d; rm[r] |= b; cm[c] |= b; bm[b0] |= b; if (rec()) return true; g[best] = 0; rm[r] &= ~b; cm[c] &= ~b; bm[b0] &= ~b; }
+    return false;
+  };
+  return rec() ? carve(g, level) : classicPuzzle(level);
+}
+
+/* ---------- global words: positions (turn, R, C) of the home grid ---------- */
+function moveLanguage() {
+  const L = [], nb = N / BR, ns = N / BC, pairs = n => { const o = []; for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) o.push([i, j]); return o; };
+  for (let b = 0; b < nb; b++) for (const [i, j] of pairs(BR)) L.push({ t: "row", a: b * BR + i, b: b * BR + j });
+  for (let q = 0; q < ns; q++) for (const [i, j] of pairs(BC)) L.push({ t: "col", a: q * BC + i, b: q * BC + j });
+  for (const [i, j] of pairs(nb)) L.push({ t: "band", a: i, b: j });
+  for (const [i, j] of pairs(ns)) L.push({ t: "stack", a: i, b: j });
+  const cyc = (t, first, n) => { const f = [...Array(n).keys()].map(k => first + k); L.push({ t, list: f }, { t, list: f.slice().reverse() }); };
+  if (BR >= 3) for (let b = 0; b < nb; b++) cyc("rcyc", b * BR, BR);
+  if (BC >= 3) for (let q = 0; q < ns; q++) cyc("ccyc", q * BC, BC);
+  if (nb >= 3) cyc("bcyc", 0, nb);
+  if (ns >= 3) cyc("scyc", 0, ns);
+  if (BR === BC) L.push({ t: "turn" });
+  return L;
+}
+function applyPos(st, m) {
+  if (m.t === "turn") return { t: !st.t, R: st.C.slice(), C: st.R.slice() };
+  const R = st.R.slice(), C = st.C.slice();
+  const cycle = (arr, L, size) => { const old = arr.slice(); L.forEach((g, k) => { const to = L[(k + 1) % L.length]; for (let o = 0; o < size; o++) arr[to * size + o] = old[g * size + o]; }); };
+  if (m.t === "row") [R[m.a], R[m.b]] = [R[m.b], R[m.a]];
+  else if (m.t === "col") [C[m.a], C[m.b]] = [C[m.b], C[m.a]];
+  else if (m.t === "band") for (let o = 0; o < BR; o++) [R[m.a * BR + o], R[m.b * BR + o]] = [R[m.b * BR + o], R[m.a * BR + o]];
+  else if (m.t === "stack") for (let o = 0; o < BC; o++) [C[m.a * BC + o], C[m.b * BC + o]] = [C[m.b * BC + o], C[m.a * BC + o]];
+  else if (m.t === "rcyc") cycle(R, m.list, 1);
+  else if (m.t === "ccyc") cycle(C, m.list, 1);
+  else if (m.t === "bcyc") cycle(R, m.list, BR);
+  else if (m.t === "scyc") cycle(C, m.list, BC);
+  return { t: st.t, R, C };
+}
+const homeAt = (st, r, c) => st.t ? home(st.C[c], st.R[r]) : home(st.R[r], st.C[c]);
+const startPos = () => ({ t: false, R: [...Array(N).keys()], C: [...Array(N).keys()] });
+function directPath(from, to) {
+  const moves = []; let st = from;
+  const push = m => { moves.push(m); st = applyPos(st, m); };
+  if (st.t !== to.t) push({ t: "turn" });
+  const nb = N / BR, ns = N / BC;
+  for (let k = 0; k < nb; k++) { const want = Math.floor(to.R[k * BR] / BR), j = [...Array(nb).keys()].find(q => Math.floor(st.R[q * BR] / BR) === want); if (j !== k) push({ t: "band", a: k, b: j }); }
+  for (let q = 0; q < N; q++) { const j = st.R.indexOf(to.R[q]); if (j !== q) push({ t: "row", a: q, b: j }); }
+  for (let k = 0; k < ns; k++) { const want = Math.floor(to.C[k * BC] / BC), j = [...Array(ns).keys()].find(q => Math.floor(st.C[q * BC] / BC) === want); if (j !== k) push({ t: "stack", a: k, b: j }); }
+  for (let q = 0; q < N; q++) { const j = st.C.indexOf(to.C[q]); if (j !== q) push({ t: "col", a: q, b: j }); }
+  return moves;
+}
+// exact search for Classic puzzles (bands and stacks slot by slot, one consistent renaming)
+function findMoves(p) {
+  const nb = N / BR, ns = N / BC, PR = perms(BR), PC = perms(BC);
+  const givens = []; for (let i = 0; i < N * N; i++) if (p[i]) givens.push([(i / N) | 0, i % N, p[i]]);
+  const byRow = [...Array(N)].map(() => []); for (const g of givens) byRow[g[0]].push(g);
+  for (const turn of BR === BC ? [false, true] : [false]) {
+    const H = turn ? (r, c) => home(c, r) : home;
+    const rowSrc = new Int16Array(N).fill(-1), colSrc = new Int16Array(N).fill(-1), fwd = new Int16Array(N + 1), back = new Int16Array(N + 1);
+    const usedB = new Uint8Array(nb), usedS = new Uint8Array(ns); let nodes = 0;
+    const check = (cells, log) => { for (const [r, c, v] of cells) { if (rowSrc[r] < 0 || colSrc[c] < 0) continue; const hv = H(rowSrc[r], colSrc[c]); if (fwd[hv] === 0 && back[v] === 0) { fwd[hv] = v; back[v] = hv; log.push(hv, v); } else if (fwd[hv] !== v || back[v] !== hv) return false; } return true; };
+    const undo = log => { for (let k = 0; k < log.length; k += 2) { fwd[log[k]] = 0; back[log[k + 1]] = 0; } };
+    const slots = []; for (let k = 0; k < Math.max(nb, ns); k++) { if (k < nb) slots.push(["band", k]); if (k < ns) slots.push(["stack", k]); }
+    const rec = si => {
+      if (++nodes > 400000) return false;
+      if (si === slots.length) return true;
+      const [kind, k] = slots[si];
+      if (kind === "band") { for (let b = 0; b < nb; b++) if (!usedB[b]) for (const pr of PR) { usedB[b] = 1; for (let j = 0; j < BR; j++) rowSrc[k * BR + j] = b * BR + pr[j]; const log = [], cells = []; for (let j = 0; j < BR; j++) cells.push(...byRow[k * BR + j]); if (check(cells, log) && rec(si + 1)) return true; undo(log); usedB[b] = 0; for (let j = 0; j < BR; j++) rowSrc[k * BR + j] = -1; } }
+      else { for (let s = 0; s < ns; s++) if (!usedS[s]) for (const pc of PC) { usedS[s] = 1; for (let j = 0; j < BC; j++) colSrc[k * BC + j] = s * BC + pc[j]; const log = [], cells = givens.filter(g => Math.floor(g[1] / BC) === k); if (check(cells, log) && rec(si + 1)) return true; undo(log); usedS[s] = 0; for (let j = 0; j < BC; j++) colSrc[k * BC + j] = -1; } }
+      return false;
+    };
+    if (rec(0)) { const map = Array.from(fwd), free = []; for (let v = 1; v <= N; v++) if (!back[v]) free.push(v); for (let hv = 1; hv <= N; hv++) if (!map[hv]) map[hv] = free.shift(); return { st: { t: turn, R: Array.from(rowSrc), C: Array.from(colSrc) }, map }; }
+  }
+  return null;
+}
+// every (turn, rows, columns, renaming) that turns the home grid into this full grid (for exact minimums)
+function allArrangements(full, cap) {
+  const nb = N / BR, ns = N / BC, PR = perms(BR), PC = perms(BC), out = [];
+  const cells = []; for (let i = 0; i < N * N; i++) cells.push([(i / N) | 0, i % N, full[i]]);
+  const byRow = [...Array(N)].map(() => []); for (const g of cells) byRow[g[0]].push(g);
+  const byStack = [...Array(ns)].map((_, k) => cells.filter(g => Math.floor(g[1] / BC) === k));
+  for (const turn of BR === BC ? [false, true] : [false]) {
+    const H = turn ? (r, c) => home(c, r) : home;
+    const rowSrc = new Int16Array(N).fill(-1), colSrc = new Int16Array(N).fill(-1), fwd = new Int16Array(N + 1), back = new Int16Array(N + 1);
+    const usedB = new Uint8Array(nb), usedS = new Uint8Array(ns);
+    const check = (cs, log) => { for (const [r, c, v] of cs) { if (rowSrc[r] < 0 || colSrc[c] < 0) continue; const hv = H(rowSrc[r], colSrc[c]); if (fwd[hv] === 0 && back[v] === 0) { fwd[hv] = v; back[v] = hv; log.push(hv, v); } else if (fwd[hv] !== v || back[v] !== hv) return false; } return true; };
+    const undo = log => { for (let k = 0; k < log.length; k += 2) { fwd[log[k]] = 0; back[log[k + 1]] = 0; } };
+    const slots = []; for (let k = 0; k < Math.max(nb, ns); k++) { if (k < nb) slots.push(["band", k]); if (k < ns) slots.push(["stack", k]); }
+    const rec = si => {
+      if (out.length >= cap) return;
+      if (si === slots.length) { out.push({ st: { t: turn, R: Array.from(rowSrc), C: Array.from(colSrc) }, map: Array.from(fwd) }); return; }
+      const [kind, k] = slots[si];
+      if (kind === "band") { for (let b = 0; b < nb; b++) if (!usedB[b]) for (const pr of PR) { usedB[b] = 1; for (let j = 0; j < BR; j++) rowSrc[k * BR + j] = b * BR + pr[j]; const log = [], cs = []; for (let j = 0; j < BR; j++) cs.push(...byRow[k * BR + j]); if (check(cs, log)) rec(si + 1); undo(log); usedB[b] = 0; for (let j = 0; j < BR; j++) rowSrc[k * BR + j] = -1; } }
+      else { for (let q = 0; q < ns; q++) if (!usedS[q]) for (const pc of PC) { usedS[q] = 1; for (let j = 0; j < BC; j++) colSrc[k * BC + j] = q * BC + pc[j]; const log = []; if (check(byStack[k], log)) rec(si + 1); undo(log); usedS[q] = 0; for (let j = 0; j < BC; j++) colSrc[k * BC + j] = -1; } }
+    };
+    rec(0);
+  }
+  return out;
+}
+/* ---------- minimum number of words ---------- */
+// fewest words to make an arrangement of k things, using swaps of two and (k >= 3) the two full rotations
+const DIST = {};
+function permDist(p) {
+  const k = p.length;
+  if (!DIST[k]) {
+    const gens = []; for (let i = 0; i < k; i++) for (let j = i + 1; j < k; j++) gens.push(a => { const b = a.slice(); [b[i], b[j]] = [b[j], b[i]]; return b; });
+    if (k >= 3) { gens.push(a => a.slice(1).concat(a[0]), a => [a[k - 1]].concat(a.slice(0, k - 1))); }
+    const start = [...Array(k).keys()], d = new Map([[start.join(","), 0]]); let frontier = [start];
+    while (frontier.length) { const next = []; for (const a of frontier) for (const g of gens) { const b = g(a), key = b.join(","); if (!d.has(key)) { d.set(key, d.get(a.join(",")) + 1); next.push(b); } } frontier = next; }
+    DIST[k] = d;
+  }
+  return DIST[k].get(p.join(","));
+}
+const cycles = perm => { const seen = new Uint8Array(perm.length); let c = 0; for (let i = 0; i < perm.length; i++) if (!seen[i]) { c++; for (let j = i; !seen[j]; j = perm[j]) seen[j] = 1; } return c; };
+// global words needed for a position + renaming: turn + bands + rows in each band + stacks + columns in each stack + number swaps
+function globalCost(st, map) {
+  const nb = N / BR, ns = N / BC;
+  let c = st.t ? 1 : 0;
+  c += permDist([...Array(nb).keys()].map(k => Math.floor(st.R[k * BR] / BR)));
+  for (let k = 0; k < nb; k++) c += permDist([...Array(BR).keys()].map(j => st.R[k * BR + j] % BR));
+  c += permDist([...Array(ns).keys()].map(k => Math.floor(st.C[k * BC] / BC)));
+  for (let k = 0; k < ns; k++) c += permDist([...Array(BC).keys()].map(j => st.C[k * BC + j] % BC));
+  c += N - cycles([...Array(N).keys()].map(x => map[x + 1] - 1));
+  return c;
+}
+// fewest swaps inside units (boxes / rows / columns) to turn grid G into grid T — each unit holds every number once
+function unitSwaps(G, T, kind) {
+  let total = 0;
+  for (let u = 0; u < N; u++) {
+    const cellsU = []; for (let i = 0; i < N * N; i++) { const r = (i / N) | 0, c = i % N; if ((kind === "box" ? boxOf(r, c) : kind === "row" ? r : c) === u) cellsU.push(i); }
+    const where = new Map(cellsU.map((i, k) => [G[i], k]));
+    const perm = cellsU.map(i => where.get(T[i]));
+    if (perm.some(x => x === undefined)) return Infinity;
+    total += cellsU.length - cycles(perm);
+  }
+  return total;
+}
+const gridOf = (st, map) => { const g = []; for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) g.push(map[homeAt(st, r, c)]); return g; };
+function minimumWords(sol) {
+  const H = gridOf(startPos(), [...Array(N + 1).keys()]), res = {};
+  // 1) global words only (exact) — possible only in the home grid's family
+  const arr = allArrangements(sol, 20000);
+  res.global = arr.length ? Math.min(...arr.map(a => globalCost(a.st, a.map))) : null;
+  // 2) one local word only, from the home grid (exact)
+  res.box = unitSwaps(H, sol, "box"); res.row = unitSwaps(H, sol, "row"); res.col = unitSwaps(H, sol, "col");
+  // 3) global words first, then box swaps (best found by search)
+  const all = []; for (let i = 0; i < N * N; i++) all.push([(i / N) | 0, i % N, sol[i]]);
+  const L = moveLanguage();
+  const cost = st => { const ren = bestRenaming(st, all).ren, G = gridOf(st, ren); const g = globalCost(st, ren), b = unitSwaps(G, sol, "box"); return { t: g + b, g, b }; };
+  let st = startPos(), cur = cost(st), best = { ...cur, st }, T = 2;
+  const IT = N <= 9 ? 6000 : 2500;
+  for (let it = 0; it < IT; it++) {
+    const s2 = applyPos(st, L[(Math.random() * L.length) | 0]), c2 = cost(s2);
+    if (c2.t <= cur.t || Math.random() < Math.exp((cur.t - c2.t) / T)) { st = s2; cur = c2; if (cur.t < best.t) best = { ...cur, st }; }
+    T = Math.max(0.1, T * (1 - 3 / IT));
+  }
+  if (res.box < best.t) best = { t: res.box, g: 0, b: res.box };
+  res.mixed = best;
+  return res;
+}
+function showMinimum(sol, used) {
+  const box = $("minBox"); box.classList.remove("hidden");
+  box.innerHTML = `<h3>Fewest words from the home grid</h3><div class="note">Working it out…</div>`;
+  setTimeout(() => {
+    const m = minimumWords(sol);
+    const rows = [
+      ["🧩 Global words only", m.global, m.global === null ? "impossible — not in the home grid's family" : "exact"],
+      ["🎨 3⇄7 in box k only", m.box, "exact"],
+      ["🎨 3⇄7 in row i only", m.row, "exact"],
+      ["🎨 3⇄7 in column j only", m.col, "exact"],
+      ["🧩 + 🎨 global words, then box swaps", m.mixed.t, `best found (${m.mixed.g} global + ${m.mixed.b} box)`],
+    ];
+    const vals = rows.map(r => r[1]).filter(v => v !== null && isFinite(v)), fewest = Math.min(...vals);
+    box.innerHTML = `<h3>Fewest words from the home grid</h3>
+      <div><span class="big">${fewest}</span> words is the fewest found to turn the home grid into this solution${used ? ` — this run used <b>${used.toLocaleString()}</b>${used > fewest ? ` (${used / fewest >= 10 ? Math.round(used / fewest).toLocaleString() : (used / fewest).toFixed(1)}×)` : ""}` : ""}.</div>
+      <table>${rows.map(([name, v, kind]) => `<tr class="${v === fewest ? "best" : ""}"><td>${name}<span class="k">${kind}</span></td><td class="n">${v === null ? "—" : v}</td></tr>`).join("")}</table>
+      <div class="note">"Exact" = no shorter way exists with that set of words. The cross word isn't counted here: one cross move changes several cells, so its minimum can't be worked out the same way. Mixing all the words could only need the same number or fewer.</div>`;
+  }, 30);
+}
+// best renaming of the numbers for a position (assignment problem, Hungarian method)
+function bestRenaming(st, givens) {
+  const w = [...Array(N + 1)].map(() => new Int32Array(N + 1));
+  for (const [r, c, v] of givens) w[homeAt(st, r, c)][v]++;
+  const n = N, INF = 1e9, u = new Float64Array(n + 1), vv = new Float64Array(n + 1), p = new Int32Array(n + 1), way = new Int32Array(n + 1);
+  for (let i = 1; i <= n; i++) {
+    p[0] = i; let j0 = 0; const minv = new Float64Array(n + 1).fill(INF), used = new Uint8Array(n + 1);
+    do { used[j0] = 1; const i0 = p[j0]; let delta = INF, j1 = 0;
+      for (let j = 1; j <= n; j++) if (!used[j]) { const cur = -w[i0][j] - u[i0] - vv[j]; if (cur < minv[j]) { minv[j] = cur; way[j] = j0; } if (minv[j] < delta) { delta = minv[j]; j1 = j; } }
+      for (let j = 0; j <= n; j++) { if (used[j]) { u[p[j]] += delta; vv[j] -= delta; } else minv[j] -= delta; }
+      j0 = j1; } while (p[j0] !== 0);
+    do { const j1 = way[j0]; p[j0] = p[j1]; j0 = j1; } while (j0);
+  }
+  const ren = new Int32Array(N + 1); for (let j = 1; j <= n; j++) ren[p[j]] = j;
+  let matched = 0; for (let hv = 1; hv <= N; hv++) matched += w[hv][ren[hv]];
+  return { ren, matched };
+}
+// Stage 1 plan: the global-word route from the home grid (exact for Classic, closest possible otherwise)
+function globalPlan(p) {
+  const givens = []; for (let i = 0; i < N * N; i++) if (p[i]) givens.push([(i / N) | 0, i % N, p[i]]);
+  let target, ren, exact = false;
+  const ex = findMoves(p);
+  if (ex) { target = ex.st; ren = ex.map; exact = true; }
+  else {
+    const L = moveLanguage(); let st = startPos(), cur = bestRenaming(st, givens).matched, best = { st, sc: cur }, T = 1.5;
+    const IT = N <= 9 ? 25000 : 8000;
+    for (let it = 0; it < IT; it++) {
+      const s2 = applyPos(st, L[(Math.random() * L.length) | 0]), sc = bestRenaming(s2, givens).matched;
+      if (sc >= cur || Math.random() < Math.exp((sc - cur) / T)) { st = s2; cur = sc; if (sc > best.sc) best = { st, sc }; }
+      T = Math.max(0.05, T * (1 - 4 / IT));
+    }
+    target = best.st; ren = Array.from(bestRenaming(target, givens).ren);
+  }
+  const moves = directPath(startPos(), target);
+  const now = [...Array(N + 1).keys()];
+  for (let t = 1; t <= N; t++) {
+    if (now[t] === ren[t]) continue;
+    const a = now[t], b = ren[t]; moves.push({ t: "num", a, b });
+    for (let x = 1; x <= N; x++) { if (now[x] === a) now[x] = b; else if (now[x] === b) now[x] = a; }
+  }
+  return { moves, exact };
+}
+const cyc = (ch, L) => L.map(x => ch + (x + 1)).join("→");
+const gNote = m => ({ turn: "T", band: `B${m.a + 1}↔B${m.b + 1}`, row: `R${m.a + 1}↔R${m.b + 1}`, stack: `S${m.a + 1}↔S${m.b + 1}`, col: `C${m.a + 1}↔C${m.b + 1}`,
+  rcyc: cyc("R", m.list || []), ccyc: cyc("C", m.list || []), bcyc: cyc("B", m.list || []), scyc: cyc("S", m.list || []), num: `${sym(m.a)}⇄${sym(m.b)}` })[m.t];
+const gExplain = m => ({
+  turn: "Turn the grid: rows become columns.",
+  band: `Swap bands ${m.a + 1} and ${m.b + 1} (${BR} rows with ${BR} rows).`,
+  row: `Swap rows ${m.a + 1} and ${m.b + 1} inside band ${Math.floor(m.a / BR) + 1}.`,
+  stack: `Swap stacks ${m.a + 1} and ${m.b + 1} (${BC} columns with ${BC} columns).`,
+  col: `Swap columns ${m.a + 1} and ${m.b + 1} inside stack ${Math.floor(m.a / BC) + 1}.`,
+  num: `Swap numbers ${sym(m.a)} ⇄ ${sym(m.b)} everywhere.`,
+})[m.t] || `Rotate ${gNote(m)} one place.`;
+
+/* ---------- logic (cells that can be proved) ---------- */
+function logicSingles(p) {
+  const g = p.slice(), out = [], full = (1 << (N + 1)) - 2, units = [];
+  for (let r = 0; r < N; r++) units.push([...Array(N).keys()].map(c => r * N + c));
+  for (let c = 0; c < N; c++) units.push([...Array(N).keys()].map(r => r * N + c));
+  for (let b = 0; b < N; b++) { const u = []; for (let i = 0; i < N * N; i++) if (boxOf((i / N) | 0, i % N) === b) u.push(i); units.push(u); }
+  const peers = [...Array(N * N)].map((_, i) => units.filter(u => u.includes(i)).flat());
+  const cand = i => { let used = 0; for (const j of peers[i]) used |= 1 << g[j]; return full & ~used; };
+  for (let changed = true; changed;) {
+    changed = false;
+    for (let i = 0; i < N * N; i++) if (!g[i]) { const m = cand(i); if (m && !(m & (m - 1))) { g[i] = Math.log2(m); out.push([i, g[i]]); changed = true; } }
+    for (const u of units) for (let v = 1; v <= N; v++) { if (u.some(i => g[i] === v)) continue; const spots = u.filter(i => !g[i] && (cand(i) & (1 << v))); if (spots.length === 1) { g[spots[0]] = v; out.push([spots[0], v]); changed = true; } }
+  }
+  return out;
+}
+
+/* ---------- board ---------- */
+const S = {}; // run state
+const SPEEDS = {
+  slow:   { ev: 900, tries: 400000, toBest: true,  delay: 900, quick: false },
+  normal: { ev: 380, tries: 400000, toBest: true,  delay: 380, quick: false },
+  fast:   { ev: 70,  tries: 25000,  toBest: false, delay: 40,  quick: true },
+  turbo:  { ev: 0,   tries: 150000, toBest: false, delay: 0,   quick: true },
+};
+const WORD_INFO = { box: ["box", "--w1"], row: ["row", "--w2"], col: ["column", "--w3"], cross: ["cross", "--w4"] };
+function buildBoard() {
+  const inner = $("inner"); inner.innerHTML = "";
+  const gap = N > 9 ? 1.5 : 2.5, cell = 100 / N, W = $("board").clientWidth || 340;
+  inner.style.setProperty("--rfs", Math.max(8, W / N * 0.46) + "px");
+  inner.style.setProperty("--gfs", Math.max(7, W / N * 0.25) + "px");
+  S.tiles = [];
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const el = document.createElement("div"); el.className = "tile";
+    el.style.width = `calc(${cell}% - ${gap}px)`; el.style.height = `calc(${cell}% - ${gap}px)`;
+    inner.appendChild(el); S.tiles.push({ el, r, c, v: home(r, c) });
+  }
+  for (let br = 0; br < N / BR; br++) for (let bc = 0; bc < N / BC; bc++) {
+    const f = document.createElement("div"); f.className = "frame";
+    f.style.left = `calc(${bc * BC * cell}% - 2px)`; f.style.top = `calc(${br * BR * cell}% - 2px)`;
+    f.style.width = `calc(${BC * cell}% + 1px)`; f.style.height = `calc(${BR * cell}% + 1px)`; inner.appendChild(f);
+  }
+  S.ghosts = [];
+  for (let i = 0; i < N * N; i++) {
+    const g = document.createElement("div"); g.className = "ghost";
+    g.style.left = `${(i % N) * cell}%`; g.style.top = `${((i / N) | 0) * cell}%`;
+    g.style.width = `calc(${cell}% - ${gap}px)`; g.style.height = `calc(${cell}% - ${gap}px)`;
+    g.textContent = sym(puzzle[i]); inner.appendChild(g); S.ghosts.push(g);
+  }
+  S.hl = document.createElement("div"); S.hl.className = "hl hidden"; inner.appendChild(S.hl);
+}
+const cellTile = () => { const m = new Array(N * N); for (const t of S.tiles) m[t.r * N + t.c] = t; return m; };
+function render(hot = [], hlMove = null) {
+  const cell = 100 / N, sp = SPEEDS[$("speed").value], at = cellTile();
+  $("inner").classList.toggle("quick", sp.quick);
+  $("inner").classList.toggle("nonum", !$("optNums").checked);
+  const conf = new Set();
+  if (S.phase === "search") { for (let i = 0; i < N * N; i++) if (!S.fixed[i] && S.eng.repeatsAt(i)) conf.add(i); }
+  let matched = 0;
+  for (let i = 0; i < N * N; i++) {
+    const t = at[i]; if (!t) continue;
+    t.el.style.left = `${t.c * cell}%`; t.el.style.top = `${t.r * cell}%`;
+    t.el.style.backgroundColor = `hsl(${hue(t.v)} 72% 60%)`; t.el.textContent = sym(t.v);
+    t.el.classList.toggle("pin", S.fixed && S.fixed[i] === 1); t.el.classList.toggle("lpin", S.fixed && S.fixed[i] === 2);
+    t.el.classList.toggle("conf", conf.has(i)); t.el.classList.toggle("hot", hot.includes(i));
+    const hit = puzzle[i] && t.v === puzzle[i]; if (hit) matched++;
+    S.ghosts[i].classList.toggle("hit", !!hit);
+  }
+  // highlight a moved line group
+  const hl = S.hl;
+  if (hlMove && ["band", "row", "stack", "col"].includes(hlMove.t)) {
+    const rowsAxis = hlMove.t === "band" || hlMove.t === "row", size = hlMove.t === "band" ? BR : hlMove.t === "stack" ? BC : 1;
+    const a = Math.min(hlMove.a, hlMove.b) * size, b = Math.max(hlMove.a, hlMove.b) * size + size; hl.classList.remove("hidden");
+    if (rowsAxis) { hl.style.left = "-3px"; hl.style.width = "calc(100% + 4px)"; hl.style.top = `calc(${a * cell}% - 3px)`; hl.style.height = `calc(${(b - a) * cell}% + 3px)`; }
+    else { hl.style.top = "-3px"; hl.style.height = "calc(100% + 4px)"; hl.style.left = `calc(${a * cell}% - 3px)`; hl.style.width = `calc(${(b - a) * cell}% + 3px)`; }
+  } else hl.classList.add("hidden");
+  const nG = puzzle.filter(Boolean).length;
+  $("sGivens").textContent = `${matched}/${nG}`;
+  $("sRepeats").textContent = S.eng ? S.eng.cost : S.phase === "pin" || S.phase === "done" ? repeatsNow() : "–";
+  $("sPinned").textContent = S.fixed ? S.pinnedCount : 0;
+  $("sMoves").textContent = wordCounts().total.toLocaleString();
+  $("wordsTotal").innerHTML = wordsBreakdown();
+  ["st0", "st1", "st2", "st3"].forEach((id, k) => {
+    const order = ["home", "global", "pin", "search"], cur = S.phase === "done" ? 4 : order.indexOf(S.phase);
+    $(id).classList.toggle("on", k === cur); $(id).classList.toggle("done", k < cur);
+  });
+  $("play").textContent = S.running ? "⏸ Pause" : S.phase === "done" ? "↺ Again" : S.phase === "home" ? "▶ Solve" : "▶ Continue";
+  if (S.eng) {
+    const w = S.eng.stats;
+    $("wordStats").innerHTML = Object.keys(w).filter(k => S.words.includes(k)).map(k => `<span class="sw" style="background:var(${WORD_INFO[k][1]})"></span> ${WORD_INFO[k][0]}: ${w[k].kept.toLocaleString()} kept / ${w[k].tried.toLocaleString()} tried`).join(" &nbsp; ");
+  } else $("wordStats").textContent = "";
+}
+// Total language words used so far = global words + pinning swaps + local words kept by the search
+function wordCounts() {
+  const g = S.wc ? S.wc.g : {}, pin = S.wc ? S.wc.pin : {}, st = S.eng ? S.eng.stats : null;
+  const gl = { "R↔R": g.row || 0, "B↔B": g.band || 0, "C↔C": g.col || 0, "S↔S": g.stack || 0,
+    "rotate": (g.rcyc || 0) + (g.ccyc || 0) + (g.bcyc || 0) + (g.scyc || 0), "T": g.turn || 0, "a⇄b": g.num || 0 };
+  const local = {}; for (const w of ["box", "row", "col", "cross"]) local[w] = st ? st[w].kept : 0;
+  const pinTotal = Object.values(pin).reduce((a, b) => a + b, 0);
+  const gTotal = Object.values(gl).reduce((a, b) => a + b, 0), lTotal = Object.values(local).reduce((a, b) => a + b, 0);
+  return { gl, pin, local, gTotal, pinTotal, lTotal, total: gTotal + pinTotal + lTotal };
+}
+function wordsBreakdown() {
+  const c = wordCounts();
+  if (!c.total && S.phase === "home") return "";
+  const parts = (obj, names) => Object.entries(obj).filter(([, v]) => v).map(([k, v]) => `${names ? names[k] : k} ${v.toLocaleString()}`).join(" · ") || "none";
+  const LN = { box: "box", row: "row", col: "column", cross: "cross" };
+  let h = `<b>${c.total.toLocaleString()}</b> language words${S.phase === "done" ? " to solve this puzzle" : " so far"}:<br>`;
+  h += `<span class="grp">🧩 ${c.gTotal.toLocaleString()} global <span class="dim">(${parts(c.gl)})</span></span>`;
+  if (S.fixed) h += `<span class="grp">📌 ${c.pinTotal.toLocaleString()} pin <span class="dim">(${parts(c.pin, LN)})</span></span>`;
+  if (S.eng) h += `<span class="grp">🎨 ${c.lTotal.toLocaleString()} local <span class="dim">(${parts(c.local, LN)})</span></span>`;
+  return h;
+}
+function repeatsNow() {
+  const at = cellTile(); let rep = 0;
+  const units = []; for (let k = 0; k < N; k++) { units.push([...Array(N).keys()].map(c => k * N + c), [...Array(N).keys()].map(r => r * N + k)); }
+  for (let b = 0; b < N; b++) { const u = []; for (let i = 0; i < N * N; i++) if (boxOf((i / N) | 0, i % N) === b) u.push(i); units.push(u); }
+  for (const u of units) rep += N - new Set(u.map(i => at[i].v)).size;
+  return rep;
+}
+function say(phase, text) { $("phase").textContent = phase; $("text").innerHTML = text; }
+function logChip(txt, col, head) {
+  const log = $("log"), s = document.createElement("span");
+  if (head) s.className = "hd"; else if (col) s.style.setProperty("--c", `var(${col})`);
+  s.textContent = txt; log.appendChild(s);
+  while (log.children.length > 160) log.removeChild(log.firstChild);
+  log.scrollTop = log.scrollHeight;
+}
+
+/* ---------- applying words to the board ---------- */
+function applyGlobal(m) {
+  if (m.t === "num") { for (const t of S.tiles) { if (t.v === m.a) t.v = m.b; else if (t.v === m.b) t.v = m.a; } return; }
+  if (m.t === "turn") { for (const t of S.tiles) [t.r, t.c] = [t.c, t.r]; return; }
+  const rowsAxis = ["row", "band", "rcyc", "bcyc"].includes(m.t), size = m.t === "band" || m.t === "bcyc" ? BR : m.t === "stack" || m.t === "scyc" ? BC : 1;
+  for (const t of S.tiles) {
+    const x = rowsAxis ? t.r : t.c, g = Math.floor(x / size), off = x % size; let nx = x;
+    if (m.list) { const k = m.list.indexOf(g); if (k >= 0) nx = m.list[(k + 1) % m.list.length] * size + off; }
+    else if (g === m.a) nx = m.b * size + off; else if (g === m.b) nx = m.a * size + off;
+    if (rowsAxis) t.r = nx; else t.c = nx;
+  }
+}
+
+/* ---------- local-word search engine ---------- */
+function makeEngine(g, fixed, words) {
+  const NN = N * N, R = new Int16Array(NN), C = new Int16Array(NN), Bx = new Int16Array(NN);
+  const rows = [...Array(N)].map(() => []), cols = [...Array(N)].map(() => []), boxes = [...Array(N)].map(() => []);
+  for (let i = 0; i < NN; i++) { R[i] = (i / N) | 0; C[i] = i % N; Bx[i] = boxOf(R[i], C[i]); rows[R[i]].push(i); cols[C[i]].push(i); boxes[Bx[i]].push(i); }
+  const cnt = new Int16Array(3 * N * (N + 1)); let cost = 0;
+  const U = i => [R[i], N + C[i], 2 * N + Bx[i]];
+  for (let i = 0; i < NN; i++) for (const u of U(i)) cnt[u * (N + 1) + g[i]]++;
+  for (let u = 0; u < 3 * N; u++) for (let v = 1; v <= N; v++) if (!cnt[u * (N + 1) + v]) cost++;
+  const setv = (i, v) => { const old = g[i]; for (const u of U(i)) { const a = u * (N + 1); if (--cnt[a + old] === 0) cost++; if (cnt[a + v]++ === 0) cost--; } g[i] = v; };
+  const freeIn = list => list.map(u => u.filter(i => !fixed[i])).filter(u => u.length >= 2);
+  const groups = { box: freeIn(boxes), row: freeIn(rows), col: freeIn(cols) };
+  const freeRow = rows.map(u => u.filter(i => !fixed[i]));
+  const freeAll = []; for (let i = 0; i < NN; i++) if (!fixed[i] && freeRow[R[i]].length >= 2) freeAll.push(i);
+  const usable = words.filter(w => w === "cross" ? freeAll.length > 0 : groups[w].length > 0);
+  const stats = {}; for (const w of ["box", "row", "col", "cross"]) stats[w] = { tried: 0, kept: 0 };
+  const E = { stats, g, T: 0.6, best: cost, stuck: 0, tries: 0, get cost() { return cost; }, last: null };
+  E.repeatsAt = i => U(i).some(u => cnt[u * (N + 1) + g[i]] > 1);
+  const touched = [], olds = [];
+  // returns: "done" | "best" (a new lowest, when toBest) | "chunk"
+  E.run = (maxTries, toBest) => {
+    if (!usable.length) return "done";
+    for (let t = 0; t < maxTries; t++) {
+      if (!cost) return "done";
+      const w = usable[(Math.random() * usable.length) | 0];
+      touched.length = 0; olds.length = 0; let desc;
+      if (w === "cross") {
+        const p1 = freeAll[(Math.random() * freeAll.length) | 0], fr = freeRow[R[p1]], p2 = fr[(Math.random() * fr.length) | 0];
+        if (p2 === p1) continue; const a = g[p1], b = g[p2]; if (a === b) continue;
+        let blocked = false; const qs = [];
+        for (const q of cols[C[p1]]) if (q !== p1 && g[q] === b) { if (fixed[q]) { blocked = true; break; } qs.push(q); }
+        stats.cross.tried++; E.tries++;
+        if (blocked) continue;
+        touched.push(p1, p2, ...qs); olds.push(a, b, ...qs.map(() => b));
+        setv(p1, b); setv(p2, a); for (const q of qs) setv(q, a);
+        desc = { w, a, b, r: R[p1], c: C[p1] };
+      } else {
+        const grp = groups[w][(Math.random() * groups[w].length) | 0];
+        const p1 = grp[(Math.random() * grp.length) | 0], p2 = grp[(Math.random() * grp.length) | 0];
+        if (p1 === p2 || g[p1] === g[p2]) continue;
+        stats[w].tried++; E.tries++;
+        touched.push(p1, p2); olds.push(g[p1], g[p2]);
+        setv(p1, olds[1]); setv(p2, olds[0]);
+        desc = { w, a: olds[0], b: olds[1], unit: w === "box" ? Bx[p1] : w === "row" ? R[p1] : C[p1] };
+      }
+      const d = cost - E.before;
+      if (d <= 0 || Math.random() < Math.exp(-d / E.T)) {
+        stats[w].kept++; E.before = cost; E.movesKept = (E.movesKept || 0) + 1;
+        if (cost < E.best) { E.best = cost; E.stuck = 0; E.last = { desc, cells: touched.slice() }; if (toBest) return "best"; }
+        else E.stuck++;
+      } else { for (let k = touched.length - 1; k >= 0; k--) setv(touched[k], olds[k]); E.stuck++; }
+      E.T = Math.max(0.05, E.T * 0.99995);
+      if (E.stuck > 40000) { E.T = 0.6; E.stuck = 0; E.best = cost; }
+    }
+    return "chunk";
+  };
+  E.before = cost;
+  return E;
+}
+const lNote = d => d.w === "cross" ? `${sym(d.a)}⇄${sym(d.b)} r${d.r + 1}c${d.c + 1}` : `${sym(d.a)}⇄${sym(d.b)} ${d.w === "box" ? "b" : d.w === "row" ? "r" : "c"}${d.unit + 1}`;
+const lExplain = d => d.w === "cross"
+  ? `Cross word: the ${sym(d.a)} at row ${d.r + 1}, column ${d.c + 1} becomes ${sym(d.b)} — swap ${sym(d.a)} and ${sym(d.b)} in row ${d.r + 1} and in column ${d.c + 1}.`
+  : `Swap ${sym(d.a)} and ${sym(d.b)} inside ${d.w === "box" ? "box" : d.w === "row" ? "row" : "column"} ${d.unit + 1} only.`;
+
+/* ---------- the run ---------- */
+function reset() {
+  stop();
+  $("minBox").classList.add("hidden");
+  Object.assign(S, { phase: "home", running: false, moves: 0, movesBase: undefined, wc: { g: {}, pin: {} }, fixed: null, eng: null, pinnedCount: 0, queue: [], words: [] });
+  buildBoard(); $("log").innerHTML = "";
+  render();
+  say("Home grid", `The same start for every puzzle. White corner numbers are the ${puzzle.filter(Boolean).length} givens; they turn green when matched. Press Solve.`);
+}
+function stop() { if (S.timer) clearTimeout(S.timer); S.timer = null; S.running = false; }
+function prepareGlobal() {
+  S.phase = "global";
+  if ($("optRubik").checked) {
+    const plan = globalPlan(puzzle);
+    S.queue = plan.moves.map(m => ({ kind: "g", m })); S.exact = plan.exact;
+    logChip("🧩", null, true);
+    say("Global words", plan.exact
+      ? `This puzzle is in the home grid's family: ${plan.moves.length} global words will solve it.`
+      : `Global words move and rename whole lines to match as many givens as possible (${plan.moves.length} words), then local words finish.`);
+  } else { S.queue = []; S.exact = false; say("Global words", "Skipped (switched off)."); }
+}
+function preparePins() {
+  S.phase = "pin";
+  S.words = [["wBox", "box"], ["wRow", "row"], ["wCol", "col"], ["wCross", "cross"]].filter(([id]) => $(id).checked).map(([, w]) => w);
+  if (!S.words.length) { S.words = ["box"]; $("wBox").checked = true; }
+  S.fixed = new Uint8Array(N * N);
+  const list = [];
+  for (let i = 0; i < N * N; i++) if (puzzle[i]) list.push([i, puzzle[i], 1]);
+  if ($("optLogic").checked) for (const [i, v] of logicSingles(puzzle)) list.push([i, v, 2]);
+  // pin with local swaps inside the box (or the row/column if box swaps are off) — the grid has each number once per unit here
+  const unitKind = S.words.includes("box") ? "box" : S.words.includes("col") ? "col" : "row";
+  S.queue = list.map(([i, v, k]) => ({ kind: "pin", i, v, k, unitKind }));
+  S.nGiven = list.filter(x => x[2] === 1).length; S.nLogic = list.length - S.nGiven;
+  logChip("📌", null, true);
+  say("Pin", `Pin ${S.nGiven} givens${S.nLogic ? ` and ${S.nLogic} cells proved by logic` : ""} with local swaps inside the ${unitKind === "box" ? "box" : unitKind === "col" ? "column" : "row"}.`);
+}
+function unitCells(kind, i) {
+  const r = (i / N) | 0, c = i % N, out = [];
+  for (let j = 0; j < N * N; j++) { const rj = (j / N) | 0, cj = j % N; if (kind === "box" ? boxOf(rj, cj) === boxOf(r, c) : kind === "row" ? rj === r : cj === c) out.push(j); }
+  return out;
+}
+function doPin(e) {
+  const at = cellTile(), t = at[e.i]; let hot = [e.i];
+  if (t.v !== e.v) {
+    const j = unitCells(e.unitKind, e.i).find(k => at[k].v === e.v && !S.fixed[k]);
+    if (j !== undefined) { const u = at[j]; [t.v, u.v] = [u.v, t.v]; S.moves++; S.wc.pin[e.unitKind] = (S.wc.pin[e.unitKind] || 0) + 1; hot.push(j); logChip(lNote({ w: e.unitKind, a: u.v, b: t.v, unit: e.unitKind === "box" ? boxOf((e.i / N) | 0, e.i % N) : e.unitKind === "row" ? (e.i / N) | 0 : e.i % N }), WORD_INFO[e.unitKind][1]); }
+  }
+  S.fixed[e.i] = e.k; S.pinnedCount++;
+  return hot;
+}
+function startSearch() {
+  S.phase = "search";
+  const at = cellTile(), g = new Int8Array(N * N); for (let i = 0; i < N * N; i++) g[i] = at[i].v;
+  S.eng = makeEngine(g, S.fixed, S.words);
+  logChip("🎨", null, true);
+  say("Local words", `Now use the local words (${S.words.map(w => WORD_INFO[w][0]).join(", ")}) until nothing repeats. ${S.eng.cost} repeats to remove.`);
+}
+function syncFromEngine() { const at = cellTile(); for (let i = 0; i < N * N; i++) at[i].v = S.eng.g[i]; }
+function finish(solvedByGlobal) {
+  stop(); S.phase = "done";
+  const at = cellTile(), grid = []; for (let i = 0; i < N * N; i++) grid.push(at[i].v);
+  const ok = puzzle.every((v, i) => !v || grid[i] === v) && countSolutions(grid, 2, 1e6) === 1;
+  render();
+  say(ok ? "Solved" : "Stopped", ok
+    ? (solvedByGlobal ? `Solved with global words only — ${wordCounts().total} language words from the home grid. This puzzle is in the home grid's family.`
+      : `Solved: no row, column or box repeats a number and all givens match. ${wordCounts().total.toLocaleString()} language words in total from the static home grid (${wordCounts().gTotal} global + ${wordCounts().pinTotal} pin + ${wordCounts().lTotal.toLocaleString()} local).`)
+    : "Stopped before a solution.");
+  if (ok) showMinimum(grid, wordCounts().total);
+  return -1;
+}
+function tick(single) {
+  const sp = SPEEDS[$("speed").value];
+  if (S.phase === "home") { prepareGlobal(); render(); return sp.ev || 30; }
+  if (S.phase === "global") {
+    if (S.queue.length) {
+      let m;
+      do { m = S.queue.shift().m; applyGlobal(m); S.moves++; S.wc.g[m.t] = (S.wc.g[m.t] || 0) + 1; logChip(gNote(m), null); } while (sp.ev === 0 && S.queue.length && !single);
+      render([], m); say("Global words", gExplain(m)); return sp.ev;
+    }
+    if (repeatsNow() === 0 && puzzle.every((v, i) => !v || cellTile()[i].v === v)) return finish(true);
+    preparePins(); render(); return sp.ev || 30;
+  }
+  if (S.phase === "pin") {
+    if (S.queue.length) {
+      let hot, e;
+      do { e = S.queue.shift(); hot = doPin(e); } while (sp.ev === 0 && S.queue.length && !single);
+      render(hot);
+      say(`Pin · ${S.pinnedCount} of ${S.nGiven + S.nLogic}`, `${e.k === 1 ? "Given" : "Proved by logic"}: ${sym(e.v)} at row ${((e.i / N) | 0) + 1}, column ${e.i % N + 1}.`);
+      return sp.ev;
+    }
+    startSearch(); render(); return sp.delay;
+  }
+  if (S.phase === "search") {
+    const res = S.eng.run(single ? 2e6 : sp.tries, sp.toBest || single);
+    syncFromEngine();
+    S.moves = S.movesBase === undefined ? (S.movesBase = S.moves, S.moves) : S.movesBase + (S.eng.movesKept || 0);
+    let hot = [];
+    if (res === "best" && S.eng.last) { hot = S.eng.last.cells; const d = S.eng.last.desc; logChip(lNote(d), WORD_INFO[d.w][1]); say(`Local words · ${S.eng.cost} repeats left`, lExplain(d)); }
+    else say(`Local words · ${S.eng.cost} repeats left`, `Trying local words… ${S.eng.tries.toLocaleString()} tried so far.`);
+    render(hot);
+    if (res === "done" || !S.eng.cost) return finish(false);
+    if (S.eng.tries > (N <= 9 ? 40e6 : 120e6) && !single) { say("Local words", `Still ${S.eng.cost} repeats after ${S.eng.tries.toLocaleString()} tries — press Continue to keep going, or turn Logic first on.`); return -1; }
+    return sp.delay;
+  }
+  return -1;
+}
+function loop() { const w = tick(false); if (w < 0 || !S.running) { S.running = false; render(); return; } S.timer = setTimeout(loop, w); }
+function play() {
+  if (S.running) { stop(); render(); return; }
+  if (S.phase === "done") reset();
+  const clues = puzzle.filter(Boolean).length;
+  if (clues < N) { say("Solver", "Add or make a puzzle first."); return; }
+  if (countSolutions(puzzle, 1, 300000) === 0) { say("Solver", "These givens break the rules — there is nothing to solve."); return; }
+  S.running = true; render(); loop();
+}
+
+/* ---------- puzzle editor ---------- */
+function buildPGrid() {
+  const g = $("pgrid"); g.innerHTML = ""; g.style.gridTemplateColumns = `repeat(${N},1fr)`; g.style.gridTemplateRows = `repeat(${N},1fr)`;
+  for (let i = 0; i < N * N; i++) {
+    const d = document.createElement("div"), r = (i / N) | 0, c = i % N;
+    if (c === N - 1) d.classList.add("lc"); else if ((c + 1) % BC === 0) d.classList.add("br");
+    if (r === N - 1) d.classList.add("lr"); else if ((r + 1) % BR === 0) d.classList.add("bb");
+    d.addEventListener("click", () => { if (!editing) return; sel = i; renderPGrid(); }); g.appendChild(d);
+  }
+  g.style.setProperty("--pfs", Math.max(9, Math.min(360, g.clientWidth || 320) / N * 0.55) + "px");
+  const pad = $("pad"); pad.innerHTML = ""; pad.style.gridTemplateColumns = `repeat(${N > 9 ? Math.ceil((N + 1) / 2) : N + 1},1fr)`;
+  for (let d = 1; d <= N; d++) { const b = document.createElement("button"); b.textContent = sym(d); b.addEventListener("click", () => setCell(d)); pad.appendChild(b); }
+  const e = document.createElement("button"); e.textContent = "⌫"; e.addEventListener("click", () => setCell(0)); pad.appendChild(e);
+}
+function renderPGrid() {
+  [...$("pgrid").children].forEach((el, i) => { el.textContent = sym(puzzle[i]); el.classList.toggle("sel", editing && i === sel); el.style.color = puzzle[i] ? `hsl(${hue(puzzle[i])} 65% 38%)` : ""; });
+  $("clueCount").textContent = `${puzzle.filter(Boolean).length} givens`;
+}
+function setCell(d) { if (sel < 0) return; puzzle[sel] = d; renderPGrid(); reset(); }
+function setSize(n) { N = n; [BR, BC] = boxShape(N); puzzle = new Array(N * N).fill(0); sel = -1; $("size").value = String(N); buildPGrid(); renderPGrid(); reset(); }
+function newPuzzle(kind) {
+  $("busy").classList.remove("hidden");
+  setTimeout(() => { puzzle = kind === "classic" ? classicPuzzle($("level").value) : variedPuzzle($("level").value); editing = false; sel = -1; $("editBtn").classList.remove("on"); $("pad").classList.add("hidden"); renderPGrid(); reset(); $("busy").classList.add("hidden"); }, 30);
+}
+
+/* ---------- wiring ---------- */
+$("size").addEventListener("change", () => { setSize(+$("size").value); newPuzzle("varied"); });
+$("newVaried").addEventListener("click", () => newPuzzle("varied"));
+$("newClassic").addEventListener("click", () => newPuzzle("classic"));
+$("editBtn").addEventListener("click", () => { editing = !editing; $("editBtn").classList.toggle("on", editing); $("pad").classList.toggle("hidden", !editing); if (editing && sel < 0) sel = 0; renderPGrid(); });
+$("clearBtn").addEventListener("click", () => { puzzle = new Array(N * N).fill(0); renderPGrid(); reset(); });
+$("play").addEventListener("click", play);
+$("stepBtn").addEventListener("click", () => { stop(); if (S.phase === "done") return; if (puzzle.filter(Boolean).length < N) return; tick(true); render(S.phase === "search" && S.eng && S.eng.last ? S.eng.last.cells : []); });
+$("reset").addEventListener("click", reset);
+for (const id of ["optRubik", "optLogic", "wBox", "wRow", "wCol", "wCross"]) $(id).addEventListener("change", () => { if (S.phase !== "home") reset(); });
+$("optNums").addEventListener("change", () => render());
+$("speed").addEventListener("change", () => render());
+document.addEventListener("keydown", e => {
+  if (!editing || sel < 0) return;
+  const v = SYMBOLS.indexOf(e.key.toUpperCase());
+  if (v >= 1 && v <= N) setCell(v); else if (e.key === "Backspace" || e.key === "Delete" || e.key === "0") setCell(0);
+});
+// boot: a puzzle passed in the address (#n=9&p=...), else a new varied puzzle
+(function boot() {
+  const h = new URLSearchParams(location.hash.slice(1)), n = +h.get("n"), p = h.get("p") || "";
+  if ([4, 6, 9, 12, 16].includes(n) && p.length === n * n) { setSize(n); puzzle = [...p].map(ch => Math.max(0, SYMBOLS.indexOf(ch.toUpperCase()))).map(v => v > N ? 0 : v); renderPGrid(); reset(); }
+  else { setSize(9); newPuzzle("varied"); }
+})();
+</script>
+</body>
+</html>

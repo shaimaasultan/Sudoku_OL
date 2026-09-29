@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Option Layers</title>
+<style>
+:root{
+  --bg:#f5f4ef; --surface:#ffffff; --ink:#1c1e23; --muted:#6a6e77; --line:#cfd2d8; --line-strong:#1c1e23;
+  --accent:#2455c7; --accent-ink:#fff; --btn:#e9e7e0; --btn-ink:#1c1e23; --ok:#2e9e57; --bad:#c42626; --cellbg:#ffffff;
+  --shadow:0 1px 2px rgba(0,0,0,.08),0 4px 14px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#131519; --surface:#1c1f25; --ink:#e7e8eb; --muted:#9aa0aa; --line:#383d46; --line-strong:#c9cdd4;
+    --accent:#6f98ff; --accent-ink:#0d1117; --btn:#2a2e36; --btn-ink:#e7e8eb; --cellbg:#1c1f25; --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  padding:max(12px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));touch-action:manipulation;-webkit-user-select:none;user-select:none}
+.wrap{max-width:620px;margin:0 auto}
+h1{font-size:20px;margin:0}
+.sub{font-size:12px;color:var(--muted);margin-bottom:6px}
+h2{font-size:15px;margin:0 0 6px}
+button,select{font:inherit;color:var(--btn-ink);background:var(--btn);border:0;border-radius:10px;padding:9px 12px;cursor:pointer}
+select{appearance:none;-webkit-appearance:none;max-width:100%;min-width:0}
+button:active{transform:scale(.97)}
+button.primary{background:var(--accent);color:var(--accent-ink);font-weight:600}
+button.on{background:var(--accent);color:var(--accent-ink)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.row select{flex:1}
+.card{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:12px;margin-top:12px}
+.note{font-size:12.5px;color:var(--muted);margin:6px 0}
+/* editor */
+.pgrid{display:grid;width:100%;max-width:340px;aspect-ratio:1/1;margin:6px auto 0;border:2px solid var(--line-strong);border-radius:4px;overflow:hidden;background:var(--surface)}
+.pgrid div{display:flex;align-items:center;justify-content:center;border-right:1px solid var(--line);border-bottom:1px solid var(--line);font-size:var(--pfs);font-weight:700;cursor:pointer;min-width:0;min-height:0}
+.pgrid div.br,.board div.br{border-right:2px solid var(--line-strong)} .pgrid div.bb,.board div.bb{border-bottom:2px solid var(--line-strong)}
+.pgrid div.lc,.board div.lc{border-right:0} .pgrid div.lr,.board div.lr{border-bottom:0}
+.pgrid div.sel{background:#c9dbff;color:#1c1e23}
+.pad{display:grid;gap:6px;margin-top:8px}
+.pad button{height:42px;padding:0;font-size:19px;background:var(--surface);box-shadow:var(--shadow);color:var(--accent)}
+/* board */
+.board{display:grid;width:100%;max-width:470px;aspect-ratio:1/1;margin:8px auto 0;border:2px solid var(--line-strong);border-radius:4px;overflow:hidden;background:var(--cellbg)}
+.board div{position:relative;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--line);border-bottom:1px solid var(--line);font-size:var(--bfs);min-width:0;min-height:0;transition:background-color .25s}
+.board div.given{font-weight:800}
+.board div.cert{font-weight:600}
+.board div.fresh{animation:pop .5s}
+@keyframes pop{40%{transform:scale(1.25)}}
+.board div.mark{box-shadow:inset 0 0 0 3px var(--bad)}
+.board div .pc{position:absolute;right:2px;bottom:1px;font-size:var(--sfs);color:var(--muted);font-weight:600}
+.nums{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.nums span{font-size:12.5px;font-weight:700;border-radius:8px;padding:4px 8px;background:var(--bg);color:var(--muted);font-variant-numeric:tabular-nums;cursor:pointer}
+.nums span.focus{outline:2px solid var(--accent);color:var(--ink)}
+.nums span.lock{color:#15161a}
+.nums span small{font-weight:500;margin-left:3px}
+.ctl{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.ctl button{padding:8px 13px}
+.step{background:var(--bg);border-radius:10px;padding:8px 10px;margin-top:8px;min-height:56px;font-size:14px}
+.step .no{font-size:11px;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.stats div{background:var(--bg);border-radius:10px;padding:6px 4px;text-align:center}
+.stats b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
+.stats span{font-size:10.5px;color:var(--muted)}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-2px}
+.log{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;max-height:150px;overflow:auto}
+.log span{font:600 12px -apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);border-radius:6px;padding:3px 7px;border-left:3px solid var(--c,transparent)}
+.log span.back{color:var(--bad)}
+ol{padding-left:20px;margin:6px 0} li{margin:4px 0;font-size:14px}
+.busy{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:20;color:#fff;font-weight:600}
+.cube3{width:100%;max-width:470px;aspect-ratio:1/1;display:block;margin:8px auto 0;border-radius:10px;background:var(--bg);touch-action:none;cursor:grab}
+.cube3:active{cursor:grabbing}
+.cubectl{justify-content:center;font-size:12px;color:var(--muted)}
+.cubectl label{display:flex;align-items:center;gap:5px}
+.cubectl input[type=range]{width:90px}
+@media (max-width:560px){ #start,#tie{flex:1 1 100%!important} #speed,#view{flex:1 1 40%!important} }
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🗂️ Option Layers</h1>
+  <div class="sub">Build every option layer of every number, AND them together, lock what is certain · S. S. Soltan</div>
+
+  <div class="card">
+    <div class="row">
+      <select id="size" aria-label="Size"><option value="4">4×4</option><option value="6">6×6</option><option value="9" selected>9×9</option><option value="12">12×12</option><option value="16">16×16</option></select>
+      <select id="level" aria-label="Clues"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select>
+    </div>
+    <div class="row">
+      <button id="newVaried" class="primary">New varied puzzle</button>
+      <button id="newClassic">New classic puzzle</button>
+      <button id="editBtn">✎ Enter my own</button>
+      <button id="clearBtn">Clear</button>
+    </div>
+    <div id="pgrid" class="pgrid"></div>
+    <div id="pad" class="pad hidden"></div>
+    <p class="note" id="clueCount"></p>
+  </div>
+
+  <div class="card">
+    <div class="row" style="margin-top:0">
+      <select id="start" aria-label="Start with" style="flex:2"><option value="2" selected>Start with the 2 most repeated numbers</option><option value="3">Start with the 3 most repeated numbers</option><option value="all">Build all numbers at once</option></select>
+      <select id="tie" aria-label="Ties" style="flex:2"><option value="box" selected>Ties: fewest free cells in a box first</option><option value="low">Ties: lowest number first</option></select>
+      <select id="speed" aria-label="Speed"><option value="slow">Slow</option><option value="normal" selected>Normal</option><option value="fast">Fast</option><option value="turbo">Turbo</option></select>
+      <select id="view" aria-label="View"><option value="board" selected>View: board</option><option value="cube">View: cube (slices)</option></select>
+    </div>
+    <div id="board" class="board"></div>
+    <canvas id="cube3" class="cube3 hidden" aria-label="3D cube: one horizontal slice per number"></canvas>
+    <div id="cubeCtl" class="row cubectl hidden"><label>Spread slices <input type="range" id="cubeSpread" min="0" max="2.5" step="0.1" value="0.8"></label><label><input type="checkbox" id="cubeAuto" checked> Auto-rotate</label></div>
+    <div class="legend hidden" id="legCube">
+      <span><i style="background:hsl(200 70% 45%)"></i>locked or given block</span>
+      <span><i style="background:hsl(200 70% 60%);opacity:.6"></i>certain (in every option)</span>
+      <span><i style="background:hsl(200 70% 55%);border-radius:50%;opacity:.8"></i>still in some option — bigger = more of the shown number's options</span>
+      <span><b style="color:#8a8f99">|</b> pillar just filled by a lock</span>
+      <span>label = options left (✓ locked)</span>
+    </div>
+    <div class="legend" id="legBoard">
+      <span><i style="background:hsl(200 70% 45%)"></i>in every option of the number shown (AND = certain)</span>
+      <span><i style="background:hsl(200 70% 45%);opacity:.3"></i>in some of its options</span>
+      <span><i style="box-shadow:inset 0 0 0 2px var(--bad)"></i>just changed</span>
+    </div>
+    <div class="nums" id="nums"></div>
+    <div class="ctl">
+      <button id="reset">⏮ Reset</button>
+      <button id="play" class="primary">▶ Solve</button>
+      <button id="stepBtn">Step ▶|</button>
+    </div>
+    <div class="stats">
+      <div><b id="sListed">0</b><span>options built</span></div>
+      <div><b id="sLeft">0</b><span>options left</span></div>
+      <div><b id="sLocked">0</b><span>numbers locked 🔒</span></div>
+      <div><b id="sGuess">0</b><span>guesses · go-backs</span></div>
+    </div>
+    <div class="step"><div class="no" id="phase"></div><div id="text"></div></div>
+    <div id="log" class="log"></div>
+  </div>
+
+  <div class="card">
+    <h2>How it works</h2>
+    <ol>
+      <li><b>Start small</b>: build the option layers of the 2 (or 3) most repeated numbers only — they have the fewest options. An option layer is one cell in each box, no repeats in rows or columns, covering the number's givens and avoiding cells already taken.</li>
+      <li><b>When the lists stop shrinking</b>, add the next most repeated number. Numbers locked earlier have already taken their cells, so its list is built much shorter.</li>
+      <li><b>AND</b> each number's options: a cell in <b>all</b> of them is certain for that number.</li>
+      <li><b>Cut</b> options that take a cell certain for another number, and options that clash with <b>every</b> option of some other number (they can never sit together).</li>
+      <li><b>Every cell needs a number</b>: if only one number can still reach a cell, keep only the options of that number that cover it.</li>
+      <li><b>🔒 Lock</b> a number when one option is left — confidence 100%. Its list is dropped and it is never visited again. Every cut is proven, so locked numbers never need a go-back.</li>
+      <li><b>View: cube (slices)</b> shows the same steps in the cube: rows × columns × numbers, one horizontal slice per number. An option layer lives inside its slice; the vertical <b>pillars</b> (one per cell) link the slices — when a slice locks, its pillars are full and every other slice loses the options that used them.</li>
+      <li><b>Three, then four numbers together</b>: when every number is built and the pair check is stuck, check the <b>unlocked</b> numbers 3 at a time — an option is kept only if every 2 other numbers still have options that fit beside it with no cell shared — then 4 at a time. Locked numbers are not in it; their cells are simply taken.</li>
+      <li>Only if the lists stop shrinking: <b>guess</b> on the number with the fewest options left, trying first the option that clashes least with the other numbers' options. A wrong guess is undone and the next option is tried.</li>
+    </ol>
+  </div>
+</div>
+<div id="busy" class="busy hidden">Working…</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const SYMBOLS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const sym = v => v > 0 ? SYMBOLS[v] : "";
+function boxShape(n) { let best = null; for (let r = 1; r <= n; r++) if (n % r === 0) { const c = n / r; if (r <= c) { const d = Math.abs(r - Math.sqrt(n)); if (!best || d < best[0]) best = [d, r, c]; } } return [best[1], best[2]]; }
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+let N = 9, BR = 3, BC = 3, puzzle = new Array(81).fill(0), editing = false, sel = -1;
+const boxOf = (r, c) => Math.floor(r / BR) * (N / BC) + Math.floor(c / BC);
+const home = (r, c) => (r * BC + Math.floor(r / BR) + c) % N + 1;
+const hue = d => Math.round((d - 1) * 360 / N);
+const rc = i => `r${((i / N) | 0) + 1}c${i % N + 1}`;
+
+/* ---------- puzzles ---------- */
+function countSolutions(p, limit, budget) {
+  const g = p.slice(), rm = new Int32Array(N), cm = new Int32Array(N), bm = new Int32Array(N), full = (1 << (N + 1)) - 2;
+  for (let i = 0; i < N * N; i++) if (g[i]) { const b = 1 << g[i], r = (i / N) | 0, c = i % N; if ((rm[r] | cm[c] | bm[boxOf(r, c)]) & b) return 0; rm[r] |= b; cm[c] |= b; bm[boxOf(r, c)] |= b; }
+  let count = 0, nodes = 0;
+  (function rec() {
+    if (count >= limit || ++nodes > budget) return;
+    let best = -1, bc = 99, bmask = 0;
+    for (let i = 0; i < N * N; i++) if (!g[i]) { const r = (i / N) | 0, c = i % N, m = full & ~(rm[r] | cm[c] | bm[boxOf(r, c)]); let k = 0, x = m; while (x) { x &= x - 1; k++; } if (k < bc) { bc = k; best = i; bmask = m; if (k < 2) break; } }
+    if (best < 0) { count++; return; }
+    const r = (best / N) | 0, c = best % N, b0 = boxOf(r, c);
+    for (let d = 1; d <= N; d++) if (bmask & (1 << d)) { const b = 1 << d; g[best] = d; rm[r] |= b; cm[c] |= b; bm[b0] |= b; rec(); g[best] = 0; rm[r] &= ~b; cm[c] &= ~b; bm[b0] &= ~b; if (count >= limit) return; }
+  })();
+  return nodes > budget ? -1 : count;
+}
+function carve(sol, level) {
+  const ratio = { easy: 0.5, medium: 0.4, hard: 0.32 }[level], target = Math.round(N * N * ratio), p = sol.slice(), budget = N <= 9 ? 20000 : 4000;
+  let clues = N * N; const pairs = []; for (let i = 0; i <= (N * N - 1) / 2; i++) pairs.push([i, N * N - 1 - i]);
+  for (const [a, b] of shuffle(pairs)) { if (clues <= target) break; const va = p[a], vb = p[b]; p[a] = 0; p[b] = 0; if (countSolutions(p, 2, budget) === 1) clues -= a === b ? 1 : 2; else { p[a] = va; p[b] = vb; } }
+  return p;
+}
+function classicPuzzle(level) {
+  const nb = N / BR, ns = N / BC;
+  const ro = shuffle([...Array(nb).keys()]).flatMap(b => shuffle([...Array(BR).keys()]).map(k => b * BR + k));
+  const co = shuffle([...Array(ns).keys()]).flatMap(s => shuffle([...Array(BC).keys()]).map(k => s * BC + k));
+  const rl = shuffle([...Array(N).keys()].map(i => i + 1)), turn = BR === BC && Math.random() < 0.5, sol = [];
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) sol.push(rl[(turn ? home(co[c], ro[r]) : home(ro[r], co[c])) - 1]);
+  return carve(sol, level);
+}
+function variedPuzzle(level) {
+  const g = new Array(N * N).fill(0), rm = new Int32Array(N), cm = new Int32Array(N), bm = new Int32Array(N), full = (1 << (N + 1)) - 2; let nodes = 0;
+  const rec = () => {
+    if (++nodes > 200000) return false;
+    let best = -1, bc = 99, bmask = 0;
+    for (let i = 0; i < N * N; i++) if (!g[i]) { const r = (i / N) | 0, c = i % N, m = full & ~(rm[r] | cm[c] | bm[boxOf(r, c)]); let k = 0, x = m; while (x) { x &= x - 1; k++; } if (k < bc) { bc = k; best = i; bmask = m; if (k < 2) break; } }
+    if (best < 0) return true; if (!bc) return false;
+    const r = (best / N) | 0, c = best % N, b0 = boxOf(r, c), ds = []; for (let d = 1; d <= N; d++) if (bmask & (1 << d)) ds.push(d);
+    for (const d of shuffle(ds)) { const b = 1 << d; g[best] = d; rm[r] |= b; cm[c] |= b; bm[b0] |= b; if (rec()) return true; g[best] = 0; rm[r] &= ~b; cm[c] &= ~b; bm[b0] &= ~b; }
+    return false;
+  };
+  return rec() ? carve(g, level) : classicPuzzle(level);
+}
+
+/* ---------- option layers (templates) as bitsets ---------- */
+function solveOptionLayers(p, k0) {
+  const NN = N * N, W = Math.ceil(NN / 32), has = (t, i) => (t[i >> 5] >>> (i & 31)) & 1;
+  const R = [], C = [], B = [], boxes = [...Array(N)].map(() => []);
+  for (let i = 0; i < NN; i++) { R[i] = (i / N) | 0; C[i] = i % N; B[i] = boxOf(R[i], C[i]); boxes[B[i]].push(i); }
+  const cnt = new Array(N + 1).fill(0); p.forEach(v => { if (v) cnt[v]++; });
+  // ties in the repeat count: the number with the fewest free cells in its tightest box goes first (then fewest free cells in total)
+  const boxFree = d => { const rh = new Uint8Array(N), ch = new Uint8Array(N), bh = new Uint8Array(N); boxes.forEach((bx, b) => bx.forEach(i => { if (p[i] === d) rh[R[i]] = ch[C[i]] = bh[b] = 1; })); let min = 99, free = 0; boxes.forEach((bx, b) => { if (bh[b]) return; let n = 0; for (const i of bx) if (!p[i] && !rh[R[i]] && !ch[C[i]]) n++; free += n; if (n < min) min = n; }); return [min, free]; };
+  const tie = [null]; for (let d = 1; d <= N; d++) tie.push((!document.getElementById("tie") || $("tie").value === "box") ? boxFree(d) : [0, 0]);
+  const order = [...Array(N).keys()].map(k => k + 1).sort((a, b) => cnt[b] - cnt[a] || tie[a][0] - tie[b][0] || tie[a][1] - tie[b][1] || a - b);
+  const ev = [], MAXEV = 2500, st = { guesses: 0, back: 0, listed: 0, order };
+  const wantUnion = !!document.getElementById("view") && $("view").value === "cube";   // cube view also needs every slice's live cells
+  const disjoint = (a, b) => { for (let w = 0; w < W; w++) if (a[w] & b[w]) return false; return true; };
+  // group check, only for the unlocked numbers (once every one is built and the pair check is stuck):
+  // keep an option only if, for every group of 2 (then 3) other numbers, one option of each still fits with it -- no cell shared
+  const gcount = { 3: 0, 4: 0 };
+  const fitsWith = (lists, acc, work) => { if (!lists.length) return true; for (const u of lists[0]) { if (++work.n > 3e6) return true; if (!disjoint(u, acc)) continue; const a2 = acc.slice(); for (let w = 0; w < W; w++) a2[w] |= u[w]; if (fitsWith(lists.slice(1), a2, work)) return true; } return false; };
+  const pickK = (n, k, from = 0) => k === 0 ? [[]] : [...Array(Math.max(0, n - from)).keys()].map(x => x + from).flatMap(i => pickK(n, k - 1, i + 1).map(c => [i, ...c]));
+  function groupCut(T, act) {
+    for (const k of [3, 4]) {
+      if (act.length < k) break;
+      const work = { n: 0 };   // safety cap: past it, options are kept (never cut on a guess)
+      for (const d of act) {
+        if (T[d].length === 1) continue;
+        const before = T[d].length;
+        const keep = T[d].filter(t => {
+          const others = act.filter(e => e !== d).map(e => T[e].filter(u => disjoint(t, u)));
+          if (others.some(o => !o.length)) return false;
+          for (const c of pickK(others.length, k - 1)) if (!fitsWith(c.map(i => others[i]).sort((a, b) => a.length - b.length), t, work)) return false;
+          return true;
+        });
+        if (keep.length !== before) { T[d] = keep; gcount[k]++; return { d, k, before, after: keep.length }; }
+      }
+    }
+    return null;
+  }
+  // snapshot for the animation: counts (-1 = not built yet), certain cells, and the focus number's shading
+  const snap = (S, focus, extra) => {
+    if (ev.length >= MAXEV) { st.truncated = true; return; }
+    const counts = [0], cert = Int8Array.from(S.g);
+    for (let d = 1; d <= N; d++) counts.push(S.locked[d] ? 1 : S.T[d] ? S.T[d].length : -1);
+    for (let d = 1; d <= N; d++) if (S.T[d] && S.T[d].length) { const a = S.T[d][0].slice(); for (const t of S.T[d]) for (let w = 0; w < W; w++) a[w] &= t[w]; for (let i = 0; i < NN; i++) if (has(a, i)) cert[i] = d; }
+    let use = null, total = 0;
+    if (focus && S.T[focus]) { use = new Uint32Array(NN); total = S.T[focus].length; for (const t of S.T[focus]) for (let i = 0; i < NN; i++) if (has(t, i)) use[i]++; }
+    let un = null;
+    if (wantUnion) { un = [null]; for (let d = 1; d <= N; d++) { if (!S.T[d]) { un.push(null); continue; } const o = new Uint32Array(W); for (const t of S.T[d]) for (let w = 0; w < W; w++) o[w] |= t[w]; un.push(o); } }
+    ev.push({ counts, cert, focus, use, total, ...extra, guesses: st.guesses, back: st.back, listed: st.listed, g: Int8Array.from(S.g), lk: S.locked.slice(), un });
+  };
+  function build(S, d, why) {
+    const g = S.g, rowHas = new Uint8Array(N), colHas = new Uint8Array(N), boxAt = new Int16Array(N).fill(-1);
+    for (let i = 0; i < NN; i++) if (g[i] === d) { rowHas[R[i]] = 1; colHas[C[i]] = 1; boxAt[B[i]] = i; }
+    const opts = [...Array(N).keys()].map(b => boxAt[b] >= 0 ? [boxAt[b]] : boxes[b].filter(i => !g[i] && !rowHas[R[i]] && !colHas[C[i]]));
+    const ord = [...Array(N).keys()].sort((a, b) => opts[a].length - opts[b].length);
+    const list = [], uR = new Uint8Array(N), uC = new Uint8Array(N), bits = new Uint32Array(W);
+    (function rec(k) { if (list.length > 600000) return; if (k === N) { list.push(bits.slice()); return; } for (const i of opts[ord[k]]) { if (uR[R[i]] || uC[C[i]]) continue; uR[R[i]] = uC[C[i]] = 1; bits[i >> 5] |= 1 << (i & 31); rec(k + 1); bits[i >> 5] &= ~(1 << (i & 31)); uR[R[i]] = uC[C[i]] = 0; } })(0);
+    if (list.length > 600000) { st.tooMany = d; return false; }
+    st.listed += list.length; S.T[d] = list;
+    snap(S, d, { kind: "build", d, n: list.length, why });
+    return true;
+  }
+  function lock(S, d) {
+    const t = S.T[d][0]; for (let i = 0; i < NN; i++) if (has(t, i)) S.g[i] = d;
+    S.T[d] = null; S.locked[d] = 1;
+    snap(S, 0, { kind: "lock", d });
+  }
+  function propagate(S) {
+    for (let changed = true; changed;) {
+      changed = false;
+      const act = order.filter(d => S.T[d]);
+      for (const d of act) if (!S.T[d].length) return { fail: d };
+      // options that use a cell a locked number has taken are gone
+      for (const d of act) {
+        const before = S.T[d].length, keep = S.T[d].filter(t => { for (let i = 0; i < NN; i++) if (S.g[i] && S.g[i] !== d && has(t, i)) return false; return true; });
+        if (keep.length !== before) { S.T[d] = keep; changed = true; snap(S, d, { kind: "cut", d, before, after: keep.length, why: "taken" }); if (!keep.length) return { fail: d }; }
+      }
+      const core = {}, union = {};
+      for (const d of act) { const a = S.T[d][0].slice(), o = new Uint32Array(W); for (const t of S.T[d]) for (let w = 0; w < W; w++) { a[w] &= t[w]; o[w] |= t[w]; } core[d] = a; union[d] = o; }
+      // every free cell needs a number: built numbers reach it through their options, others by a quick cell check
+      const need = {}, needCells = {}; for (const d of act) { need[d] = new Uint32Array(W); needCells[d] = []; }
+      for (let i = 0; i < NN; i++) if (!S.g[i]) {
+        let n = 0, who = 0;
+        for (let d = 1; d <= N; d++) {
+          if (S.locked[d]) continue;
+          let reach;
+          if (S.T[d]) reach = has(union[d], i);
+          else { reach = true; for (let j = 0; j < NN; j++) if (S.g[j] === d && (R[j] === R[i] || C[j] === C[i] || B[j] === B[i])) { reach = false; break; } }
+          if (reach) { n++; who = d; }
+        }
+        if (!n) return { fail: 0, cell: i };
+        if (n === 1 && S.T[who] && !has(core[who], i)) { need[who][i >> 5] |= 1 << (i & 31); needCells[who].push(i); }
+      }
+      for (const d of act) {
+        const before = S.T[d].length;
+        const keep = S.T[d].filter(t => { for (let w = 0; w < W; w++) if (((t[w] & need[d][w]) >>> 0) !== need[d][w]) return false; for (const e of act) if (e !== d) for (let w = 0; w < W; w++) if (t[w] & core[e][w]) return false; return true; });
+        if (keep.length !== before) { S.T[d] = keep; changed = true; snap(S, d, { kind: "cut", d, before, after: keep.length, cells: needCells[d], why: needCells[d].length ? "only" : "cert" }); if (!keep.length) return { fail: d }; }
+      }
+      if (!changed) for (const d of act) {
+        if (S.T[d].length === 1) continue;
+        const before = S.T[d].length; let by = 0;
+        const keep = S.T[d].filter(t => { for (const e of act) if (e !== d && !S.T[e].some(u => disjoint(t, u))) { by = e; return false; } return true; });
+        if (keep.length !== before) { S.T[d] = keep; changed = true; snap(S, d, { kind: "pair", d, before, after: keep.length, by }); if (!keep.length) return { fail: d }; }
+      }
+      if (!changed && !order.find(e => !S.locked[e] && !S.T[e])) { const gc = groupCut(S.T, act); if (gc) { changed = true; snap(S, gc.d, { kind: "group", ...gc }); if (!gc.after) return { fail: gc.d }; } }
+      for (const d of act) if (S.T[d] && S.T[d].length === 1) { lock(S, d); changed = true; }
+      if (!changed) { // stuck: bring in the next most repeated number
+        const next = order.find(d => !S.locked[d] && !S.T[d]);
+        if (next) { if (!build(S, next, "stuck")) return { fail: -1 }; changed = true; }
+      }
+    }
+    return { ok: true };
+  }
+  function solve(S) {
+    const pr = propagate(S);
+    if (!pr.ok) { if (pr.fail !== -1) snap(S, 0, { kind: "fail", d: pr.fail, cell: pr.cell }); return null; }
+    const act = order.filter(d => S.T[d]);
+    if (!act.length) return S;
+    const d = act.sort((a, b) => S.T[a].length - S.T[b].length)[0];
+    const clash = t => { let c2 = 0; for (const e of order) if (e !== d && S.T[e]) for (const u of S.T[e]) if (!disjoint(t, u)) c2++; return c2; };
+    const ordered = S.T[d].map(t => ({ t, c: clash(t) })).sort((a, b) => a.c - b.c);
+    for (let k = 0; k < ordered.length; k++) {
+      st.guesses++;
+      const U = { g: S.g.slice(), locked: S.locked.slice(), T: S.T.map(l => l && l.slice()) }; U.T[d] = [ordered[k].t];
+      snap(U, d, { kind: "guess", d, k: k + 1, of: ordered.length, clash: ordered[k].c });
+      const r = solve(U); if (r) return r;
+      if (st.tooMany) return null;
+      st.back++; snap(S, d, { kind: "back", d, k: k + 1 });
+    }
+    return null;
+  }
+  const S0 = { g: p.slice(), locked: new Array(N + 1).fill(0), T: new Array(N + 1).fill(null) };
+  const first = k0 === "all" ? order : order.slice(0, +k0);
+  for (const d of first) if (!build(S0, d, "start")) return { tooMany: d };
+  const Rs = solve(S0);
+  if (st.tooMany) return { tooMany: st.tooMany };
+  if (Rs) snap(Rs, 0, { kind: "done" });
+  return { ok: !!Rs, grid: Rs ? Rs.g : null, ev, ...st };
+}
+
+/* ---------- view ---------- */
+const V = {};
+const SPEEDS = { slow: 1100, normal: 450, fast: 90, turbo: 0 };
+function buildBoard() {
+  const b = $("board"); b.innerHTML = ""; b.style.gridTemplateColumns = `repeat(${N},1fr)`; b.style.gridTemplateRows = `repeat(${N},1fr)`;
+  V.cells = [];
+  for (let i = 0; i < N * N; i++) {
+    const d = document.createElement("div"), r = (i / N) | 0, c = i % N;
+    if (c === N - 1) d.classList.add("lc"); else if ((c + 1) % BC === 0) d.classList.add("br");
+    if (r === N - 1) d.classList.add("lr"); else if ((r + 1) % BR === 0) d.classList.add("bb");
+    b.appendChild(d); V.cells.push(d);
+  }
+  const W = b.clientWidth || 340;
+  b.style.setProperty("--bfs", Math.max(9, W / N * 0.5) + "px"); b.style.setProperty("--sfs", Math.max(7, W / N * 0.2) + "px");
+}
+function draw(e, prev) {
+  C3.e = e; C3.prev = prev || C3.prev; C3.dirty = true;
+  const NN = N * N, marks = new Set(e.cells || []);
+  for (let i = 0; i < NN; i++) {
+    const el = V.cells[i], v = e.cert[i], given = !!puzzle[i];
+    el.innerHTML = v ? sym(v) : "";
+    el.classList.toggle("given", given); el.classList.toggle("cert", !!v && !given);
+    el.style.color = v ? `hsl(${hue(v)} 65% ${given ? 30 : 40}%)` : "";
+    let bg = "";
+    if (e.focus && e.use && e.total) {
+      const f = e.use[i] / e.total;
+      if (f > 0 && !(v && v !== e.focus)) bg = `hsla(${hue(e.focus)},70%,50%,${f >= 1 ? 0.55 : 0.08 + 0.35 * f})`;
+      if (e.use[i] && f < 1 && !v && N <= 9) el.innerHTML = `<span class="pc">${Math.round(f * 100)}</span>`;
+    }
+    el.style.backgroundColor = bg;
+    el.classList.toggle("mark", marks.has(i));
+    if (prev && v && !prev.cert[i] && !given) { el.classList.remove("fresh"); void el.offsetWidth; el.classList.add("fresh"); }
+  }
+  // number chips
+  const box = $("nums"); box.innerHTML = "";
+  for (let d = 1; d <= N; d++) {
+    const s = document.createElement("span"), n = e.counts[d], locked = n === 1;
+    s.innerHTML = `${sym(d)}<small>${locked ? "🔒" : n < 0 ? "–" : n.toLocaleString()}</small>`;
+    if (n < 0) s.title = "not built yet";
+    if (locked) { s.classList.add("lock"); s.style.background = `hsl(${hue(d)} 72% 72%)`; }
+    if (d === e.focus) s.classList.add("focus");
+    box.appendChild(s);
+  }
+  const left = e.counts.reduce((a, b, d) => a + (d && b > 1 ? b : 0), 0);
+  $("sListed").textContent = e.listed.toLocaleString(); $("sLeft").textContent = left.toLocaleString();
+  $("sLocked").textContent = `${e.counts.filter((n, d) => d && n === 1).length}/${N}`; $("sGuess").textContent = `${e.guesses} · ${e.back}`;
+}
+function explain(e) {
+  const d = sym(e.d);
+  switch (e.kind) {
+    case "build": return e.why === "stuck"
+      ? ["Add the next number", `The lists stopped shrinking, so add ${d} — the next most repeated number. With the locked numbers' cells already taken, it has only <b>${e.n.toLocaleString()}</b> option layers.`]
+      : ["Build option layers", `Start with the most repeated numbers: ${d} has <b>${e.n.toLocaleString()}</b> option layers (one cell per box, no repeats in rows or columns, covering its givens). Shaded cells are in its options; darkest = in all of them.`];
+    case "cut": return e.why === "only"
+      ? ["AND · every cell needs a number", `Only ${d} can still reach ${e.cells.slice(0, 4).map(rc).join(", ")}${e.cells.length > 4 ? "…" : ""} — keep only the options of ${d} that cover ${e.cells.length > 1 ? "them" : "it"}: <b>${e.before.toLocaleString()} → ${e.after.toLocaleString()}</b>.`]
+      : e.why === "taken" ? ["Cells taken", `Remove ${d}'s options that use cells a locked number has taken: <b>${e.before.toLocaleString()} → ${e.after.toLocaleString()}</b>.`]
+      : ["AND · certain cells", `Remove ${d}'s options that use a cell certain for another number: <b>${e.before.toLocaleString()} → ${e.after.toLocaleString()}</b>.`];
+    case "pair": return ["AND · options that clash", `Some options of ${d} clash with <b>every</b> option of ${sym(e.by)}, so they can never be used: <b>${e.before.toLocaleString()} → ${e.after.toLocaleString()}</b>.`];
+    case "group": return [`AND · ${e.k === 3 ? "three" : "four"} numbers together`, `Every pair of unlocked numbers still fits, so check them ${e.k} at a time: some options of ${d} leave no way to place ${e.k === 3 ? "two" : "three"} other unlocked numbers beside them without sharing a cell — cut: <b>${e.before.toLocaleString()} → ${e.after.toLocaleString()}</b>.`];
+    case "lock": return ["🔒 Locked", `Number ${d} has one option left — confidence 100%. Its list is dropped; it will never be revisited.`];
+    case "guess": return ["Guess", `The lists stopped shrinking. ${d} has the fewest options (${e.of}); try option ${e.k} of ${e.of} — the one with the fewest clashes (${e.clash}) with other numbers' options.`];
+    case "fail": return ["Contradiction", e.cell !== undefined ? `No number can reach ${rc(e.cell)} any more — the last guess was wrong.` : `Number ${d} has no option left — the last guess was wrong.`];
+    case "back": return ["Go back", `Undo guess ${e.k} for ${d} and try its next option.`];
+    case "done": return ["Solved", `Every number is locked — the grid is the solution. ${V.R.guesses ? `${V.R.guesses} guess${V.R.guesses > 1 ? "es" : ""}, ${V.R.back} go-back${V.R.back === 1 ? "" : "s"}.` : "<b>No guessing was needed</b>: the AND cuts alone locked every number."}`];
+  }
+  return ["", ""];
+}
+function chip(e) {
+  const d = sym(e.d), l = $("log"), s = document.createElement("span");
+  const t = { build: `${e.why === "stuck" ? "+ " : ""}${d}: ${e.n}`, cut: `${d}: ${e.before}→${e.after}`, pair: `${d}: ${e.before}→${e.after} (vs ${sym(e.by)})`, group: `${d}: ${e.before}→${e.after} (${e.k} together)`, lock: `🔒 ${d}`, guess: `? ${d} ${e.k}/${e.of}`, fail: "✗", back: `↩ ${d}`, done: "✓ solved" }[e.kind];
+  if (!t) return; s.textContent = t;
+  if (e.d) s.style.setProperty("--c", `hsl(${hue(e.d)} 60% 50%)`);
+  if (e.kind === "fail" || e.kind === "back") s.className = "back";
+  l.appendChild(s); while (l.children.length > 250) l.removeChild(l.firstChild); l.scrollTop = l.scrollHeight;
+}
+function reset() {
+  stop(); Object.assign(V, { phase: "home", k: 0, R: null, running: false }); C3.e = null; C3.prev = null; C3.dirty = true;
+  buildBoard(); $("log").innerHTML = ""; $("nums").innerHTML = "";
+  for (let i = 0; i < N * N; i++) { const el = V.cells[i]; el.textContent = sym(puzzle[i]); el.classList.toggle("given", !!puzzle[i]); el.style.color = puzzle[i] ? `hsl(${hue(puzzle[i])} 65% 30%)` : ""; }
+  ["sListed", "sLeft"].forEach(id => $(id).textContent = "0"); $("sLocked").textContent = `0/${N}`; $("sGuess").textContent = "0 · 0";
+  say("Ready", "Press Solve to build every option layer of every number.");
+  $("play").textContent = "▶ Solve";
+}
+function say(p, t) { $("phase").textContent = p; $("text").innerHTML = t; }
+function stop() { if (V.timer) clearTimeout(V.timer); V.timer = null; V.running = false; }
+function prepare() {
+  $("busy").classList.remove("hidden");
+  const t0 = performance.now(); V.R = solveOptionLayers(puzzle, $("start").value); V.ms = Math.round(performance.now() - t0);
+  $("busy").classList.add("hidden");
+  if (V.R.tooMany) { say("Too many options", `Number ${sym(V.R.tooMany)} has more than 600,000 option layers — add more givens.`); V.phase = "done"; return false; }
+  V.phase = "run"; V.k = 0; return true;
+}
+function tick(single) {
+  const sp = SPEEDS[$("speed").value];
+  if (V.phase === "home") { if (!prepare()) return -1; }
+  if (V.phase !== "run") return -1;
+  let e, prev, batch = 0;
+  do { prev = V.R.ev[V.k - 1]; e = V.R.ev[V.k++]; if (!e) break; chip(e); } while (sp === 0 && !single && ++batch < 300 && V.k < V.R.ev.length);
+  if (!e) return finish();
+  draw(e, prev); const [ph, tx] = explain(e); say(ph, tx);
+  $("play").textContent = V.running ? "⏸ Pause" : "▶ Continue";
+  if (V.k >= V.R.ev.length) return finish();
+  return e.kind === "lock" || e.kind === "guess" || e.kind === "back" ? Math.max(sp, 200) * 1.4 : sp;
+}
+function finish() {
+  stop(); V.phase = "done";
+  const R = V.R, last = R.ev[R.ev.length - 1];
+  if (last) draw(last);
+  const ok = R.ok && puzzle.every((v, i) => !v || R.grid[i] === v) && countSolutions(R.grid, 2, 1e6) === 1;
+  say(ok ? "Solved" : "Stopped", ok
+    ? `Every number is locked — the grid is the solution. Only ${R.listed.toLocaleString()} option layers were built and ANDed (starting with ${$("start").value === "all" ? "all numbers" : `the ${$("start").value} most repeated`}); ${R.guesses ? `${R.guesses} guess${R.guesses > 1 ? "es" : ""} and ${R.back} go-back${R.back === 1 ? "" : "s"} were needed` : "<b>no guessing was needed</b>"} (${V.ms} ms).${R.truncated ? " (Animation shows the first steps only.)" : ""}`
+    : "No solution: these givens can't all be satisfied.");
+  $("play").textContent = "↺ Again";
+  return -1;
+}
+function loop() { const w = tick(false); if (w < 0 || !V.running) { V.running = false; if (V.phase !== "done") $("play").textContent = "▶ Continue"; return; } V.timer = setTimeout(loop, w); }
+function play() {
+  if (V.running) { stop(); $("play").textContent = "▶ Continue"; return; }
+  if (V.phase === "done") reset();
+  if (puzzle.filter(Boolean).length < N - 1) { say("Option Layers", "Add or make a puzzle first."); return; }
+  if (countSolutions(puzzle, 1, 300000) === 0) { say("Option Layers", "These givens break the rules — there is nothing to solve."); return; }
+  V.running = true; $("play").textContent = "⏸ Pause"; setTimeout(loop, 20);
+}
+
+/* ---------- cube view: one horizontal slice per number, pillars link the slices ---------- */
+const C3 = { yaw: -0.65, pitch: 0.5, spread: 0.8, auto: true, drag: null, e: null, prev: null, raf: 0, dirty: true };
+function cubeDraw3() {
+  const cv = $("cube3"), w = cv.clientWidth; if (!w) return;
+  const dpr = window.devicePixelRatio || 1;
+  if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(w * dpr); }
+  const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const css = getComputedStyle(document.documentElement), col = n => css.getPropertyValue(n).trim();
+  ctx.fillStyle = col("--bg"); ctx.fillRect(0, 0, w, w);
+  const NN = N * N, e = C3.e, g = e ? e.g : puzzle, cert = e ? e.cert : puzzle, has = (t, i) => (t[i >> 5] >>> (i & 31)) & 1;
+  const focus = e && e.focus ? e.focus : 0, marks = new Set(e && e.cells ? e.cells : []);
+  // unbuilt slices: a point is live if its row, column and box don't hold that number yet
+  const R = i => (i / N) | 0, Cc = i => i % N, Bx = i => boxOf(R(i), Cc(i));
+  const rowHas = [...Array(N + 1)].map(() => new Uint8Array(N)), colHas = [...Array(N + 1)].map(() => new Uint8Array(N)), boxHas = [...Array(N + 1)].map(() => new Uint8Array(N));
+  for (let i = 0; i < NN; i++) if (cert[i]) { rowHas[cert[i]][R(i)] = 1; colHas[cert[i]][Cc(i)] = 1; boxHas[cert[i]][Bx(i)] = 1; }
+  const pillars = e && e.kind === "lock" && C3.prev ? [...Array(NN).keys()].filter(i => e.g[i] && !C3.prev.g[i]) : [];
+  const u = w * 0.5 / N, gap = u * (1 + C3.spread), half = (N - 1) / 2;
+  const cy = Math.cos(C3.yaw), sy = Math.sin(C3.yaw), cp = Math.cos(C3.pitch), sp = Math.sin(C3.pitch), F = w * 2.2;
+  const proj = (x, y, z) => { const X = x * cy - z * sy, Z1 = x * sy + z * cy, Y = y * cp - Z1 * sp, Z = y * sp + Z1 * cp, s = F / (F + Z); return [w / 2 + X * s, w / 2 - Y * s, Z, s]; };
+  const items = [];
+  for (let i = 0; i < NN; i++) {
+    const x = (Cc(i) - half) * u, z = (R(i) - half) * u;
+    for (let d = 1; d <= N; d++) {
+      const placed = g[i] === d, sure = !placed && cert[i] === d;
+      let live = false, heat = -1;
+      if (!placed && !sure && !cert[i]) {
+        if (e && e.un && e.un[d]) live = !!has(e.un[d], i);
+        else if (!(e && e.lk && e.lk[d])) live = !rowHas[d][R(i)] && !colHas[d][Cc(i)] && !boxHas[d][Bx(i)];
+        if (live && d === focus && e.use && e.total) heat = e.use[i] / e.total;
+      }
+      if (!placed && !sure && !live) continue;
+      const [px, py, pz, s] = proj(x, (d - 1 - half) * gap, z);
+      items.push({ px, py, pz, s, d, placed, sure, live, heat, given: placed && !!puzzle[i], mark: marks.has(i) && d === (e && e.d) });
+    }
+  }
+  // cube frame
+  const ex = (half + 0.6) * u, ey = half * gap + u * 0.6, corners = [];
+  for (const a of [-1, 1]) for (const b of [-1, 1]) for (const c of [-1, 1]) corners.push(proj(a * ex, b * ey, c * ex));
+  ctx.strokeStyle = col("--line"); ctx.lineWidth = 1;
+  for (let a = 0; a < 8; a++) for (let b = a + 1; b < 8; b++) if ([1, 2, 4].includes(a ^ b)) { ctx.beginPath(); ctx.moveTo(corners[a][0], corners[a][1]); ctx.lineTo(corners[b][0], corners[b][1]); ctx.stroke(); }
+  // pillars just filled by a lock
+  ctx.strokeStyle = "rgba(138,143,153,.85)"; ctx.lineWidth = 2;
+  for (const i of pillars) { const x = (Cc(i) - half) * u, z = (R(i) - half) * u, a = proj(x, -half * gap - u * 0.4, z), b = proj(x, half * gap + u * 0.4, z); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+  items.sort((a, b) => b.pz - a.pz);
+  const lockD = e && e.kind === "lock" ? e.d : 0;
+  for (const it of items) {
+    const h = hue(it.d), size = u * 0.72 * it.s, dim = (focus && it.d !== focus) || (lockD && it.d !== lockD) ? 0.28 : 1;
+    ctx.globalAlpha = dim;
+    if (it.placed || it.sure) {
+      ctx.globalAlpha = dim * (it.sure ? 0.6 : 1);
+      ctx.fillStyle = `hsl(${h} 70% ${it.given ? 45 : 58}%)`; ctx.fillRect(it.px - size / 2, it.py - size / 2, size, size);
+      if (it.given) { ctx.strokeStyle = "rgba(0,0,0,.45)"; ctx.lineWidth = 1; ctx.strokeRect(it.px - size / 2, it.py - size / 2, size, size); }
+    } else {
+      const hv = it.heat;
+      ctx.globalAlpha = dim * (hv >= 0 ? 0.35 + 0.6 * hv : 0.5); ctx.fillStyle = `hsl(${h} 70% 55%)`;
+      ctx.beginPath(); ctx.arc(it.px, it.py, Math.max(1.2, u * (hv >= 0 ? 0.08 + 0.3 * hv : 0.12) * it.s), 0, 7); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if (it.mark) { ctx.strokeStyle = col("--bad"); ctx.lineWidth = 2; const g2 = size * 1.2; ctx.strokeRect(it.px - g2 / 2, it.py - g2 / 2, g2, g2); }
+  }
+  // slice labels: options left, ✓ when locked
+  ctx.font = `600 ${Math.max(9, u * 0.7)}px -apple-system,Segoe UI,Roboto,sans-serif`; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  for (let d = 1; d <= N; d++) {
+    const [px, py] = proj(ex + u * 0.9, (d - 1 - half) * gap, -ex), n = e ? e.counts[d] : -1;
+    ctx.fillStyle = `hsl(${hue(d)} 70% 45%)`;
+    ctx.fillText(sym(d) + (e && e.lk && e.lk[d] ? " ✓" : n >= 0 ? " " + n.toLocaleString() : ""), px - u * 0.35, py);
+  }
+}
+function cubeLoop3() {
+  if ($("view").value !== "cube") { C3.raf = 0; return; }
+  if (C3.auto && !C3.drag && !document.hidden) { C3.yaw += 0.0035; C3.dirty = true; }
+  if (C3.dirty) { C3.dirty = false; cubeDraw3(); }
+  C3.raf = requestAnimationFrame(cubeLoop3);
+}
+function setView() {
+  const cube = $("view").value === "cube";
+  ["board", "legBoard"].forEach(id => $(id).classList.toggle("hidden", cube));
+  ["cube3", "cubeCtl", "legCube"].forEach(id => $(id).classList.toggle("hidden", !cube));
+  reset();
+  if (cube && !C3.raf) C3.raf = requestAnimationFrame(cubeLoop3);
+}
+$("view").addEventListener("change", setView);
+$("cubeSpread").addEventListener("input", e => { C3.spread = +e.target.value; C3.dirty = true; });
+$("cubeAuto").addEventListener("change", e => { C3.auto = e.target.checked; });
+{
+  const cv = $("cube3");
+  cv.addEventListener("pointerdown", e => { C3.drag = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener("pointermove", e => {
+    if (!C3.drag) return;
+    C3.yaw += (e.clientX - C3.drag.x) * 0.01; C3.pitch = Math.max(-1.4, Math.min(1.4, C3.pitch + (e.clientY - C3.drag.y) * 0.01));
+    C3.drag = { x: e.clientX, y: e.clientY }; C3.dirty = true;
+  });
+  ["pointerup", "pointercancel"].forEach(t => cv.addEventListener(t, () => { C3.drag = null; }));
+  window.addEventListener("resize", () => { C3.dirty = true; });
+}
+
+/* ---------- editor ---------- */
+function buildPGrid() {
+  const g = $("pgrid"); g.innerHTML = ""; g.style.gridTemplateColumns = `repeat(${N},1fr)`; g.style.gridTemplateRows = `repeat(${N},1fr)`;
+  for (let i = 0; i < N * N; i++) {
+    const d = document.createElement("div"), r = (i / N) | 0, c = i % N;
+    if (c === N - 1) d.classList.add("lc"); else if ((c + 1) % BC === 0) d.classList.add("br");
+    if (r === N - 1) d.classList.add("lr"); else if ((r + 1) % BR === 0) d.classList.add("bb");
+    d.addEventListener("click", () => { if (!editing) return; sel = i; renderPGrid(); }); g.appendChild(d);
+  }
+  g.style.setProperty("--pfs", Math.max(9, Math.min(340, g.clientWidth || 320) / N * 0.55) + "px");
+  const pad = $("pad"); pad.innerHTML = ""; pad.style.gridTemplateColumns = `repeat(${N > 9 ? Math.ceil((N + 1) / 2) : N + 1},1fr)`;
+  for (let d = 1; d <= N; d++) { const b = document.createElement("button"); b.textContent = sym(d); b.addEventListener("click", () => setCell(d)); pad.appendChild(b); }
+  const e = document.createElement("button"); e.textContent = "⌫"; e.addEventListener("click", () => setCell(0)); pad.appendChild(e);
+}
+function renderPGrid() {
+  [...$("pgrid").children].forEach((el, i) => { el.textContent = sym(puzzle[i]); el.classList.toggle("sel", editing && i === sel); el.style.color = puzzle[i] ? `hsl(${hue(puzzle[i])} 65% 38%)` : ""; });
+  $("clueCount").textContent = `${puzzle.filter(Boolean).length} givens`;
+}
+function setCell(d) { if (sel < 0) return; puzzle[sel] = d; renderPGrid(); reset(); }
+function setSize(n) { N = n; [BR, BC] = boxShape(N); puzzle = new Array(N * N).fill(0); sel = -1; $("size").value = String(N); buildPGrid(); renderPGrid(); reset(); }
+function newPuzzle(kind) {
+  $("busy").classList.remove("hidden");
+  setTimeout(() => { puzzle = kind === "classic" ? classicPuzzle($("level").value) : variedPuzzle($("level").value); editing = false; sel = -1; $("editBtn").classList.remove("on"); $("pad").classList.add("hidden"); renderPGrid(); reset(); $("busy").classList.add("hidden"); }, 30);
+}
+$("size").addEventListener("change", () => { setSize(+$("size").value); newPuzzle("varied"); });
+$("newVaried").addEventListener("click", () => newPuzzle("varied"));
+$("newClassic").addEventListener("click", () => newPuzzle("classic"));
+$("editBtn").addEventListener("click", () => { editing = !editing; $("editBtn").classList.toggle("on", editing); $("pad").classList.toggle("hidden", !editing); if (editing && sel < 0) sel = 0; renderPGrid(); });
+$("clearBtn").addEventListener("click", () => { puzzle = new Array(N * N).fill(0); renderPGrid(); reset(); });
+$("play").addEventListener("click", play);
+$("stepBtn").addEventListener("click", () => { stop(); if (V.phase === "done") return; if (puzzle.filter(Boolean).length < N - 1) return; tick(true); });
+$("reset").addEventListener("click", reset);
+$("start").addEventListener("change", reset);
+$("tie").addEventListener("change", reset);
+document.addEventListener("keydown", e => {
+  if (!editing || sel < 0) return;
+  const v = SYMBOLS.indexOf(e.key.toUpperCase());
+  if (v >= 1 && v <= N) setCell(v); else if (e.key === "Backspace" || e.key === "Delete" || e.key === "0") setCell(0);
+});
+(function boot() {
+  const h = new URLSearchParams(location.hash.slice(1)), n = +h.get("n"), p = h.get("p") || "";
+  if ([4, 6, 9, 12, 16].includes(n) && p.length === n * n) { setSize(n); puzzle = [...p].map(ch => Math.max(0, SYMBOLS.indexOf(ch.toUpperCase()))).map(v => v > N ? 0 : v); renderPGrid(); reset(); }
+  else { setSize(9); newPuzzle("varied"); }
+})();
+</script>
+</body>
+</html>

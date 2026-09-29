@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Layer Builder 2</title>
+<style>
+:root{
+  --bg:#f5f4ef; --surface:#ffffff; --ink:#1c1e23; --muted:#6a6e77; --line:#cfd2d8; --line-strong:#1c1e23;
+  --accent:#2455c7; --accent-ink:#fff; --btn:#e9e7e0; --btn-ink:#1c1e23; --ok:#2e9e57; --bad:#c42626;
+  --blocked:#d9dadf; --cellbg:#ffffff;
+  --shadow:0 1px 2px rgba(0,0,0,.08),0 4px 14px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#131519; --surface:#1c1f25; --ink:#e7e8eb; --muted:#9aa0aa; --line:#383d46; --line-strong:#c9cdd4;
+    --accent:#6f98ff; --accent-ink:#0d1117; --btn:#2a2e36; --btn-ink:#e7e8eb; --blocked:#30343c; --cellbg:#1c1f25;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  padding:max(12px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));touch-action:manipulation;-webkit-user-select:none;user-select:none}
+.wrap{max-width:620px;margin:0 auto}
+h1{font-size:20px;margin:0}
+.sub{font-size:12px;color:var(--muted);margin-bottom:6px}
+h2{font-size:15px;margin:0 0 6px}
+button,select{font:inherit;color:var(--btn-ink);background:var(--btn);border:0;border-radius:10px;padding:9px 12px;cursor:pointer}
+select{appearance:none;-webkit-appearance:none}
+button:active{transform:scale(.97)}
+button.primary{background:var(--accent);color:var(--accent-ink);font-weight:600}
+button.on{background:var(--accent);color:var(--accent-ink)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.row select{flex:1;min-width:0}
+.card{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:12px;margin-top:12px}
+.note{font-size:12.5px;color:var(--muted);margin:6px 0}
+label.chk{display:flex;align-items:center;gap:6px;font-size:13.5px}
+
+/* editor */
+.pgrid{display:grid;width:100%;max-width:340px;aspect-ratio:1/1;margin:6px auto 0;border:2px solid var(--line-strong);border-radius:4px;overflow:hidden;background:var(--surface)}
+.pgrid div{display:flex;align-items:center;justify-content:center;border-right:1px solid var(--line);border-bottom:1px solid var(--line);font-size:var(--pfs);font-weight:700;cursor:pointer;min-width:0;min-height:0}
+.pgrid div.br{border-right:2px solid var(--line-strong)} .pgrid div.bb{border-bottom:2px solid var(--line-strong)}
+.pgrid div.lc{border-right:0} .pgrid div.lr{border-bottom:0}
+.pgrid div.sel{background:#c9dbff;color:#1c1e23}
+.pad{display:grid;gap:6px;margin-top:8px}
+.pad button{height:42px;padding:0;font-size:19px;background:var(--surface);box-shadow:var(--shadow);color:var(--accent)}
+
+/* board */
+.boardwrap{position:relative;width:100%;max-width:470px;aspect-ratio:1/1;margin:8px auto 0}
+.board{position:absolute;inset:0;display:grid;border:2px solid var(--line-strong);border-radius:4px;overflow:hidden;background:var(--cellbg)}
+.board div{display:flex;align-items:center;justify-content:center;border-right:1px solid var(--line);border-bottom:1px solid var(--line);font-size:var(--bfs);min-width:0;min-height:0;transition:background-color .25s}
+.board div.br{border-right:2px solid var(--line-strong)} .board div.bb{border-bottom:2px solid var(--line-strong)}
+.board div.lc{border-right:0} .board div.lr{border-bottom:0}
+.board div.given{font-weight:800}
+.board div.done{font-weight:600}
+.board div.blk{background:var(--blocked)}
+.board div.fresh{animation:pop .5s}
+@keyframes pop{40%{transform:scale(1.25)}}
+.tiles{position:absolute;inset:2px;pointer-events:none}
+.tile{position:absolute;display:flex;align-items:center;justify-content:center;border-radius:6px;font-weight:800;color:#15161a;font-size:var(--bfs);
+  transition:top .45s cubic-bezier(.3,.7,.3,1),left .45s cubic-bezier(.3,.7,.3,1);box-shadow:0 2px 6px rgba(0,0,0,.3),inset 0 -2px 0 rgba(0,0,0,.18)}
+.quick .tile{transition-duration:.08s}
+.tile.bad{box-shadow:0 0 0 3px #ff2d2d,0 2px 6px rgba(0,0,0,.3)}
+.tile.hot{box-shadow:0 0 0 3px #ffd43b,0 4px 10px rgba(0,0,0,.4);z-index:2}
+
+.layers{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.layers span{font-size:12.5px;font-weight:700;border-radius:8px;padding:4px 8px;background:var(--bg);color:var(--muted);font-variant-numeric:tabular-nums}
+.layers span.cur{outline:2px solid var(--accent);color:var(--ink)}
+.layers span.ok{color:#15161a}
+.layers span.first{box-shadow:inset 0 0 0 2px var(--bad)}
+.layers span small{font-weight:500;opacity:.8;margin-left:3px}
+.sig{margin-top:10px;background:var(--bg);border-radius:10px;padding:8px 10px;font-size:13px}
+.sig h3{margin:0 0 4px;font-size:14px}
+.sig .chips{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}
+.sig .chips span{font:700 12px ui-monospace,Menlo,Consolas,monospace;border-radius:6px;padding:3px 6px;color:#15161a}
+.sig .code{font:700 15px ui-monospace,Menlo,Consolas,monospace;letter-spacing:.03em}
+.ctl{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.ctl button{padding:8px 13px}
+.step{background:var(--bg);border-radius:10px;padding:8px 10px;margin-top:8px;min-height:56px;font-size:14px}
+.step .no{font-size:11px;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.stats div{background:var(--bg);border-radius:10px;padding:6px 4px;text-align:center}
+.stats b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
+.stats span{font-size:10.5px;color:var(--muted)}
+.log{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;max-height:140px;overflow:auto}
+.log span{font:600 12px ui-monospace,Menlo,Consolas,monospace;background:var(--bg);border-radius:6px;padding:3px 6px;border-left:3px solid var(--c,transparent)}
+.log span.hd{background:none;border:0;font:700 11px -apple-system,Segoe UI,Roboto,sans-serif;color:var(--muted);padding:3px 2px}
+.log span.back{color:var(--bad)}
+ol{padding-left:20px;margin:6px 0} li{margin:4px 0;font-size:14px}
+.busy{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:20;color:#fff;font-weight:600}
+.cube3{width:100%;max-width:470px;aspect-ratio:1/1;display:block;margin:8px auto 0;border-radius:10px;background:var(--bg);touch-action:none;cursor:grab}
+.cube3:active{cursor:grabbing}
+.cubectl{justify-content:center;font-size:12px;color:var(--muted)}
+.cubectl label{display:flex;align-items:center;gap:5px}
+.cubectl input[type=range]{width:90px}
+@media (max-width:560px){ #method{flex:1 1 100%!important} #speed,#view{flex:1 1 40%!important} }
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🧱 Layer Builder 2</h1>
+  <div class="sub">Layers start from the givens · choice layers are marked · go back straight to the layer that caused the dead end · S. S. Soltan</div>
+
+  <div class="card">
+    <div class="row">
+      <select id="size" aria-label="Size"><option value="4">4×4</option><option value="6">6×6</option><option value="9" selected>9×9</option><option value="12">12×12</option><option value="16">16×16</option></select>
+      <select id="level" aria-label="Clues"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select>
+    </div>
+    <div class="row">
+      <button id="newVaried" class="primary">New varied puzzle</button>
+      <button id="newClassic">New classic puzzle</button>
+      <button id="editBtn">✎ Enter my own</button>
+      <button id="clearBtn">Clear</button>
+    </div>
+    <div id="pgrid" class="pgrid"></div>
+    <div id="pad" class="pad hidden"></div>
+    <p class="note" id="clueCount"></p>
+  </div>
+
+  <div class="card">
+    <div class="row" style="margin-top:0">
+      <select id="method" aria-label="Method" style="flex:2"><option value="search" selected>Method: build layer by layer</option><option value="ol">Method: option layers (AND and lock)</option></select>
+      <select id="speed" aria-label="Speed" style="flex:1"><option value="slow">Slow</option><option value="normal" selected>Normal</option><option value="fast">Fast</option><option value="turbo">Turbo</option></select>
+      <select id="view" aria-label="View" style="flex:1"><option value="board" selected>View: board</option><option value="cube">View: cube (slices)</option></select>
+    </div>
+    <div class="row" style="margin-top:0" id="searchOpts">
+      <select id="order" aria-label="Layer order" style="flex:2"><option value="best" selected>Order: try both, keep the better</option><option value="fewest">Order: fewest places first</option><option value="repeat">Order: most repeated number first (your rule)</option></select>
+    </div>
+    <div class="row" style="margin-top:0" id="searchOpts2">
+      <select id="backMode" aria-label="How to go back" style="flex:1"><option value="cbj" selected>Go back: jump to the layer that caused it</option><option value="chrono">Go back: one layer at a time</option><option value="first">Go back: straight to the first choice</option></select>
+    </div>
+    <div id="bw" class="boardwrap"><div id="board" class="board"></div><div id="tiles" class="tiles"></div></div>
+    <canvas id="cube3" class="cube3 hidden" aria-label="3D cube: one horizontal slice per number"></canvas>
+    <div id="cubeCtl" class="row cubectl hidden"><label>Spread slices <input type="range" id="cubeSpread" min="0" max="2.5" step="0.1" value="0.8"></label><label><input type="checkbox" id="cubeAuto" checked> Auto-rotate</label><label><input type="checkbox" id="cubeDots" checked> Show possible</label></div>
+    <p class="note hidden" id="cubeNote" style="font-size:11.5px;text-align:center">Each number is one horizontal slice. The layer being built is outlined in its slice (red = on a taken cell, thick = the block that just moved); dots = where a number not built yet can still go. Grey pillars: cells a locked layer just filled; red pillars: cells a go-back emptied. Label: ✓ built, 🔒 locked by option layers, ◆ placements that fitted.</p>
+    <div class="layers" id="layers"></div>
+    <div class="ctl">
+      <button id="reset">⏮ Reset</button>
+      <button id="play" class="primary">▶ Build</button>
+      <button id="stepBtn">Step ▶|</button>
+    </div>
+    <div class="stats">
+      <div><b id="sLayers">0</b><span>layers built</span></div>
+      <div><b id="sWords">0</b><span>move words</span></div>
+      <div><b id="sBack">0</b><span>go-backs</span></div>
+      <div><b id="sTried">0</b><span>placements tried</span></div>
+    </div>
+    <div class="step"><div class="no" id="phase"></div><div id="text"></div></div>
+    <div id="sig" class="sig hidden"></div>
+    <div id="log" class="log"></div>
+  </div>
+
+  <div class="card">
+    <h2>How it works</h2>
+    <ol>
+      <li><b>Order the layers</b>: the number with the fewest places left goes next (checked again after every layer). The other option is your rule: the most repeated number first.</li>
+      <li><b>Start from the givens</b>: the number sits on its given cells; in every other box it starts on the first free cell.</li>
+      <li><b>Move inside the boxes</b> until the layer fits: it covers its givens, avoids the grey cells already taken, and still has no repeats in rows or columns. Each move is a word: <b>5·b4 r4c2→r5c3</b> = move the 5 inside box 4.</li>
+      <li><b>Lock the layer</b>: its cells turn grey for every later layer.</li>
+      <li><b>Choice or forced?</b> A layer with only one possible placement is <b>• forced</b> — it can't be the mistake. A layer with several is a <b>◆ choice</b>; the first choice is outlined in red.</li>
+      <li><b>Dead end?</b> When a number has a box with no free cell, look at <b>which layers took the cells it needed</b> there, and <b>jump straight back to the most recent of them that made a choice</b> — every layer in between is undone without trying its other placements, because it didn't cause the problem. Fixing the cause fixes everything after it. This still finds the solution of any valid puzzle.</li>
+      <li><b>Spot the mistake early</b>: after each layer, every remaining number must still have a complete placement — not just a free cell in each box. This catches the layer that causes a dead end right away, and halves the placements tried.</li>
+      <li><b>Try both, keep the better</b> (the default): the layers are built once in each order — fewest places first, and your most-repeated-first rule — and the build that went back less is shown. Each order wins on different puzzles.</li>
+      <li><b>Method: option layers</b> — instead of choosing a placement and hoping, first build every option layer of the 2 most repeated numbers (adding the next when stuck), AND and cut them against each other, and <b>🔒 lock</b> a number as soon as one option is left. The board then builds each locked layer in the order it was locked. Locked layers are proven, so they never need a go-back; a guess is made only if the cuts stop.</li>
+      <li>The other two options are for comparison: going back one layer at a time (slower), and always going straight to the first choice (fast, but it can jump past the solution when the real mistake is a later choice).</li>
+    </ol>
+  </div>
+</div>
+<div id="busy" class="busy hidden">Working…</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const SYMBOLS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const sym = v => v > 0 ? SYMBOLS[v] : "";
+function boxShape(n) { let best = null; for (let r = 1; r <= n; r++) if (n % r === 0) { const c = n / r; if (r <= c) { const d = Math.abs(r - Math.sqrt(n)); if (!best || d < best[0]) best = [d, r, c]; } } return [best[1], best[2]]; }
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+let N = 9, BR = 3, BC = 3, puzzle = new Array(81).fill(0), editing = false, sel = -1;
+const boxOf = (r, c) => Math.floor(r / BR) * (N / BC) + Math.floor(c / BC);
+const home = (r, c) => (r * BC + Math.floor(r / BR) + c) % N + 1;
+const hue = d => Math.round((d - 1) * 360 / N);
+const rc = i => `r${((i / N) | 0) + 1}c${i % N + 1}`;
+
+/* ---------- puzzles ---------- */
+function countSolutions(p, limit, budget) {
+  const g = p.slice(), rm = new Int32Array(N), cm = new Int32Array(N), bm = new Int32Array(N), full = (1 << (N + 1)) - 2;
+  for (let i = 0; i < N * N; i++) if (g[i]) { const b = 1 << g[i], r = (i / N) | 0, c = i % N; if ((rm[r] | cm[c] | bm[boxOf(r, c)]) & b) return 0; rm[r] |= b; cm[c] |= b; bm[boxOf(r, c)] |= b; }
+  let count = 0, nodes = 0;
+  (function rec() {
+    if (count >= limit || ++nodes > budget) return;
+    let best = -1, bc = 99, bmask = 0;
+    for (let i = 0; i < N * N; i++) if (!g[i]) { const r = (i / N) | 0, c = i % N, m = full & ~(rm[r] | cm[c] | bm[boxOf(r, c)]); let k = 0, x = m; while (x) { x &= x - 1; k++; } if (k < bc) { bc = k; best = i; bmask = m; if (k < 2) break; } }
+    if (best < 0) { count++; return; }
+    const r = (best / N) | 0, c = best % N, b0 = boxOf(r, c);
+    for (let d = 1; d <= N; d++) if (bmask & (1 << d)) { const b = 1 << d; g[best] = d; rm[r] |= b; cm[c] |= b; bm[b0] |= b; rec(); g[best] = 0; rm[r] &= ~b; cm[c] &= ~b; bm[b0] &= ~b; if (count >= limit) return; }
+  })();
+  return nodes > budget ? -1 : count;
+}
+function carve(sol, level) {
+  const ratio = { easy: 0.5, medium: 0.4, hard: 0.32 }[level], target = Math.round(N * N * ratio), p = sol.slice(), budget = N <= 9 ? 20000 : 4000;
+  let clues = N * N; const pairs = []; for (let i = 0; i <= (N * N - 1) / 2; i++) pairs.push([i, N * N - 1 - i]);
+  for (const [a, b] of shuffle(pairs)) { if (clues <= target) break; const va = p[a], vb = p[b]; p[a] = 0; p[b] = 0; if (countSolutions(p, 2, budget) === 1) clues -= a === b ? 1 : 2; else { p[a] = va; p[b] = vb; } }
+  return p;
+}
+function classicPuzzle(level) {
+  const nb = N / BR, ns = N / BC;
+  const ro = shuffle([...Array(nb).keys()]).flatMap(b => shuffle([...Array(BR).keys()]).map(k => b * BR + k));
+  const co = shuffle([...Array(ns).keys()]).flatMap(s => shuffle([...Array(BC).keys()]).map(k => s * BC + k));
+  const rl = shuffle([...Array(N).keys()].map(i => i + 1)), turn = BR === BC && Math.random() < 0.5, sol = [];
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) sol.push(rl[(turn ? home(co[c], ro[r]) : home(ro[r], co[c])) - 1]);
+  return carve(sol, level);
+}
+function variedPuzzle(level) {
+  const g = new Array(N * N).fill(0), rm = new Int32Array(N), cm = new Int32Array(N), bm = new Int32Array(N), full = (1 << (N + 1)) - 2; let nodes = 0;
+  const rec = () => {
+    if (++nodes > 200000) return false;
+    let best = -1, bc = 99, bmask = 0;
+    for (let i = 0; i < N * N; i++) if (!g[i]) { const r = (i / N) | 0, c = i % N, m = full & ~(rm[r] | cm[c] | bm[boxOf(r, c)]); let k = 0, x = m; while (x) { x &= x - 1; k++; } if (k < bc) { bc = k; best = i; bmask = m; if (k < 2) break; } }
+    if (best < 0) return true; if (!bc) return false;
+    const r = (best / N) | 0, c = best % N, b0 = boxOf(r, c), ds = []; for (let d = 1; d <= N; d++) if (bmask & (1 << d)) ds.push(d);
+    for (const d of shuffle(ds)) { const b = 1 << d; g[best] = d; rm[r] |= b; cm[c] |= b; bm[b0] |= b; if (rec()) return true; g[best] = 0; rm[r] &= ~b; cm[c] &= ~b; bm[b0] &= ~b; }
+    return false;
+  };
+  return rec() ? carve(g, level) : classicPuzzle(level);
+}
+
+/* ---------- the layer search ---------- */
+// For number d: choose one cell in every box, no two in the same row or column, covering d's givens and avoiding taken cells.
+function layerSolver(p, orderMode, backMode) {
+  const NN = N * N, R = [], C = [], Bx = [], boxes = [...Array(N)].map(() => []);
+  for (let i = 0; i < NN; i++) { R[i] = (i / N) | 0; C[i] = i % N; Bx[i] = boxOf(R[i], C[i]); boxes[Bx[i]].push(i); }
+  const taken = new Int8Array(NN); for (let i = 0; i < NN; i++) taken[i] = p[i];
+  const owner = new Int8Array(NN).fill(-1);                       // which layer (depth) took a cell
+  const gR = [...Array(N + 1)].map(() => new Uint8Array(N)), gC = [...Array(N + 1)].map(() => new Uint8Array(N)), gB = [...Array(N + 1)].map(() => new Int16Array(N).fill(-1));
+  const counts = new Int16Array(N + 1);
+  for (let i = 0; i < NN; i++) if (p[i]) { gR[p[i]][R[i]] = 1; gC[p[i]][C[i]] = 1; gB[p[i]][Bx[i]] = i; counts[p[i]]++; }
+  const S = { tried: 0, back: 0, jumps: 0, skipped: 0, events: [], done: new Uint8Array(N + 1), path: [], choice: {} };
+  const staticOrder = [...Array(N).keys()].map(k => k + 1).sort((a, b) => counts[b] - counts[a] || a - b);
+  const usable = (d, b) => gB[d][b] >= 0 ? [gB[d][b]] : boxes[b].filter(i => !p[i] && !gR[d][R[i]] && !gC[d][C[i]]);
+  const options = (d, b) => gB[d][b] >= 0 ? [gB[d][b]] : usable(d, b).filter(i => !taken[i]);
+  const placesOf = d => { let s2 = 0; for (let b = 0; b < N; b++) { const o = options(d, b).length; if (!o) return 0; s2 += o; } return s2; };
+  function* placements(d) {
+    const opts = [...Array(N).keys()].map(b => ({ b, o: options(d, b) })).sort((x, y) => x.o.length - y.o.length);
+    const uR = new Uint8Array(N), uC = new Uint8Array(N), pick = new Array(N);
+    function* rec(k) { if (k === N) { yield pick.slice(); return; } const { b, o } = opts[k]; for (const i of o) { if (uR[R[i]] || uC[C[i]]) continue; uR[R[i]] = 1; uC[C[i]] = 1; pick[b] = i; yield* rec(k + 1); uR[R[i]] = 0; uC[C[i]] = 0; } }
+    yield* rec(0);
+  }
+  const countPlacements = (d, cap) => { let n = 0; for (const _ of placements(d)) if (++n >= cap) break; return n; };
+  const bit = k => 1 << k;
+  // the layers that took cells number e could have used in box b
+  const culpritsIn = (e, b) => { let m = 0; for (const i of usable(e, b)) if (owner[i] >= 0) m |= bit(owner[i]); return m; };
+  const culpritsAll = e => { let m = 0; for (let b = 0; b < N; b++) m |= culpritsIn(e, b); return m; };
+  // dead end = a remaining number has an empty box, or no complete placement at all (spotted as soon as the cause is placed)
+  const deadEnd = () => {
+    for (let e = 1; e <= N; e++) if (!S.done[e]) for (let b = 0; b < N; b++) if (!options(e, b).length) return { e, b, mask: culpritsIn(e, b) };
+    for (let e = 1; e <= N; e++) if (!S.done[e] && countPlacements(e, 1) === 0) return { e, b: -1, mask: culpritsAll(e) };
+    return null;
+  };
+  const MAXEV = 5000, log = e => { if (S.events.length < MAXEV) S.events.push(e); else S.truncated = true; };
+  const digitsOf = m => S.path.filter((x, k) => m & bit(k)).map(x => x.d);
+  const firstChoiceDepth = () => { const k = S.path.findIndex(x => x.count > 1); return k < 0 ? null : k; };
+  let nodes = 0;
+  function solve(depth) {
+    if (depth === N) return { ok: true };
+    if (++nodes > 3e6) { S.aborted = true; return { ok: false, cs: -1 }; }
+    let d;
+    if (orderMode === "repeat") d = staticOrder.find(x => !S.done[x]);
+    else { let best = Infinity; for (let x = 1; x <= N; x++) if (!S.done[x]) { const pl = placesOf(x); if (pl < best) { best = pl; d = x; } } }
+    const count = countPlacements(d, 99);
+    log({ t: "start", d, depth, count });
+    let conf = 0;
+    for (const cells of placements(d)) {
+      S.tried++;
+      const startCells = [...Array(N).keys()].map(b => gB[d][b] >= 0 ? gB[d][b] : options(d, b)[0]);
+      for (const i of cells) { taken[i] = d; if (!p[i]) owner[i] = depth; }
+      S.done[d] = 1; S.path.push({ d, cells, count });
+      if (count > 1 && S.choice[d] === undefined) S.choice[d] = count;
+      log({ t: "place", d, cells, start: startCells, count });
+      let res;
+      const dead = deadEnd();
+      if (dead) { log({ t: "dead", d: dead.e, box: dead.b, after: d, culprits: digitsOf(dead.mask) }); res = { ok: false, cs: dead.mask }; }
+      else res = solve(depth + 1);
+      if (res.ok) return res;
+      if (S.aborted) return res;
+      // undo this layer
+      S.back++; S.done[d] = 0; S.path.pop();
+      for (const i of cells) { taken[i] = p[i]; owner[i] = -1; }
+      if (backMode === "cbj") {
+        if (!(res.cs & bit(depth))) { S.skipped++; log({ t: "undo", d, cells, skip: true, target: res.target }); return res; } // not the cause: jump over
+        log({ t: "undo", d, cells, land: true });
+        conf |= res.cs & ~bit(depth);
+      } else if (backMode === "first") {
+        const f = res.jumpTo !== undefined ? res.jumpTo : firstChoiceDepth();
+        if (f !== null && f < depth) { S.skipped++; log({ t: "undo", d, cells, skip: true }); return { ok: false, cs: -1, jumpTo: f }; }
+        log({ t: "undo", d, cells, land: true });
+      } else log({ t: "undo", d, cells, land: true });
+    }
+    if (count === 0) log({ t: "none", d });
+    if (backMode === "cbj") {
+      conf |= culpritsAll(d) & (bit(depth) - 1);          // layers that shrank this number's choices
+      const target = conf ? 31 - Math.clz32(conf) : -1;  // the most recent cause
+      if (target >= 0 && target < depth - 1) S.jumps++;
+      return { ok: false, cs: conf, target };
+    }
+    return { ok: false, cs: -1 };
+  }
+  const r = solve(0);
+  S.ok = !!r.ok;
+  S.order = S.path.map(x => x.d);
+  return S;
+}
+
+/* ---------- option layers: build every option of the most repeated numbers, AND, cut, lock ---------- */
+function olSolver(p) {
+  const NN = N * N, W = Math.ceil(NN / 32), has = (t, i) => (t[i >> 5] >>> (i & 31)) & 1;
+  const R = [], C = [], Bx = [], boxes = [...Array(N)].map(() => []);
+  for (let i = 0; i < NN; i++) { R[i] = (i / N) | 0; C[i] = i % N; Bx[i] = boxOf(R[i], C[i]); boxes[Bx[i]].push(i); }
+  const cnt = new Array(N + 1).fill(0); p.forEach(v => { if (v) cnt[v]++; });
+  // ties in the repeat count: the number with the fewest free cells in its tightest box goes first (then fewest free cells in total)
+  const boxFree = d => { const rh = new Uint8Array(N), ch = new Uint8Array(N), bh = new Uint8Array(N); boxes.forEach((bx, b) => bx.forEach(i => { if (p[i] === d) rh[R[i]] = ch[C[i]] = bh[b] = 1; })); let min = 99, free = 0; boxes.forEach((bx, b) => { if (bh[b]) return; let n = 0; for (const i of bx) if (!p[i] && !rh[R[i]] && !ch[C[i]]) n++; free += n; if (n < min) min = n; }); return [min, free]; };
+  const tie = [null]; for (let d = 1; d <= N; d++) tie.push(boxFree(d));
+  const order = [...Array(N).keys()].map(k => k + 1).sort((a, b) => cnt[b] - cnt[a] || tie[a][0] - tie[b][0] || tie[a][1] - tie[b][1] || a - b);
+  const out = { events: [], listed: 0, guesses: 0, back: 0, skipped: 0, ol: true, builtN: {} };
+  const stack = [], log = e => { if (out.events.length < 5000) out.events.push(e); else out.truncated = true; };
+  const disjoint = (a, b) => { for (let w = 0; w < W; w++) if (a[w] & b[w]) return false; return true; };
+  // group check, only for the unlocked numbers (once every one is built and the pair check is stuck):
+  // keep an option only if, for every group of 2 (then 3) other numbers, one option of each still fits with it -- no cell shared
+  const gcount = { 3: 0, 4: 0 };
+  const fitsWith = (lists, acc, work) => { if (!lists.length) return true; for (const u of lists[0]) { if (++work.n > 3e6) return true; if (!disjoint(u, acc)) continue; const a2 = acc.slice(); for (let w = 0; w < W; w++) a2[w] |= u[w]; if (fitsWith(lists.slice(1), a2, work)) return true; } return false; };
+  const pickK = (n, k, from = 0) => k === 0 ? [[]] : [...Array(Math.max(0, n - from)).keys()].map(x => x + from).flatMap(i => pickK(n, k - 1, i + 1).map(c => [i, ...c]));
+  function groupCut(T, act) {
+    for (const k of [3, 4]) {
+      if (act.length < k) break;
+      const work = { n: 0 };   // safety cap: past it, options are kept (never cut on a guess)
+      for (const d of act) {
+        if (T[d].length === 1) continue;
+        const before = T[d].length;
+        const keep = T[d].filter(t => {
+          const others = act.filter(e => e !== d).map(e => T[e].filter(u => disjoint(t, u)));
+          if (others.some(o => !o.length)) return false;
+          for (const c of pickK(others.length, k - 1)) if (!fitsWith(c.map(i => others[i]).sort((a, b) => a.length - b.length), t, work)) return false;
+          return true;
+        });
+        if (keep.length !== before) { T[d] = keep; gcount[k]++; return { d, k, before, after: keep.length }; }
+      }
+    }
+    return null;
+  }
+  function build(S, d) {
+    const g = S.g, rowHas = new Uint8Array(N), colHas = new Uint8Array(N), boxAt = new Int16Array(N).fill(-1);
+    for (let i = 0; i < NN; i++) if (g[i] === d) { rowHas[R[i]] = 1; colHas[C[i]] = 1; boxAt[Bx[i]] = i; }
+    const opts = [...Array(N).keys()].map(b => boxAt[b] >= 0 ? [boxAt[b]] : boxes[b].filter(i => !g[i] && !rowHas[R[i]] && !colHas[C[i]]));
+    const ord = [...Array(N).keys()].sort((a, b) => opts[a].length - opts[b].length);
+    const list = [], uR = new Uint8Array(N), uC = new Uint8Array(N), bits = new Uint32Array(W);
+    (function rec(k) { if (list.length > 600000) return; if (k === N) { list.push(bits.slice()); return; } for (const i of opts[ord[k]]) { if (uR[R[i]] || uC[C[i]]) continue; uR[R[i]] = uC[C[i]] = 1; bits[i >> 5] |= 1 << (i & 31); rec(k + 1); bits[i >> 5] &= ~(1 << (i & 31)); uR[R[i]] = uC[C[i]] = 0; } })(0);
+    if (list.length > 600000) { out.tooMany = d; return false; }
+    out.listed += list.length; out.builtN[d] = list.length; S.T[d] = list; return true;
+  }
+  // lock = write the layer onto the board (as a Layer Builder event), drop its option list
+  function lock(S, d, t, how, extra) {
+    const cells = new Array(N), start = new Array(N);
+    for (let b = 0; b < N; b++) { const own = boxes[b].find(i => S.g[i] === d); start[b] = own !== undefined ? own : boxes[b].find(i => !S.g[i]); }
+    for (let i = 0; i < NN; i++) if (has(t, i)) { cells[Bx[i]] = i; S.g[i] = d; }
+    S.T[d] = null; S.locked[d] = 1; stack.push({ d, cells });
+    log({ t: "start", d, count: how === "guess" ? extra.of : 1, ol: how, built: out.builtN[d], ...extra });
+    log({ t: "place", d, cells, start, count: how === "guess" ? extra.of : 1 });
+  }
+  function propagate(S) {
+    for (let changed = true; changed;) {
+      changed = false;
+      const act = order.filter(d => S.T[d]);
+      for (const d of act) if (!S.T[d].length) return { fail: d };
+      for (const d of act) { const keep = S.T[d].filter(t => { for (let i = 0; i < NN; i++) if (S.g[i] && S.g[i] !== d && has(t, i)) return false; return true; }); if (keep.length !== S.T[d].length) { S.T[d] = keep; changed = true; if (!keep.length) return { fail: d }; } }
+      const core = {}, union = {};
+      for (const d of act) { const a = S.T[d][0].slice(), o = new Uint32Array(W); for (const t of S.T[d]) for (let w = 0; w < W; w++) { a[w] &= t[w]; o[w] |= t[w]; } core[d] = a; union[d] = o; }
+      const need = {}; for (const d of act) need[d] = new Uint32Array(W);
+      for (let i = 0; i < NN; i++) if (!S.g[i]) {
+        let n = 0, who = 0;
+        for (let d = 1; d <= N; d++) {
+          if (S.locked[d]) continue;
+          let reach;
+          if (S.T[d]) reach = has(union[d], i);
+          else { reach = true; for (let j = 0; j < NN; j++) if (S.g[j] === d && (R[j] === R[i] || C[j] === C[i] || Bx[j] === Bx[i])) { reach = false; break; } }
+          if (reach) { n++; who = d; }
+        }
+        if (!n) return { fail: 0, cell: i };
+        if (n === 1 && S.T[who] && !has(core[who], i)) need[who][i >> 5] |= 1 << (i & 31);
+      }
+      for (const d of act) { const keep = S.T[d].filter(t => { for (let w = 0; w < W; w++) if (((t[w] & need[d][w]) >>> 0) !== need[d][w]) return false; for (const e of act) if (e !== d) for (let w = 0; w < W; w++) if (t[w] & core[e][w]) return false; return true; }); if (keep.length !== S.T[d].length) { S.T[d] = keep; changed = true; if (!keep.length) return { fail: d }; } }
+      if (!changed) for (const d of act) { if (S.T[d].length === 1) continue; const keep = S.T[d].filter(t => act.every(e => e === d || S.T[e].some(u => disjoint(t, u)))); if (keep.length !== S.T[d].length) { S.T[d] = keep; changed = true; if (!keep.length) return { fail: d }; } }
+      if (!changed && !order.find(e => !S.locked[e] && !S.T[e])) { const gc = groupCut(S.T, act); if (gc) { changed = true; if (!gc.after) return { fail: gc.d }; } }
+      for (const d of act) if (S.T[d] && S.T[d].length === 1) { lock(S, d, S.T[d][0], "lock", {}); changed = true; }
+      if (!changed) { const next = order.find(d => !S.locked[d] && !S.T[d]); if (next) { if (!build(S, next)) return { fail: -1 }; changed = true; } }
+    }
+    return { ok: true };
+  }
+  function solve(S) {
+    const pr = propagate(S);
+    if (!pr.ok) { if (pr.fail !== -1) log({ t: "dead", d: pr.fail, after: stack.length ? stack[stack.length - 1].d : 0, box: -1, culprits: [], ol: true, cell: pr.cell }); return null; }
+    const act = order.filter(d => S.T[d]);
+    if (!act.length) return S;
+    const d = act.sort((a, b) => S.T[a].length - S.T[b].length)[0];
+    const clash = t => { let c2 = 0; for (const e of order) if (e !== d && S.T[e]) for (const u of S.T[e]) if (!disjoint(t, u)) c2++; return c2; };
+    const opts = S.T[d].map(t => ({ t, c: clash(t) })).sort((a, b) => a.c - b.c);
+    for (let k = 0; k < opts.length; k++) {
+      out.guesses++;
+      const mark = stack.length;
+      const U = { g: S.g.slice(), locked: S.locked.slice(), T: S.T.map(l => l && l.slice()) };
+      lock(U, d, opts[k].t, "guess", { k: k + 1, of: opts.length });
+      const r = solve(U); if (r) return r;
+      if (out.tooMany) return null;
+      out.back++;
+      while (stack.length > mark) { const x = stack.pop(); log({ t: "undo", d: x.d, cells: x.cells, land: stack.length === mark }); if (stack.length > mark) out.skipped++; }
+    }
+    return null;
+  }
+  const S0 = { g: p.slice(), locked: new Array(N + 1).fill(0), T: new Array(N + 1).fill(null) };
+  for (const d of order.slice(0, 2)) if (!build(S0, d)) return { ...out, ok: false };
+  // numbers completely given are locked from the start
+  for (let d = 1; d <= N; d++) if (cnt[d] === N) { S0.locked[d] = 1; S0.T[d] = null; }
+  const Rs = solve(S0);
+  out.ok = !!Rs; out.path = stack.slice(); out.order = stack.map(x => x.d);
+  for (let d = 1; d <= N; d++) if (cnt[d] === N) out.order.unshift(d);
+  out.tried = out.listed; out.g3 = gcount[3]; out.g4 = gcount[4];
+  return out;
+}
+
+/* ---------- board + animation ---------- */
+const V = {}; // view state
+const SPEEDS = { slow: 900, normal: 380, fast: 70, turbo: 0 };
+function buildBoard() {
+  const b = $("board"); b.innerHTML = ""; b.style.gridTemplateColumns = `repeat(${N},1fr)`; b.style.gridTemplateRows = `repeat(${N},1fr)`;
+  V.cells = [];
+  for (let i = 0; i < N * N; i++) {
+    const d = document.createElement("div"), r = (i / N) | 0, c = i % N;
+    if (c === N - 1) d.classList.add("lc"); else if ((c + 1) % BC === 0) d.classList.add("br");
+    if (r === N - 1) d.classList.add("lr"); else if ((r + 1) % BR === 0) d.classList.add("bb");
+    b.appendChild(d); V.cells.push(d);
+  }
+  const W = $("bw").clientWidth || 340;
+  $("bw").style.setProperty("--bfs", Math.max(9, W / N * 0.5) + "px");
+  $("tiles").innerHTML = ""; V.tiles = [];
+}
+function drawCells() {
+  C3.dirty = true;
+  for (let i = 0; i < N * N; i++) {
+    const el = V.cells[i], v = V.grid[i], active = V.layer && V.phase !== "done";
+    el.textContent = sym(v);
+    el.classList.toggle("given", !!puzzle[i]); el.classList.toggle("done", !!v && !puzzle[i]);
+    el.style.color = v ? `hsl(${hue(v)} 65% ${puzzle[i] ? 30 : 42}%)` : "";
+    el.classList.toggle("blk", !!(active && v && v !== V.layer));
+  }
+}
+function placeTiles(d, cells, hot = -1) {
+  V.tileCells = cells.slice(); V.tileD = d; V.tileHot = hot; C3.dirty = true;
+  const cell = 100 / N, gap = N > 9 ? 2 : 3;
+  // reuse tiles
+  while (V.tiles.length < cells.length) { const t = document.createElement("div"); t.className = "tile"; $("tiles").appendChild(t); V.tiles.push(t); }
+  while (V.tiles.length > cells.length) V.tiles.pop().remove();
+  cells.forEach((i, k) => {
+    const t = V.tiles[k], r = (i / N) | 0, c = i % N;
+    t.style.width = `calc(${cell}% - ${gap}px)`; t.style.height = `calc(${cell}% - ${gap}px)`;
+    t.style.left = `calc(${c * cell}% + ${gap / 2}px)`; t.style.top = `calc(${r * cell}% + ${gap / 2}px)`;
+    t.style.backgroundColor = `hsl(${hue(d)} 72% 62%)`; t.textContent = sym(d);
+    const occupied = V.grid[i] && V.grid[i] !== d;
+    t.classList.toggle("bad", !!occupied); t.classList.toggle("hot", k === hot);
+  });
+}
+function clearTiles() { $("tiles").innerHTML = ""; V.tiles = []; V.tileCells = null; C3.dirty = true; }
+function renderLayers() {
+  const box = $("layers"); box.innerHTML = "";
+  for (const d of V.orderShown) {
+    const s = document.createElement("span"), st = V.layerState[d];
+    const mark = st && st.ol ? (st.ol === "lock" ? "🔒" : `?${st.count}`) : st && st.count !== undefined ? (st.count > 1 ? `◆${st.count >= 99 ? "99+" : st.count}` : "•") : "";
+    s.innerHTML = `${sym(d)}${mark ? `<small>${mark}</small>` : ""}${st && st.done ? `<small>✓ ${st.words}</small>` : ""}`;
+    if (V.firstChoice === d) { s.classList.add("first"); s.title = "first choice"; }
+    if (st && st.done) { s.classList.add("ok"); s.style.background = `hsl(${hue(d)} 72% 72%)`; }
+    if (d === V.layer && V.phase !== "done") s.classList.add("cur");
+    box.appendChild(s);
+  }
+}
+function stats() {
+  $("sLayers").textContent = `${Object.values(V.layerState).filter(x => x.done).length}/${N}`;
+  $("sWords").textContent = V.words.toLocaleString();
+  $("sBack").textContent = V.back.toLocaleString();
+  $("sTried").textContent = V.triedShown.toLocaleString();
+  $("play").textContent = V.running ? "⏸ Pause" : V.phase === "done" ? "↺ Again" : V.phase === "home" ? "▶ Build" : "▶ Continue";
+}
+function say(p, t) { $("phase").textContent = p; $("text").innerHTML = t; }
+function chip(txt, col, cls) { const s = document.createElement("span"); if (cls) s.className = cls; if (col) s.style.setProperty("--c", col); s.textContent = txt; const l = $("log"); l.appendChild(s); while (l.children.length > 200) l.removeChild(l.firstChild); l.scrollTop = l.scrollHeight; }
+
+/* turn the search log into animation steps */
+function buildSteps(S) {
+  const steps = [];
+  const events = S.truncated ? pathOnly(S) : S.events;
+  for (const e of events) {
+    if (e.t === "start") steps.push({ k: "start", d: e.d, count: e.count, ol: e.ol, built: e.built, gk: e.k, of: e.of });
+    else if (e.t === "place") {
+      const start = e.start ? e.start.slice() : e.cells.slice();
+      steps.push({ k: "fill", d: e.d, cells: start.slice() });
+      const cur = start.slice();
+      for (let b = 0; b < N; b++) if (cur[b] !== e.cells[b]) { const from = cur[b]; cur[b] = e.cells[b]; steps.push({ k: "move", d: e.d, b, from, to: e.cells[b], cells: cur.slice() }); }
+      steps.push({ k: "lock", d: e.d, cells: e.cells, count: e.count });
+    }
+    else if (e.t === "dead") steps.push({ k: "dead", d: e.d, after: e.after, box: e.box, culprits: e.culprits, ol: e.ol, cell: e.cell });
+    else if (e.t === "undo") steps.push({ k: "undo", d: e.d, cells: e.cells, skip: e.skip, land: e.land });
+    else if (e.t === "none") steps.push({ k: "none", d: e.d });
+  }
+  steps.push({ k: "end" });
+  return steps;
+}
+function pathOnly(S) { const ev = []; for (const x of S.path) ev.push({ t: "start", d: x.d, count: x.count }, { t: "place", d: x.d, cells: x.cells, count: x.count }); return ev; }
+
+function reset() {
+  stop();
+  $("sig").classList.add("hidden");
+  Object.assign(V, { tileCells: null, pillars: null, phase: "home", running: false, grid: puzzle.slice(), layer: 0, words: 0, back: 0, triedShown: 0, layerState: {}, steps: null, k: 0, orderShown: [], firstChoice: 0 });
+  buildBoard(); clearTiles(); $("log").innerHTML = "";
+  const counts = new Array(N + 1).fill(0); puzzle.forEach(v => { if (v) counts[v]++; });
+  V.orderShown = [...Array(N).keys()].map(k => k + 1).sort((a, b) => counts[b] - counts[a] || a - b);
+  drawCells(); renderLayers(); stats();
+  say("Ready", `Layers will be built in this order: ${V.orderShown.map(d => `${sym(d)} (×${counts[d]})`).join(", ")}. Press Build.`);
+}
+function stop() { if (V.timer) clearTimeout(V.timer); V.timer = null; V.running = false; }
+function prepare() {
+  $("busy").classList.remove("hidden");
+  const t0 = performance.now();
+  const order = $("order").value, back = $("backMode").value;
+  if ($("method").value === "ol") V.S = olSolver(puzzle);
+  else if (order === "best") {
+    // build it both ways and keep the one that went back less (ties: fewer placements tried)
+    const A = layerSolver(puzzle, "fewest", back), B = layerSolver(puzzle, "repeat", back);
+    const better = (x, y) => x.ok !== y.ok ? (x.ok ? x : y) : x.back !== y.back ? (x.back < y.back ? x : y) : x.tried <= y.tried ? x : y;
+    V.S = better(A, B); V.S.winner = V.S === A ? "fewest" : "repeat"; V.S.other = { fewest: A, repeat: B };
+  } else V.S = layerSolver(puzzle, order, back);
+  V.ms = Math.round(performance.now() - t0);
+  $("busy").classList.add("hidden");
+  V.steps = buildSteps(V.S); V.k = 0; V.phase = "build";
+  if (V.S.ok) V.orderShown = V.S.order;
+  if (V.S.other) {
+    const f = V.S.other.fewest, r = V.S.other.repeat, name = { fewest: "fewest places first", repeat: "most repeated first" };
+    chip(`tried both — fewest places: ${f.back} go-backs · most repeated: ${r.back} go-backs → using ${name[V.S.winner]}`, null, "hd");
+  }
+  if (V.S.ol) chip(`option layers: ${V.S.listed.toLocaleString()} options built · ${V.S.g3 + V.S.g4 ? `3/4-number checks cut ${V.S.g3 + V.S.g4} time${V.S.g3 + V.S.g4 > 1 ? "s" : ""} · ` : ""}${V.S.guesses ? `${V.S.guesses} guess${V.S.guesses > 1 ? "es" : ""}, ${V.S.back} go-back${V.S.back === 1 ? "" : "s"}` : "no guessing — every layer locked by AND cuts"} · ${V.ms} ms`, null, "hd");
+  else chip(`search: ${V.S.tried.toLocaleString()} placements, ${V.S.back.toLocaleString()} layers undone (${V.S.skipped.toLocaleString()} skipped by jumps), ${V.ms} ms${V.S.truncated ? " (showing the final path)" : ""}`, null, "hd");
+}
+function tick(single) {
+  const sp = SPEEDS[$("speed").value];
+  $("tiles").classList.toggle("quick", sp < 150);
+  if (V.phase === "home") { prepare(); renderLayers(); stats(); return 30; }
+  if (V.phase !== "build") return -1;
+  let st, batch = 0;
+  do {
+    st = V.steps[V.k++];
+    if (!st) break;
+    apply(st, single || sp > 0);
+  } while (sp === 0 && !single && st && st.k !== "end" && ++batch < 400); // Turbo: up to 400 steps at once
+  stats(); renderLayers();
+  if (!st || st.k === "end") return finish();
+  const slow = (st.k === "dead" || st.k === "undo") && sp > 0 ? Math.max(sp, 250) * 1.5 : sp; // Turbo: no pause
+  return slow;
+}
+function apply(st, show) {
+  const d = st.d;
+  V.pillars = (st.k === "lock" || st.k === "undo") && st.cells ? st.cells.filter(i => !puzzle[i]) : null; V.pillarKind = st.k;
+  if (st.k === "start") {
+    V.layer = d; drawCells();
+    const places = st.d;
+    V.layerState[d] = Object.assign(V.layerState[d] || { words: 0 }, { count: st.count, ol: st.ol });
+    if (st.ol) {
+      say(`Layer ${sym(d)}`, st.ol === "lock"
+        ? `🔒 <b>Locked by the AND cuts</b>: of the ${st.built !== undefined ? st.built.toLocaleString() : ""} option layers built for ${sym(d)}, only one is left after cutting every option that clashes with the other numbers. Confidence 100% — it will never be undone.`
+        : `The cuts stopped. <b>Guess</b>: ${sym(d)} has ${st.of} options left; try option ${st.gk} of ${st.of} (the one that clashes least with the other numbers).`);
+      chip(`${st.ol === "lock" ? "🔒" : "?"}${sym(d)}:`, null, "hd");
+      return;
+    }
+    if (st.count > 1 && !V.firstChoice) V.firstChoice = d;
+    say(`Layer ${sym(d)}`, st.count === 0 ? `Layer ${sym(d)}: no placement fits the free cells.`
+      : st.count === 1 ? `Layer ${sym(d)} is <b>forced</b>: only one placement fits, so it can't be the mistake.`
+      : `Layer ${sym(d)} is a <b>choice</b>: ${st.count >= 99 ? "99 or more" : st.count} placements fit.${V.firstChoice === d ? " This is the <b>first choice</b> (outlined in red)." : ""}`);
+    chip(`${sym(d)}:`, null, "hd");
+  } else if (st.k === "fill") {
+    V.layer = d; drawCells(); placeTiles(d, st.cells);
+    const bad = st.cells.filter(i => V.grid[i] && V.grid[i] !== d).length;
+    say(`Layer ${sym(d)} · start from the givens`, `${sym(d)} sits on its givens; in every other box it starts on the first free cell.${bad ? ` ${bad} of them sit on cells already taken (red) and must move.` : ""}`);
+  } else if (st.k === "move") {
+    placeTiles(d, st.cells, st.b);
+    V.words++; V.layerState[d] = V.layerState[d] || { words: 0 }; V.layerState[d].words = (V.layerState[d].words || 0) + 1;
+    chip(`${sym(d)}·b${st.b + 1} ${rc(st.from)}→${rc(st.to)}`, `hsl(${hue(d)} 60% 50%)`);
+    say(`Layer ${sym(d)} · move inside box ${st.b + 1}`, `Move ${sym(d)} inside box ${st.b + 1} from ${rc(st.from)} to ${rc(st.to)}${puzzle[st.to] === d ? " (its given)" : ""}.`);
+  } else if (st.k === "lock") {
+    V.triedShown++;
+    for (const i of st.cells) V.grid[i] = d;
+    clearTiles(); V.layer = d; drawCells();
+    for (const i of st.cells) if (!puzzle[i]) { V.cells[i].classList.remove("fresh"); void V.cells[i].offsetWidth; V.cells[i].classList.add("fresh"); }
+    V.layerState[d] = { done: true, words: (V.layerState[d] && V.layerState[d].words) || 0, count: st.count !== undefined ? st.count : V.layerState[d] && V.layerState[d].count, ol: V.layerState[d] && V.layerState[d].ol };
+    say(`Layer ${sym(d)} locked`, `Layer ${sym(d)} fits: one in every box and no repeats in rows or columns. Its cells are now taken for the next layers.`);
+  } else if (st.k === "dead") {
+    const cul = (st.culprits || []).map(sym);
+    if (st.ol) { say(`Contradiction`, st.cell !== undefined ? `After the guess, no number can reach ${rc(st.cell)} any more — the guess was wrong.` : `After the guess, number ${sym(d)} has no option left — the guess was wrong.`); chip(`✗ contradiction`, null, "back"); return; }
+    say(`Dead end`, `After layer ${sym(st.after)}, number ${sym(d)} ${st.box >= 0 ? `has no free cell left in box ${st.box + 1}` : "can no longer fit as a whole layer (every box has a cell, but they clash in rows or columns)"}. ${cul.length ? `The cells it needed there were taken by layer${cul.length > 1 ? "s" : ""} <b>${cul.join(", ")}</b> — ${$("backMode").value === "cbj" ? "jump back to the most recent of them that made a choice." : "go back."}` : "go back."}`);
+    chip(`✗ ${sym(d)} blocked`, null, "back");
+  } else if (st.k === "none") {
+    say(`Dead end`, `Layer ${sym(d)} has no placement that fits the cells still free — go back further.`);
+    chip(`✗ ${sym(d)} no fit`, null, "back");
+  } else if (st.k === "undo") {
+    V.back++;
+    for (const i of st.cells) V.grid[i] = puzzle[i];
+    if (V.layerState[d]) V.layerState[d].done = false;
+    clearTiles(); V.layer = d; drawCells();
+    if (st.skip) { say(`Jump back`, `Undo layer ${sym(d)} without trying its other placements — it didn't cause the dead end.`); chip(`⤺ ${sym(d)}`, null, "back"); }
+    else { say(`Go back`, `Undo layer ${sym(d)} and try its <b>next placement</b>${V.firstChoice === d ? " — back at the first choice" : ""}.`); chip(`↩ ${sym(d)}`, null, "back"); }
+  }
+}
+const ordinal = n => n + (["th", "st", "nd", "rd"][((n % 100) - 20) % 10] || ["th", "st", "nd", "rd"][n % 100] || "th");
+/* ---------- move-word signature: how far each layer of the solution is from the home grid ---------- */
+// moves for layer d (solution) against home layer h = number of boxes where the cells differ
+function layerCells(grid, d) { const out = new Array(N); for (let i = 0; i < N * N; i++) if (grid[i] === d) out[boxOf((i / N) | 0, i % N)] = i; return out; }
+function hungarianMin(cost) { // square cost matrix (0-based) -> assignment row->col with minimal total
+  const n = cost.length, INF = 1e9, u = new Float64Array(n + 1), v = new Float64Array(n + 1), p = new Int32Array(n + 1), way = new Int32Array(n + 1);
+  for (let i = 1; i <= n; i++) {
+    p[0] = i; let j0 = 0; const minv = new Float64Array(n + 1).fill(INF), used = new Uint8Array(n + 1);
+    do { used[j0] = 1; const i0 = p[j0]; let delta = INF, j1 = 0;
+      for (let j = 1; j <= n; j++) if (!used[j]) { const cur = cost[i0 - 1][j - 1] - u[i0] - v[j]; if (cur < minv[j]) { minv[j] = cur; way[j] = j0; } if (minv[j] < delta) { delta = minv[j]; j1 = j; } }
+      for (let j = 0; j <= n; j++) { if (used[j]) { u[p[j]] += delta; v[j] -= delta; } else minv[j] -= delta; }
+      j0 = j1; } while (p[j0] !== 0);
+    do { const j1 = way[j0]; p[j0] = p[j1]; j0 = j1; } while (j0);
+  }
+  const a = new Array(n); for (let j = 1; j <= n; j++) a[p[j] - 1] = j - 1; return a;
+}
+function signature(sol) {
+  const H = []; for (let i = 0; i < N * N; i++) H.push(home((i / N) | 0, i % N));
+  const homeL = [...Array(N)].map((_, h) => layerCells(H, h + 1)), solL = [...Array(N)].map((_, d) => layerCells(sol, d + 1));
+  const cost = solL.map(sl => homeL.map(hl => sl.reduce((a, cell, b) => a + (cell !== hl[b] ? 1 : 0), 0)));
+  const same = [...Array(N)].map((_, d) => cost[d][d]);                    // compared with the same number
+  const match = hungarianMin(cost), best = [...Array(N)].map((_, d) => cost[d][match[d]]); // best renaming
+  const sorted = best.slice().sort((a, b) => b - a);
+  return { same, best, match, sorted, total: best.reduce((a, b) => a + b, 0), totalSame: same.reduce((a, b) => a + b, 0), zero: best.filter(x => !x).length };
+}
+// puzzle-side signature: how many layers logic finishes from the givens alone
+function layerMethodGrid(p) {
+  const g = p.slice(), NN = N * N;
+  for (let changed = true; changed;) {
+    changed = false;
+    const cnt = new Array(N + 1).fill(0); g.forEach(v => { if (v) cnt[v]++; });
+    for (const d of [...Array(N).keys()].map(k => k + 1).sort((a, b) => cnt[b] - cnt[a] || a - b)) {
+      const rh = new Uint8Array(N), ch = new Uint8Array(N), bh = new Uint8Array(N);
+      for (let i = 0; i < NN; i++) if (g[i] === d) { rh[(i / N) | 0] = 1; ch[i % N] = 1; bh[boxOf((i / N) | 0, i % N)] = 1; }
+      const open = [...Array(N)].map(() => []);
+      for (let i = 0; i < NN; i++) { const r = (i / N) | 0, c = i % N, b = boxOf(r, c); if (!g[i] && !rh[r] && !ch[c] && !bh[b]) open[b].push(i); }
+      for (let b = 0; b < N; b++) if (!bh[b] && open[b].length === 1) { g[open[b][0]] = d; changed = true; }
+    }
+    for (const line of ["row", "col"]) for (let k = 0; k < N; k++) {
+      const cells = [...Array(N).keys()].map(j => line === "row" ? k * N + j : j * N + k), empty = cells.filter(i => !g[i]);
+      if (empty.length === 1) { const have = new Set(cells.map(i => g[i])); for (let v = 1; v <= N; v++) if (!have.has(v)) { g[empty[0]] = v; changed = true; break; } }
+    }
+  }
+  return g;
+}
+function singlesGrid(p) {
+  const g = p.slice(), full = (1 << (N + 1)) - 2, units = [];
+  for (let r = 0; r < N; r++) units.push([...Array(N).keys()].map(c => r * N + c));
+  for (let c = 0; c < N; c++) units.push([...Array(N).keys()].map(r => r * N + c));
+  for (let b = 0; b < N; b++) { const u = []; for (let i = 0; i < N * N; i++) if (boxOf((i / N) | 0, i % N) === b) u.push(i); units.push(u); }
+  const peers = [...Array(N * N)].map((_, i) => units.filter(u => u.includes(i)).flat());
+  const cand = i => { let used = 0; for (const j of peers[i]) used |= 1 << g[j]; return full & ~used; };
+  for (let changed = true; changed;) {
+    changed = false;
+    for (let i = 0; i < N * N; i++) if (!g[i]) { const m = cand(i); if (m && !(m & (m - 1))) { g[i] = Math.log2(m); changed = true; } }
+    for (const u of units) for (let v = 1; v <= N; v++) { if (u.some(i => g[i] === v)) continue; const sp = u.filter(i => !g[i] && (cand(i) & (1 << v))); if (sp.length === 1) { g[sp[0]] = v; changed = true; } }
+  }
+  return g;
+}
+const layersComplete = g => { const c = new Array(N + 1).fill(0); g.forEach(v => { if (v) c[v]++; }); return c.filter((x, d) => d && x === N).length; };
+function showSignature() {
+  const g = signature(V.grid), el = $("sig");
+  const lmL = layersComplete(layerMethodGrid(puzzle)), sL = layersComplete(singlesGrid(puzzle)), lvl = lmL === N ? "A" : sL === N ? "B" : "C";
+  const chip = (d, n) => `<span style="background:hsl(${hue(d)} 72% 72%)">${sym(d)}: ${n}</span>`;
+  el.innerHTML = `<h3>Layer signature</h3>
+    <div class="note" style="margin:0">Moves each layer needs from the home grid (one per box where its cell differs):</div>
+    <div class="chips">${[...Array(N)].map((_, d) => chip(d + 1, g.same[d])).join("")}</div>
+    <div class="note" style="margin:6px 0 0">With the numbers renamed to their closest home layers (the same for any renamed copy of this puzzle):</div>
+    <div class="code">${g.sorted.join(" · ")} <span class="note">= ${g.total} words, ${g.zero} layer${g.zero === 1 ? "" : "s"} already in place</span></div>
+    <h3 style="margin-top:10px">Difficulty level ${lvl}</h3>
+    <div>From the givens alone, <b>your layer method finishes ${lmL} of ${N}</b> layers and <b>singles finish ${sL} of ${N}</b>.</div>
+    <div class="note" style="margin:2px 0 0">${{ A: "A — easy: your layer method solves it on its own.", B: "B — medium: your method stalls, but singles (all four cube directions) finish it.", C: "C — hard: logic stalls, so the solution needs guessing and going back." }[lvl]}</div>`;
+  el.classList.remove("hidden");
+}
+function finish() {
+  stop(); V.phase = "done"; V.layer = 0; clearTiles(); drawCells(); renderLayers(); stats();
+  const ok = V.S.ok && puzzle.every((v, i) => !v || V.grid[i] === v) && countSolutions(V.grid, 2, 1e6) === 1;
+  say(ok ? "Solved" : "Stopped", ok
+    ? V.S.ol ? `All ${N} layers built — the grid is the solution. ${V.S.listed.toLocaleString()} option layers were built and ANDed; ${V.S.guesses ? `${V.S.guesses} guess${V.S.guesses > 1 ? "es" : ""} and ${V.S.back} go-back${V.S.back === 1 ? "" : "s"}` : "<b>every layer was locked by the AND cuts — no guessing, no going back</b>"}. ${V.words.toLocaleString()} move words on screen (${V.ms} ms).`
+    : `All ${N} layers built — the grid is the solution. ${V.words.toLocaleString()} move words on screen${V.S.truncated ? " (final path)" : ""}; the search tried ${V.S.tried.toLocaleString()} layer placements and undid ${V.S.back.toLocaleString()} layers, ${V.S.skipped.toLocaleString()} of them skipped by jumping straight to the cause (${V.ms} ms).`
+    : V.S.aborted ? "The search hit its limit before finishing."
+    : $("backMode").value === "first" && countSolutions(puzzle, 1, 300000) > 0 ? "Missed: going straight back to the first choice jumped past the solution — the real mistake was in a later choice layer. Try “jump to the layer that caused it”."
+    : "No solution: these givens can't all be satisfied.");
+  if (ok) showSignature();
+  return -1;
+}
+function loop() { const w = tick(false); if (w < 0 || !V.running) { V.running = false; stats(); return; } V.timer = setTimeout(loop, w); }
+function play() {
+  if (V.running) { stop(); stats(); return; }
+  if (V.phase === "done") reset();
+  if (puzzle.filter(Boolean).length < N - 1) { say("Layer Builder", "Add or make a puzzle first."); return; }
+  if (countSolutions(puzzle, 1, 300000) === 0) { say("Layer Builder", "These givens break the rules — there is nothing to build."); return; }
+  V.running = true; stats(); setTimeout(loop, 20);
+}
+
+/* ---------- cube view: one horizontal slice per number, pillars link the slices ---------- */
+const C3 = { yaw: -0.65, pitch: 0.5, spread: 0.8, auto: true, dots: true, drag: null, raf: 0, dirty: true };
+function cubeDraw3() {
+  const cv = $("cube3"), w = cv.clientWidth; if (!w || !V.grid) return;
+  const dpr = window.devicePixelRatio || 1;
+  if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(w * dpr); }
+  const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const css = getComputedStyle(document.documentElement), col = n => css.getPropertyValue(n).trim();
+  ctx.fillStyle = col("--bg"); ctx.fillRect(0, 0, w, w);
+  const NN = N * N, g = V.grid, R = i => (i / N) | 0, Cc = i => i % N, Bx = i => boxOf(R(i), Cc(i));
+  const focus = V.layer && V.phase !== "done" ? V.layer : 0, done = d => !!(V.layerState[d] && V.layerState[d].done);
+  // live points of the numbers not built yet: row, column and box don't hold that number
+  const rowHas = [...Array(N + 1)].map(() => new Uint8Array(N)), colHas = [...Array(N + 1)].map(() => new Uint8Array(N)), boxHas = [...Array(N + 1)].map(() => new Uint8Array(N));
+  for (let i = 0; i < NN; i++) if (g[i]) { rowHas[g[i]][R(i)] = 1; colHas[g[i]][Cc(i)] = 1; boxHas[g[i]][Bx(i)] = 1; }
+  const tiles = V.tileCells ? new Map(V.tileCells.map((i, k) => [i, k])) : null;
+  const u = w * 0.5 / N, gap = u * (1 + C3.spread), half = (N - 1) / 2;
+  const cy = Math.cos(C3.yaw), sy = Math.sin(C3.yaw), cp = Math.cos(C3.pitch), sp = Math.sin(C3.pitch), F = w * 2.2;
+  const proj = (x, y, z) => { const X = x * cy - z * sy, Z1 = x * sy + z * cy, Y = y * cp - Z1 * sp, Z = y * sp + Z1 * cp, s = F / (F + Z); return [w / 2 + X * s, w / 2 - Y * s, Z, s]; };
+  const items = [];
+  for (let i = 0; i < NN; i++) {
+    const x = (Cc(i) - half) * u, z = (R(i) - half) * u;
+    for (let d = 1; d <= N; d++) {
+      const placed = g[i] === d, tile = !!(tiles && V.tileD === d && tiles.has(i));
+      const live = !placed && !tile && C3.dots && !g[i] && !done(d) && !rowHas[d][R(i)] && !colHas[d][Cc(i)] && !boxHas[d][Bx(i)];
+      if (!placed && !tile && !live) continue;
+      const [px, py, pz, s] = proj(x, (d - 1 - half) * gap, z);
+      items.push({ px, py, pz, s, d, placed, tile, live, bad: tile && !!g[i] && g[i] !== d, hot: tile && tiles.get(i) === V.tileHot, given: placed && !!puzzle[i] });
+    }
+  }
+  const ex = (half + 0.6) * u, ey = half * gap + u * 0.6, corners = [];
+  for (const a of [-1, 1]) for (const b of [-1, 1]) for (const c of [-1, 1]) corners.push(proj(a * ex, b * ey, c * ex));
+  ctx.strokeStyle = col("--line"); ctx.lineWidth = 1;
+  for (let a = 0; a < 8; a++) for (let b = a + 1; b < 8; b++) if ([1, 2, 4].includes(a ^ b)) { ctx.beginPath(); ctx.moveTo(corners[a][0], corners[a][1]); ctx.lineTo(corners[b][0], corners[b][1]); ctx.stroke(); }
+  // pillars: filled by the layer just locked (grey) or emptied by a go-back (red)
+  if (V.pillars) {
+    ctx.strokeStyle = V.pillarKind === "undo" ? "rgba(196,38,38,.8)" : "rgba(138,143,153,.85)"; ctx.lineWidth = 2;
+    for (const i of V.pillars) { const x = (Cc(i) - half) * u, z = (R(i) - half) * u, a = proj(x, -half * gap - u * 0.4, z), b = proj(x, half * gap + u * 0.4, z); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+  }
+  items.sort((a, b) => b.pz - a.pz);
+  const accent = col("--accent"), bad = col("--bad");
+  for (const it of items) {
+    const h = hue(it.d), size = u * 0.72 * it.s;
+    ctx.globalAlpha = focus && it.d !== focus ? 0.28 : 1;
+    if (it.placed || it.tile) {
+      ctx.fillStyle = `hsl(${h} 70% ${it.given ? 45 : it.tile ? 64 : 58}%)`; ctx.fillRect(it.px - size / 2, it.py - size / 2, size, size);
+      if (it.given) { ctx.strokeStyle = "rgba(0,0,0,.45)"; ctx.lineWidth = 1; ctx.strokeRect(it.px - size / 2, it.py - size / 2, size, size); }
+      if (it.tile) { ctx.globalAlpha = 1; ctx.strokeStyle = it.bad ? bad : accent; ctx.lineWidth = it.hot ? 3 : 1.5; const g2 = size * (it.hot ? 1.3 : 1.1); ctx.strokeRect(it.px - g2 / 2, it.py - g2 / 2, g2, g2); }
+    } else {
+      ctx.globalAlpha *= 0.5; ctx.fillStyle = `hsl(${h} 70% 55%)`;
+      ctx.beginPath(); ctx.arc(it.px, it.py, Math.max(1.2, u * 0.12 * it.s), 0, 7); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+  // slice labels: ✓ built, 🔒 locked by option layers, ◆ number of placements that fitted
+  ctx.font = `600 ${Math.max(9, u * 0.7)}px -apple-system,Segoe UI,Roboto,sans-serif`; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  for (let d = 1; d <= N; d++) {
+    const [px, py] = proj(ex + u * 0.9, (d - 1 - half) * gap, -ex), st = V.layerState[d];
+    const mark = st ? (st.done ? " ✓" : st.ol === "lock" ? " 🔒" : st.count > 1 ? " ◆" + (st.count >= 99 ? "99+" : st.count) : "") : "";
+    ctx.fillStyle = `hsl(${hue(d)} 70% 45%)`; ctx.fillText(sym(d) + mark, px - u * 0.35, py);
+  }
+}
+function cubeLoop3() {
+  if ($("view").value !== "cube") { C3.raf = 0; return; }
+  if (C3.auto && !C3.drag && !document.hidden) { C3.yaw += 0.0035; C3.dirty = true; }
+  if (C3.dirty) { C3.dirty = false; cubeDraw3(); }
+  C3.raf = requestAnimationFrame(cubeLoop3);
+}
+$("view").addEventListener("change", () => {
+  const cube = $("view").value === "cube";
+  $("bw").classList.toggle("hidden", cube);
+  ["cube3", "cubeCtl", "cubeNote"].forEach(id => $(id).classList.toggle("hidden", !cube));
+  C3.dirty = true; if (cube && !C3.raf) C3.raf = requestAnimationFrame(cubeLoop3);
+});
+$("cubeSpread").addEventListener("input", e => { C3.spread = +e.target.value; C3.dirty = true; });
+$("cubeAuto").addEventListener("change", e => { C3.auto = e.target.checked; });
+$("cubeDots").addEventListener("change", e => { C3.dots = e.target.checked; C3.dirty = true; });
+{
+  const cv = $("cube3");
+  cv.addEventListener("pointerdown", e => { C3.drag = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener("pointermove", e => {
+    if (!C3.drag) return;
+    C3.yaw += (e.clientX - C3.drag.x) * 0.01; C3.pitch = Math.max(-1.4, Math.min(1.4, C3.pitch + (e.clientY - C3.drag.y) * 0.01));
+    C3.drag = { x: e.clientX, y: e.clientY }; C3.dirty = true;
+  });
+  ["pointerup", "pointercancel"].forEach(t => cv.addEventListener(t, () => { C3.drag = null; }));
+  window.addEventListener("resize", () => { C3.dirty = true; });
+}
+
+/* ---------- editor ---------- */
+function buildPGrid() {
+  const g = $("pgrid"); g.innerHTML = ""; g.style.gridTemplateColumns = `repeat(${N},1fr)`; g.style.gridTemplateRows = `repeat(${N},1fr)`;
+  for (let i = 0; i < N * N; i++) {
+    const d = document.createElement("div"), r = (i / N) | 0, c = i % N;
+    if (c === N - 1) d.classList.add("lc"); else if ((c + 1) % BC === 0) d.classList.add("br");
+    if (r === N - 1) d.classList.add("lr"); else if ((r + 1) % BR === 0) d.classList.add("bb");
+    d.addEventListener("click", () => { if (!editing) return; sel = i; renderPGrid(); }); g.appendChild(d);
+  }
+  g.style.setProperty("--pfs", Math.max(9, Math.min(340, g.clientWidth || 320) / N * 0.55) + "px");
+  const pad = $("pad"); pad.innerHTML = ""; pad.style.gridTemplateColumns = `repeat(${N > 9 ? Math.ceil((N + 1) / 2) : N + 1},1fr)`;
+  for (let d = 1; d <= N; d++) { const b = document.createElement("button"); b.textContent = sym(d); b.addEventListener("click", () => setCell(d)); pad.appendChild(b); }
+  const e = document.createElement("button"); e.textContent = "⌫"; e.addEventListener("click", () => setCell(0)); pad.appendChild(e);
+}
+function renderPGrid() {
+  [...$("pgrid").children].forEach((el, i) => { el.textContent = sym(puzzle[i]); el.classList.toggle("sel", editing && i === sel); el.style.color = puzzle[i] ? `hsl(${hue(puzzle[i])} 65% 38%)` : ""; });
+  $("clueCount").textContent = `${puzzle.filter(Boolean).length} givens`;
+}
+function setCell(d) { if (sel < 0) return; puzzle[sel] = d; renderPGrid(); reset(); }
+function setSize(n) { N = n; [BR, BC] = boxShape(N); puzzle = new Array(N * N).fill(0); sel = -1; $("size").value = String(N); buildPGrid(); renderPGrid(); reset(); }
+function newPuzzle(kind) {
+  $("busy").classList.remove("hidden");
+  setTimeout(() => { puzzle = kind === "classic" ? classicPuzzle($("level").value) : variedPuzzle($("level").value); editing = false; sel = -1; $("editBtn").classList.remove("on"); $("pad").classList.add("hidden"); renderPGrid(); reset(); $("busy").classList.add("hidden"); }, 30);
+}
+
+/* ---------- wiring ---------- */
+$("size").addEventListener("change", () => { setSize(+$("size").value); newPuzzle("varied"); });
+$("newVaried").addEventListener("click", () => newPuzzle("varied"));
+$("newClassic").addEventListener("click", () => newPuzzle("classic"));
+$("editBtn").addEventListener("click", () => { editing = !editing; $("editBtn").classList.toggle("on", editing); $("pad").classList.toggle("hidden", !editing); if (editing && sel < 0) sel = 0; renderPGrid(); });
+$("clearBtn").addEventListener("click", () => { puzzle = new Array(N * N).fill(0); renderPGrid(); reset(); });
+$("play").addEventListener("click", play);
+$("stepBtn").addEventListener("click", () => { stop(); if (V.phase === "done") return; if (puzzle.filter(Boolean).length < N - 1) return; tick(true); stats(); });
+$("reset").addEventListener("click", reset);
+$("order").addEventListener("change", reset);
+$("backMode").addEventListener("change", reset);
+$("method").addEventListener("change", () => { const ol = $("method").value === "ol"; $("searchOpts").classList.toggle("hidden", ol); $("searchOpts2").classList.toggle("hidden", ol); reset(); });
+document.addEventListener("keydown", e => {
+  if (!editing || sel < 0) return;
+  const v = SYMBOLS.indexOf(e.key.toUpperCase());
+  if (v >= 1 && v <= N) setCell(v); else if (e.key === "Backspace" || e.key === "Delete" || e.key === "0") setCell(0);
+});
+(function boot() {
+  const h = new URLSearchParams(location.hash.slice(1)), n = +h.get("n"), p = h.get("p") || "";
+  if ([4, 6, 9, 12, 16].includes(n) && p.length === n * n) { setSize(n); puzzle = [...p].map(ch => Math.max(0, SYMBOLS.indexOf(ch.toUpperCase()))).map(v => v > N ? 0 : v); renderPGrid(); reset(); }
+  else { setSize(9); newPuzzle("varied"); }
+})();
+</script>
+</body>
+</html>

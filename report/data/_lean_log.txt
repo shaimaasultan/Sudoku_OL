@@ -1,0 +1,10 @@
+4x4 hard x100 (2 s): lean 0.006 full 0.014 dlx 0.009 mrv 0.003 ms; ok true
+6x6 hard x100 (3 s): lean 0.010 full 0.050 dlx 0.026 mrv 0.006 ms; ok true
+9x9 medium x100 (5 s): lean 0.022 full 0.329 dlx 0.089 mrv 0.021 ms; ok true
+9x9 hard x100 (6 s): lean 0.042 full 0.494 dlx 0.091 mrv 0.047 ms; ok true
+12x12 hard x30 (4 s): lean 0.222 full 6.400 dlx 0.226 mrv 1.143 ms; ok true
+16x16 medium x10 (3 s): lean 0.655 full 38.000 dlx 0.600 mrv 2.025 ms; ok true
+16x16 hard x10 (3 s): lean 0.380 full 22.200 dlx 0.563 mrv 2.300 ms; ok true
+20x20 hard x20 (15 s): lean 0.933 full 74.900 dlx 1.100 mrv 4.200 ms; ok true
+30x30 hard x10 (51 s): lean 5.900 full 914.100 dlx 4.900 mrv 10.100 ms; ok true
+exit 0

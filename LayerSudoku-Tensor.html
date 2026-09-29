@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Tensor Layers</title>
+<style>
+:root{
+  --bg:#f5f4ef; --surface:#ffffff; --ink:#1c1e23; --muted:#6a6e77; --line:#cfd2d8; --line-strong:#1c1e23;
+  --accent:#2455c7; --accent-ink:#fff; --btn:#e9e7e0; --btn-ink:#1c1e23; --ok:#2e9e57; --bad:#c42626; --cellbg:#ffffff; --hi:#fff1c9;
+  --shadow:0 1px 2px rgba(0,0,0,.08),0 4px 14px rgba(0,0,0,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#131519; --surface:#1c1f25; --ink:#e7e8eb; --muted:#9aa0aa; --line:#383d46; --line-strong:#c9cdd4;
+    --accent:#6f98ff; --accent-ink:#0d1117; --btn:#2a2e36; --btn-ink:#e7e8eb; --cellbg:#1c1f25; --hi:#3a3420; --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding:max(12px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));touch-action:manipulation}
+.wrap{max-width:620px;margin:0 auto}
+h1{font-size:20px;margin:0}
+.sub{font-size:12px;color:var(--muted);margin-bottom:6px}
+h2{font-size:15px;margin:0 0 6px}
+button,select{font:inherit;color:var(--btn-ink);background:var(--btn);border:0;border-radius:10px;padding:9px 12px;cursor:pointer;max-width:100%;min-width:0}
+select{appearance:none;-webkit-appearance:none}
+button:active{transform:scale(.97)}
+button.primary{background:var(--accent);color:var(--accent-ink);font-weight:600}
+button:disabled{opacity:.5}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.row select{flex:1}
+.card{background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:12px;margin-top:12px}
+.note{font-size:12.5px;color:var(--muted);margin:6px 0}
+.cube3{width:100%;max-width:470px;aspect-ratio:1/1;display:block;margin:8px auto 0;border-radius:10px;background:var(--bg);touch-action:none;cursor:grab}
+.cube3:active{cursor:grabbing}
+.cubectl{justify-content:center;font-size:12px;color:var(--muted)}
+.cubectl label{display:flex;align-items:center;gap:5px}
+.cubectl input[type=range]{width:90px}
+.board{display:grid;width:100%;max-width:470px;aspect-ratio:1/1;margin:8px auto 0;border:2px solid var(--line-strong);border-radius:4px;overflow:hidden;background:var(--cellbg)}
+.board div{position:relative;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-width:0;min-height:0;font-variant-numeric:tabular-nums}
+.board div.br{border-right:2px solid var(--line-strong)} .board div.bb{border-bottom:2px solid var(--line-strong)}
+.board div.given{font-weight:800}
+.board div.placed{color:var(--accent);font-weight:600}
+.board div.pick{background:var(--hi);box-shadow:inset 0 0 0 3px var(--accent)}
+.board div.try{background:var(--hi);box-shadow:inset 0 0 0 3px var(--accent)}
+.board div.undo,.board div.dead{background:rgba(196,38,38,.18);box-shadow:inset 0 0 0 3px var(--bad)}
+.board div .cd{display:grid;width:100%;height:100%;font-size:var(--cfs);color:var(--muted);line-height:1;padding:1px}
+.board div .cd span{display:flex;align-items:center;justify-content:center}
+.board div .cnt{font-size:var(--cfs);color:var(--muted);font-weight:600}
+.ctl{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.ctl button{padding:8px 13px}
+.step{background:var(--bg);border-radius:10px;padding:8px 10px;margin-top:8px;min-height:56px;font-size:14px}
+.step .no{font-size:11px;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.stats div{background:var(--bg);border-radius:10px;padding:6px 4px;text-align:center}
+.stats b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
+.stats span{font-size:10.5px;color:var(--muted)}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-2px}
+.log{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;max-height:150px;overflow:auto}
+.log span{font:600 12px -apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);border-radius:6px;padding:3px 7px}
+.log span.back{color:var(--bad)} .log span.pick{color:var(--accent)}
+ol{padding-left:20px;margin:6px 0} li{margin:4px 0;font-size:14px}
+.busy{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:20;color:#fff;font-weight:600}
+.hidden{display:none!important}
+input{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;flex:1;min-width:0}
+button.mini{padding:6px 9px;font-size:12px}
+.board div.reg{background:rgba(36,85,199,.10)}
+.board div.regbad{background:rgba(196,38,38,.12)}
+.board div.now{box-shadow:inset 0 0 0 3px var(--accent)}
+.board div.pick{background:var(--hi);box-shadow:inset 0 0 0 3px var(--accent)}
+.board div .cd span.hl{color:var(--accent);font-weight:800}
+.board div .cd span.rm{color:var(--bad);text-decoration:line-through;font-weight:700}
+.methods{display:flex;flex-direction:column;gap:5px;font-size:13.5px;margin:6px 0}
+.methods label{display:flex;align-items:center;gap:7px}
+.sw{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.bar{height:5px;background:var(--bg);border-radius:3px;overflow:hidden;margin:6px 0}
+.bar div{height:100%;width:0;background:var(--accent);transition:width .2s}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:12.5px;font-variant-numeric:tabular-nums}
+th,td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-size:11.5px;color:var(--muted);font-weight:600}
+td.best{color:var(--ok);font-weight:700}
+.stats span{font-size:10px}
+.dim{opacity:.45}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🧊 Tensor Layers</h1>
+  <div class="sub">The option-layer method on the whole N×N×N cube as one tensor: layers cut in four directions (numbers, rows, columns, boxes), watched in 3D and raced against the other methods · S. S. Soltan</div>
+
+  <div class="card">
+    <h2>Puzzle and method</h2>
+    <div class="row">
+      <select id="size" aria-label="Size"><option value="4">4×4</option><option value="6">6×6</option><option value="9" selected>9×9</option><option value="12">12×12</option><option value="16">16×16</option></select>
+      <select id="level" aria-label="Puzzle">
+        <option value="easy">Easy (one answer)</option><option value="medium">Medium (one answer)</option><option value="hard" selected>Hard (one answer)</option>
+        <option value="20">Random 20% of cells (many answers)</option><option value="25">Random 25% of cells</option><option value="30">Random 30% of cells</option><option value="34">Random 34% of cells</option><option value="40">Random 40% of cells</option><option value="50">Random 50% of cells</option>
+      </select>
+    </div>
+    <div class="row">
+      <select id="engine" aria-label="Engine">
+        <option value="tensor" selected>Tensor OL — layers chosen by the menus below</option>
+        <option value="shared">Shared number patterns — built together, cut by support counts (Start = how many numbers)</option>
+        <option value="m2">Matrix OL (matmul) — top 2 number layers + all vertical layers in full</option>
+        <option value="m3">Matrix OL (matmul) — top 3 number layers + all vertical layers in full</option>
+      </select>
+    </div>
+    <div class="row" id="tensorMenus">
+      <select id="dirs" aria-label="Layer directions">
+        <option value="1111" selected>Layers in all four directions</option>
+        <option value="1000">Number layers only (as lean OL)</option>
+        <option value="0111">Row, column and box layers only</option>
+        <option value="0000">No layers (tensor lines only)</option>
+      </select>
+      <select id="startK" aria-label="Layers built at the start"><option value="0">Start: no layer</option><option value="1">Start: top 1</option><option value="2" selected>Start: top 2</option><option value="3">Start: top 3</option><option value="4">Start: top 4</option><option value="6">Start: top 6</option><option value="9">Start: top 9</option></select>
+      <select id="cap" aria-label="Option cap"><option value="50">Cap 50</option><option value="200">Cap 200</option><option value="2000" selected>Cap 2,000</option><option value="20000">Cap 20,000</option><option value="300000">Cap 300,000</option></select>
+    </div>
+    <div class="row">
+      <input id="seed" inputmode="numeric" pattern="[0-9]*" placeholder="Seed (blank = random)" aria-label="Seed">
+      <button id="newBtn" class="primary">New puzzle</button>
+    </div>
+    <p class="note" id="info"></p>
+  </div>
+
+  <div class="card">
+    <h2>Watch it solve</h2>
+    <div class="row" style="margin-top:0">
+      <select id="speed" aria-label="Speed"><option value="slow">Slow</option><option value="normal" selected>Normal</option><option value="fast">Fast</option><option value="turbo">Turbo</option></select>
+      <select id="view" aria-label="View"><option value="both" selected>Cube + board</option><option value="cube">Cube only</option><option value="board">Board only</option></select>
+    </div>
+    <canvas id="cube3" class="cube3" aria-label="3D tensor: columns left to right, rows front to back, numbers bottom to top"></canvas>
+    <div id="cubeCtl" class="row cubectl">
+      <button id="vTop" class="mini">Top · numbers</button><button id="vFront" class="mini">Front · rows</button><button id="vSide" class="mini">Side · columns</button><button id="vTurn" class="mini">3D</button>
+    </div>
+    <div id="cubeCtl2" class="row cubectl"><label>Spread <input type="range" id="cubeSpread" min="0" max="2.5" step="0.1" value="0.6"></label><label><input type="checkbox" id="cubeAuto" checked> Auto-rotate</label><label><input type="checkbox" id="cubeDots" checked> Show possible points</label></div>
+    <div class="legend" id="legCube">
+      <span><i style="background:hsl(200 70% 42%);box-shadow:inset 0 0 0 1px rgba(0,0,0,.45)"></i>given</span>
+      <span><i style="background:hsl(200 70% 62%)"></i>placed</span>
+      <span><i style="background:hsl(200 70% 55%);border-radius:50%;opacity:.6"></i>still possible</span>
+      <span><b style="color:var(--accent)">▭</b> the layer or line in use</span>
+      <span><b style="color:var(--bad)">×</b> removed in this step</span>
+    </div>
+    <div id="board" class="board"></div>
+    <div class="ctl">
+      <button id="resetBtn">⏮ Reset</button>
+      <button id="backBtn">◀ Back</button>
+      <button id="playBtn" class="primary">▶ Play</button>
+      <button id="stepBtn">Step ▶|</button>
+      <button id="endBtn">⏭ End</button>
+    </div>
+    <div class="stats">
+      <div><b id="sPts">0</b><span>points left in the tensor</span></div>
+      <div><b id="sLeft">0</b><span>empty cells</span></div>
+      <div><b id="sBuilt">0</b><span>layers built N·R·C·B</span></div>
+      <div><b id="sGuess">0</b><span>guesses · depth now</span></div>
+    </div>
+    <div class="step"><div class="no" id="stepNo"></div><div id="stepText">Press ▶ Play or Step to watch.</div></div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <div class="card">
+    <h2>Race on the same puzzles</h2>
+    <div class="row">
+      <select id="rSize" aria-label="Race size"><option value="4">4×4</option><option value="6">6×6</option><option value="9" selected>9×9</option><option value="12">12×12</option><option value="16">16×16</option></select>
+      <select id="rLevel" aria-label="Race puzzles"></select>
+      <select id="rCount" aria-label="How many"><option value="5">5 puzzles</option><option value="10" selected>10 puzzles</option><option value="20">20 puzzles</option><option value="30">30 puzzles</option></select>
+    </div>
+    <div class="methods" id="methods"></div>
+    <div class="row"><button id="raceBtn" class="primary">▶ Run the race</button><button id="raceStop" disabled>■ Stop</button></div>
+    <div class="bar"><div id="prog"></div></div>
+    <p class="note" id="rStatus">The tensor methods use the menus above (start, cap). All methods solve the same puzzles, made once before timing, after a warm-up. A seed in the box above makes the same puzzles again.</p>
+    <div class="scroll"><table id="rTbl"></table></div>
+    <p class="note" id="rNote"></p>
+  </div>
+
+  <div class="card">
+    <h2>How the tensor method works</h2>
+    <ol>
+      <li><b>The cube is one tensor.</b> A point (row, column, number) is true while that number can still go in that cell. The same tensor is kept in four views, and each view packs one line of the cube into a 32-bit word: a cell's numbers (the <b>pillar</b>), a number's columns in a row, its rows in a column, and its places in a box. Removing a point changes all four views at once.</li>
+      <li><b>Lines with one point.</b> Every rule of Sudoku says "exactly one point on each line". A line with no point is a dead end; a line with one point places it. On pillars this is a naked single; on the other three views it is a hidden single — one pass over the tensor finds both.</li>
+      <li><b>Layers in four directions.</b> A layer is a slice of the cube with its list of options. A <b>number</b> layer (horizontal slice) lists every way to place that number once in each row, column and box — the templates of the lean method. A <b>row</b>, <b>column</b> or <b>box</b> layer (vertical slices and prisms) lists every way to give its open cells different numbers.</li>
+      <li><b>Thinnest first, in any direction.</b> For each layer a size bound is worked out from the tensor (the product of the open points along its lines). The start builds the top 1–9 thinnest layers; when nothing changes, one more is built, the thinnest in any allowed direction. A layer with more options than the cap is left unbuilt, and tried again only when its bound has shrunk about 8 times.</li>
+      <li><b>Cut and AND / OR.</b> An option that uses a removed point is cut. A point used by no option is removed from the tensor (OR); a point used by every option is placed (AND). The same rule works for all four directions.</li>
+      <li><b>Guess last, on the smallest choice.</b> When nothing more can be done, guess on the built layer with the fewest options or on the tensor line with the fewest points, whichever is smaller; go back if it leads to a dead end.</li>
+    </ol>
+    <h2 style="margin-top:12px">The shared-patterns version</h2>
+    <ol>
+      <li><b>One build for several numbers.</b> A number layer's template is a pattern — one cell per row, column and box — and the pattern does not depend on the number. So the thinnest numbers (the Start menu: top 2, 3, …) are built in <b>one</b> walk over the patterns. Each pattern is kept once, with a <b>number mask</b>: the numbers every one of its cells still allows. A branch of the walk stops as soon as the mask is empty.</li>
+      <li><b>No re-cutting.</b> Each point keeps a <b>support count</b> — how many live patterns use it for its number — and each number keeps how many patterns are still live for it. When a point is removed, only the patterns through that cell are touched: they lose that number's bit and their cells' counts go down. Support 0 removes a point (OR); support equal to the number's live count places it (AND); a number with no live pattern is a dead end. The big list is never scanned again.</li>
+      <li><b>Undo instead of copy.</b> Every bit cleared is written to a trail; after a failed guess the trail is played back, so the list is shared by all guesses and never copied.</li>
+      <li>When nothing more follows, one more number is added to the shared set (a new walk), as the lean method adds a layer. A walk longer than the cap is dropped and tried again only when the numbers have shrunk about 8 times.</li>
+    </ol>
+    <h2 style="margin-top:12px">The matrix (matmul) version</h2>
+    <ol>
+      <li>The tensor is one flat 0/1 vector <b>x</b> of all N·N·N points. <b>A</b> is the fixed matrix of the 4·N² lines of the cube; the line sums <b>s = A·x</b> give the dead ends (0) and the singles (1) in one product.</li>
+      <li><b>Every row, column and box layer is built in full at the start</b> (all its options; a layer over 300,000 options waits until it shrinks). Only the <b>top 2 or 3</b> thinnest number layers are built, and no more later.</li>
+      <li>All the layers of one direction are stacked into one option × point matrix <b>M</b>. One pass is two products: <b>alive = (M·(1−x) = 0)</b> cuts every option that uses a removed point, and <b>count = aliveᵀ·M</b> counts how many live options use each point. Count 0 removes the point (OR); count equal to its layer's live options places it (AND).</li>
+      <li>Guess last on the smallest choice, as above; a guess on a layer just switches off the other rows of that layer in <b>alive</b>.</li>
+    </ol>
+    <p class="note">Row, column and box layers with AND / OR find every naked and hidden set in a unit (pairs, triples, …); number layers find the fish patterns (X-Wing, Swordfish, …). Using both directions sees both kinds of reason. Nothing here uses the language or move words; only small counters (layers built, guesses) are kept for the table.</p>
+  </div>
+</div>
+<div id="busy" class="busy hidden">Making a puzzle…</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+let N = 9, BR = 3, BC = 3;
+function boxShape(n) { let best = null; for (let r = 1; r <= n; r++) if (n % r === 0) { const c = n / r; if (r <= c) { const d = Math.abs(r - Math.sqrt(n)); if (!best || d < best[0]) best = [d, r, c]; } } return [best[1], best[2]]; }
+const boxOf = (r, c) => Math.floor(r / BR) * (N / BC) + Math.floor(c / BC);
+
+/* ---------- geometry for the lean engine (bit sets) ---------- */
+let G = null;
+function setSize(n) {
+  N = n; [BR, BC] = boxShape(n);
+  const NN = N * N, W = Math.ceil(NN / 32), R = new Int16Array(NN), C = new Int16Array(NN), B = new Int16Array(NN);
+  const peer = new Uint32Array(NN * W), boxMask = new Uint32Array(N * W), valid = new Uint32Array(W);
+  for (let i = 0; i < NN; i++) { R[i] = (i / N) | 0; C[i] = i % N; B[i] = boxOf(R[i], C[i]); valid[i >> 5] |= 1 << (i & 31); boxMask[B[i] * W + (i >> 5)] |= 1 << (i & 31); }
+  for (let i = 0; i < NN; i++) for (let j = 0; j < NN; j++) if (i !== j && (R[i] === R[j] || C[i] === C[j] || B[i] === B[j])) peer[i * W + (j >> 5)] |= 1 << (j & 31);
+  const boxCells = [...Array(N)].map(() => []); for (let i = 0; i < NN; i++) boxCells[B[i]].push(i);
+  G = { N, NN, W, R, C, B, peer, boxMask, valid, boxCells };
+}
+const popc = x => { x = x - ((x >>> 1) & 0x55555555); x = (x & 0x33333333) + ((x >>> 2) & 0x33333333); return (Math.imul((x + (x >>> 4)) & 0x0F0F0F0F, 0x01010101) >>> 24); };
+
+
+/* ---------- puzzles ---------- */
+function countSolutions(p, limit, budget) {
+  const g = p.slice(), rm = new Int32Array(N), cm = new Int32Array(N), bm = new Int32Array(N), full = (1 << (N + 1)) - 2;
+  for (let i = 0; i < N * N; i++) if (g[i]) { const b = 1 << g[i], r = (i / N) | 0, c = i % N; if ((rm[r] | cm[c] | bm[boxOf(r, c)]) & b) return 0; rm[r] |= b; cm[c] |= b; bm[boxOf(r, c)] |= b; }
+  let count = 0, nodes = 0;
+  (function rec() {
+    if (count >= limit || ++nodes > budget) return;
+    let best = -1, bc = 99, bmask = 0;
+    for (let i = 0; i < N * N; i++) if (!g[i]) { const r = (i / N) | 0, c = i % N, m = full & ~(rm[r] | cm[c] | bm[boxOf(r, c)]); const k = popc(m); if (k < bc) { bc = k; best = i; bmask = m; if (k < 2) break; } }
+    if (best < 0) { count++; return; }
+    const r = (best / N) | 0, c = best % N, b0 = boxOf(r, c);
+    for (let d = 1; d <= N; d++) if (bmask & (1 << d)) { const b = 1 << d; g[best] = d; rm[r] |= b; cm[c] |= b; bm[b0] |= b; rec(); g[best] = 0; rm[r] &= ~b; cm[c] &= ~b; bm[b0] &= ~b; if (count >= limit) return; }
+  })();
+  return nodes > budget ? -1 : count;
+}
+// a random full grid; random backtracking can wander into a huge dead end (seen: 28 s on 16×16),
+// so give up after a step limit and start again with a fresh random order
+function randomSolution() {
+  const cap = 20 * N * N;
+  for (;;) {
+    const g = new Array(N * N).fill(0), rm = new Int32Array(N), cm = new Int32Array(N), bm = new Int32Array(N), full = (1 << (N + 1)) - 2;
+    let steps = 0;
+    const rec = () => {
+      if (++steps > cap) return null;                      // too long: restart
+      let best = -1, bc = 99, bmask = 0;
+      for (let i = 0; i < N * N; i++) if (!g[i]) { const r = (i / N) | 0, c = i % N, m = full & ~(rm[r] | cm[c] | bm[boxOf(r, c)]); const k = popc(m); if (k < bc) { bc = k; best = i; bmask = m; if (k < 2) break; } }
+      if (best < 0) return true; if (!bc) return false;
+      const r = (best / N) | 0, c = best % N, b0 = boxOf(r, c), ds = []; for (let d = 1; d <= N; d++) if (bmask & (1 << d)) ds.push(d);
+      for (const d of shuffle(ds)) { const b = 1 << d; g[best] = d; rm[r] |= b; cm[c] |= b; bm[b0] |= b; const x = rec(); if (x) return true; if (x === null) return null; g[best] = 0; rm[r] &= ~b; cm[c] &= ~b; bm[b0] &= ~b; }
+      return false;
+    };
+    if (rec()) return g;
+  }
+}
+function carve(sol, level) {
+  const ratio = { easy: 0.5, medium: 0.4, hard: 0 }[level], target = Math.round(N * N * ratio), p = sol.slice(), budget = N <= 9 ? 20000 : 5000;
+  let clues = N * N; const pairs = []; for (let i = 0; i <= (N * N - 1) / 2; i++) pairs.push([i, N * N - 1 - i]);
+  for (const [a, b] of shuffle(pairs)) { if (clues <= target) break; const va = p[a], vb = p[b]; p[a] = 0; p[b] = 0; if (countSolutions(p, 2, budget) === 1) clues -= a === b ? 1 : 2; else { p[a] = va; p[b] = vb; } }
+  return p;
+}
+
+
+const SYMBOLS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const sym = v => v > 0 ? SYMBOLS[v] : "";
+const hue = d => Math.round((d - 1) * 360 / N);
+const rc = i => `r${((i / N) | 0) + 1}c${i % N + 1}`;
+const bitsList = m => { const o = []; for (let v = 1; v <= N; v++) if ((m >> v) & 1) o.push(v); return o; };
+
+
+/* ---------- engines copied as is from the Speed page ---------- */
+/* ---------- the lean method: build, cut, AND (+ pillar), guess last ---------- */
+// Pure solving: no step words, no record of which rule filled a cell, no layer order, no counts of options, layers or guesses.
+function leanLayers(p, opt = {}) {
+  const cap = opt.cap || 300000, startK = opt.start || 2, rule = opt.order || "cells";
+  const { N, NN, W, R, C, B, peer, boxMask, valid, boxCells } = G;
+  const blank = () => ({ g: new Int8Array(NN), allow: new Uint32Array((N + 1) * W), placed: new Uint32Array((N + 1) * W), T: new Array(N + 1).fill(null), cnt: new Int32Array(N + 1), done: new Uint8Array(N + 1), big: new Uint8Array(N + 1), left: NN });
+  const clone = S => ({ g: S.g.slice(), allow: S.allow.slice(), placed: S.placed.slice(), T: S.T.slice(), cnt: S.cnt.slice(), done: S.done.slice(), big: S.big.slice(), left: S.left });
+  function place(S, i, d) {
+    if (S.g[i]) return S.g[i] === d;
+    const bw = i >> 5, bit = 1 << (i & 31);
+    if (!(S.allow[d * W + bw] & bit)) return false;
+    S.g[i] = d; S.left--;
+    S.placed[d * W + bw] |= bit;
+    for (let e = 1; e <= N; e++) if (e !== d) S.allow[e * W + bw] &= ~bit;
+    const o = d * W, po = i * W; for (let w = 0; w < W; w++) S.allow[o + w] &= ~peer[po + w];
+    return true;
+  }
+  // thinnest layer = smallest product of open cells per box (log sum)
+  function estimate(S, d) {
+    let s = 0; for (let b = 0; b < N; b++) { let k = 0; for (let w = 0; w < W; w++) k += popc(S.allow[d * W + w] & boxMask[b * W + w]); if (!k) return -1; s += Math.log(k); } return s;
+  }
+  // the next k layers to build: most repeated first (ties: fewest open cells), fewest open cells first, or the numbers of the tightest cell
+  function nextLayers(S, k) {
+    const c = [];
+    for (let d = 1; d <= N; d++) {
+      if (S.done[d] || S.T[d] || S.big[d]) continue;
+      let pl = 0, open = 0; for (let w = 0; w < W; w++) { pl += popc(S.placed[d * W + w]); open += popc(S.allow[d * W + w] & ~S.placed[d * W + w]); }
+      if (pl === N) { S.done[d] = 1; continue; }
+      const e = estimate(S, d); if (e < 0) return null;
+      c.push({ d, pl, open, e });
+    }
+    c.sort(rule === "repeat" ? (a, b) => b.pl - a.pl || a.open - b.open || a.e - b.e : (a, b) => a.open - b.open || a.e - b.e);
+    if (rule !== "tight") return c.slice(0, k).map(x => x.d);
+    // "tight": like MRV, look at cells — take the empty cell with the fewest possible numbers and build those numbers' layers
+    // (fewest open cells first among them); then the next tightest cell, until k layers are chosen
+    const ok = new Uint8Array(N + 1); for (const x of c) ok[x.d] = 1;
+    const cand = []; for (let i = 0; i < NN; i++) { const bw = i >> 5, bit = 1 << (i & 31); let f = 0; for (let d = 1; d <= N; d++) if (S.placed[d * W + bw] & bit) { f = 1; break; } if (f) continue;
+      const ds = []; for (let d = 1; d <= N; d++) if (S.allow[d * W + bw] & bit) ds.push(d); cand.push([ds.length, i, ds]); }
+    cand.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    const rank = new Array(N + 1); c.forEach((x, r) => rank[x.d] = r);
+    const out = [];
+    for (const [, , ds] of cand) { for (const d of ds.filter(d => ok[d]).sort((a, b) => rank[a] - rank[b])) if (!out.includes(d)) { out.push(d); if (out.length === k) return out; } }
+    for (const x of c) if (!out.includes(x.d)) { out.push(x.d); if (out.length === k) break; }
+    return out;
+  }
+  function build(S, d) {
+    const opts = []; for (let b = 0; b < N; b++) { const o = boxCells[b].filter(i => (S.allow[d * W + (i >> 5)] >>> (i & 31)) & 1); if (!o.length) return false; opts.push(o); }
+    opts.sort((a, b) => a.length - b.length);
+    let out = new Uint32Array(Math.max(64, W * 256)), n = 0, over = false; const bits = new Uint32Array(W);
+    (function rec(k, uR, uC) {
+      if (over) return;
+      if (k === N) { if (n >= cap) { over = true; return; } if ((n + 1) * W > out.length) { const o2 = new Uint32Array(out.length * 2); o2.set(out); out = o2; } out.set(bits, n * W); n++; return; }
+      for (const i of opts[k]) { const rb = 1 << R[i], cb = 1 << C[i]; if ((uR & rb) || (uC & cb)) continue; bits[i >> 5] |= 1 << (i & 31); rec(k + 1, uR | rb, uC | cb); bits[i >> 5] &= ~(1 << (i & 31)); }
+    })(0, 0, 0);
+    if (over) { S.big[d] = 1; return true; }        // too many options: leave this layer unbuilt
+    S.T[d] = out.subarray(0, n * W); S.cnt[d] = n;
+    return n > 0;
+  }
+  function propagate(S) {
+    const and = new Uint32Array(W), or = new Uint32Array(W);
+    for (;;) {
+      let changed = false;
+      // pillar: every empty cell must be reachable; a cell only one number reaches gets it
+      for (let w = 0; w < W; w++) {
+        let once = 0, twice = 0, full = 0;
+        for (let d = 1; d <= N; d++) { const a = S.allow[d * W + w]; twice |= once & a; once |= a; full |= S.placed[d * W + w]; }
+        const empty = valid[w] & ~full;
+        if (empty & ~once) return false;
+        let single = empty & once & ~twice;
+        while (single) { const b = single & -single, i = w * 32 + (31 - Math.clz32(b)); single ^= b;
+          if (S.g[i]) continue;
+          // an earlier single in this pass may have taken the last number away: that is a dead end, not a search
+          let d = 1; while (d <= N && !(S.allow[d * W + w] & b)) d++;
+          if (d > N || !place(S, i, d)) return false; changed = true; }
+      }
+      // cut + AND for every built layer
+      for (let d = 1; d <= N; d++) {
+        if (S.done[d] || !S.T[d]) continue;
+        const T = S.T[d], n0 = S.cnt[d], o = d * W;
+        let k = 0, first = -1;
+        for (let t = 0; t < n0; t++) { let ok = true; for (let w = 0; w < W; w++) if (T[t * W + w] & ~S.allow[o + w]) { ok = false; break; } if (!ok) { first = t; break; } }
+        let T2 = T, n = n0;
+        if (first >= 0) {                                 // copy-on-write: branches may share lists
+          T2 = new Uint32Array(n0 * W); k = 0;
+          for (let t = 0; t < n0; t++) { let ok = true; if (t >= first) for (let w = 0; w < W; w++) if (T[t * W + w] & ~S.allow[o + w]) { ok = false; break; } if (ok) { T2.set(T.subarray(t * W, t * W + W), k * W); k++; } }
+          n = k; T2 = T2.subarray(0, n * W); S.T[d] = T2; S.cnt[d] = n; changed = true;
+          if (!n) return false;
+        }
+        and.fill(0xFFFFFFFF); or.fill(0);
+        for (let t = 0; t < n; t++) for (let w = 0; w < W; w++) { const x = T2[t * W + w]; and[w] &= x; or[w] |= x; }
+        for (let w = 0; w < W; w++) {
+          const na = (S.allow[o + w] & or[w]) >>> 0; if (na !== S.allow[o + w]) { S.allow[o + w] = na; changed = true; }
+          let cert = and[w] & ~S.placed[o + w];
+          while (cert) { const b = cert & -cert, i = w * 32 + (31 - Math.clz32(b)); cert ^= b; if (!place(S, i, d)) return false; changed = true; }
+        }
+        if (n === 1) { S.done[d] = 1; S.T[d] = null; }
+      }
+      if (!S.left) return true;
+      if (changed) continue;
+      // stuck: add the next layer (same rule as the start)
+      const nx = nextLayers(S, 1); if (nx === null) return false;
+      if (!nx.length) return true;
+      if (!build(S, nx[0])) return false;
+    }
+  }
+  function solve(S) {
+    if (!propagate(S)) return null;
+    if (!S.left) return S;
+    let d = 0; for (let e = 1; e <= N; e++) if (S.T[e] && !S.done[e] && (!d || S.cnt[e] < S.cnt[d])) d = e;
+    if (d) {
+      const T = S.T[d];
+      for (let t = 0; t < S.cnt[d]; t++) { const U = clone(S); U.T[d] = T.subarray(t * W, t * W + W); U.cnt[d] = 1; const r = solve(U); if (r) return r; }
+      return null;
+    }
+    // every open layer too big to list: guess on the cell with the fewest numbers
+    let bi = -1, bk = 99; for (let i = 0; i < NN; i++) if (!S.g[i]) { let k = 0; for (let e = 1; e <= N; e++) if ((S.allow[e * W + (i >> 5)] >>> (i & 31)) & 1) k++; if (k < bk) { bk = k; bi = i; } }
+    for (let e = 1; e <= N; e++) if ((S.allow[e * W + (bi >> 5)] >>> (bi & 31)) & 1) { const U = clone(S); if (!place(U, bi, e)) continue; const r = solve(U); if (r) return r; }
+    return null;
+  }
+  const S0 = blank();
+  for (let d = 1; d <= N; d++) for (let w = 0; w < W; w++) S0.allow[d * W + w] = valid[w];
+  for (let i = 0; i < NN; i++) if (p[i] && !place(S0, i, p[i])) return { ok: false, grid: null };
+  const first = nextLayers(S0, startK); if (first === null) return { ok: false, grid: null };
+  for (const d of first) if (!build(S0, d)) return { ok: false, grid: null };
+  const r = solve(S0);
+  return { ok: !!r, grid: r ? Array.from(r.g) : null };
+}
+
+/* ---------- classic algorithms ---------- */
+function mrvSolve(p, nodeCap = 5e6) {
+  const NC = N * N, g = Int8Array.from(p), rm = new Int32Array(N), cm = new Int32Array(N), bm = new Int32Array(N), full = (1 << (N + 1)) - 2;
+  const box = i => boxOf((i / N) | 0, i % N);
+  for (let i = 0; i < NC; i++) if (g[i]) { const b = 1 << g[i]; rm[(i / N) | 0] |= b; cm[i % N] |= b; bm[box(i)] |= b; }
+  let nodes = 0, aborted = false;
+  const rec = () => {
+    if (++nodes > nodeCap) { aborted = true; return false; }
+    let best = -1, bc = 99, mask = 0;
+    for (let i = 0; i < NC; i++) if (!g[i]) { const m = full & ~(rm[(i / N) | 0] | cm[i % N] | bm[box(i)]), k = popc(m); if (k < bc) { bc = k; best = i; mask = m; if (k < 2) break; } }
+    if (best < 0) return true; if (!bc) return false;
+    const r = (best / N) | 0, c = best % N, bx = box(best);
+    for (let v = 1; v <= N; v++) if (mask & (1 << v)) { const b = 1 << v; g[best] = v; rm[r] |= b; cm[c] |= b; bm[bx] |= b; if (rec()) return true; g[best] = 0; rm[r] &= ~b; cm[c] &= ~b; bm[bx] &= ~b; if (aborted) return false; }
+    return false;
+  };
+  const ok = rec();
+  return { ok: ok && !aborted, grid: ok ? Array.from(g) : null, nodes, guesses: nodes - 1 };
+}
+function dlxSolve(p, nodeCap = 5e6) {
+  const NC = N * N, ncols = 4 * NC;
+  const L = [], Rt = [], U = [], D = [], Cl = [], RowId = [], S = new Int32Array(ncols + 1);
+  for (let j = 0; j <= ncols; j++) { L.push(j - 1); Rt.push(j + 1); U.push(j); D.push(j); Cl.push(j); RowId.push(-1); }
+  L[0] = ncols; Rt[ncols] = 0;
+  const rows = [];
+  const addRow = (cols, info) => { let first = -1; for (const col of cols) { const x = L.length; Cl.push(col + 1); RowId.push(rows.length); U.push(U[col + 1]); D.push(col + 1); D[U[col + 1]] = x; U[col + 1] = x; S[col + 1]++; if (first < 0) { first = x; L.push(x); Rt.push(x); } else { L.push(L[first]); Rt.push(first); Rt[L[first]] = x; L[first] = x; } } rows.push(info); };
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) { const i = r * N + c, given = p[i]; for (let v = 1; v <= N; v++) { if (given && given !== v) continue; addRow([i, NC + r * N + v - 1, 2 * NC + c * N + v - 1, 3 * NC + boxOf(r, c) * N + v - 1], [i, v]); } }
+  const cover = c => { Rt[L[c]] = Rt[c]; L[Rt[c]] = L[c]; for (let i = D[c]; i !== c; i = D[i]) for (let j = Rt[i]; j !== i; j = Rt[j]) { D[U[j]] = D[j]; U[D[j]] = U[j]; S[Cl[j]]--; } };
+  const uncover = c => { for (let i = U[c]; i !== c; i = U[i]) for (let j = L[i]; j !== i; j = L[j]) { S[Cl[j]]++; D[U[j]] = j; U[D[j]] = j; } Rt[L[c]] = c; L[Rt[c]] = c; };
+  const sol = []; let nodes = 0, aborted = false, found = null;
+  const search = () => {
+    if (++nodes > nodeCap) { aborted = true; return true; }
+    if (Rt[0] === 0) { found = sol.slice(); return true; }
+    let best = Rt[0]; for (let j = Rt[0]; j !== 0; j = Rt[j]) if (S[j] < S[best]) best = j;
+    const c = best; if (!S[c]) return false;
+    cover(c);
+    for (let r = D[c]; r !== c; r = D[r]) { sol.push(RowId[r]); for (let j = Rt[r]; j !== r; j = Rt[j]) cover(Cl[j]); if (search()) return true; for (let j = L[r]; j !== r; j = L[j]) uncover(Cl[j]); sol.pop(); }
+    uncover(c); return false;
+  };
+  search();
+  const grid = found ? (() => { const g = new Array(NC).fill(0); for (const k of found) { const [i, v] = rows[k]; g[i] = v; } return g; })() : null;
+  return { ok: !!found && !aborted, grid, nodes, guesses: nodes - 1 };
+}
+
+/* ---------- the tensor option-layer method ---------- */
+// The whole puzzle is one N×N×N true/false tensor X[row][column][number] (true = still possible).
+// It is kept in four views at once, each a line of the cube packed into one 32-bit word:
+//   cell view   cv[i]          — the numbers still possible in cell i        (a pillar)
+//   row view    rv[r·N + d]    — the columns where number d can go in row r
+//   column view kv[c·N + d]    — the rows where number d can go in column c
+//   box view    bv[b·N + d]    — the places in box b where number d can go
+// Every rule of Sudoku says "exactly one true on each of these lines".
+// Layers can be cut from the cube in four directions: a number (all its places), a row, a column or a box
+// (all orders of its missing numbers). The thinnest layer in any allowed direction is built next.
+let TG = null, TR = null;                            // TR: the step recorder (null when timing)
+const DIRS = ["number", "row", "column", "box"];
+function tensorSetup() {
+  const NN = N * N, R = new Int16Array(NN), C = new Int16Array(NN), B = new Int16Array(NN), P = new Int16Array(NN);
+  const unit = [[], [], [], []];                     // unit[1][r], unit[2][c], unit[3][b]: the cells of that row / column / box
+  for (let k = 1; k <= 3; k++) for (let u = 0; u < N; u++) unit[k].push([]);
+  for (let i = 0; i < NN; i++) { R[i] = (i / N) | 0; C[i] = i % N; B[i] = boxOf(R[i], C[i]); P[i] = unit[3][B[i]].length; unit[1][R[i]].push(i); unit[2][C[i]].push(i); unit[3][B[i]].push(i); }
+  const peers = []; for (let i = 0; i < NN; i++) { const s = []; for (let j = 0; j < NN; j++) if (j !== i && (R[j] === R[i] || C[j] === C[i] || B[j] === B[i])) s.push(j); peers.push(Int16Array.from(s)); }
+  const LG = new Float64Array(33); LG[0] = -1; for (let k = 1; k <= 32; k++) LG[k] = Math.log(k);
+  TG = { N, NN, R, C, B, P, unit, peers, LG, cnt: new Int32Array(NN * N), UC: [null, unit[1].map(a => Int16Array.from(a)), unit[2].map(a => Int16Array.from(a)), unit[3].map(a => Int16Array.from(a))] };
+}
+const ctz = x => 31 - Math.clz32(x & -x);
+
+function tensorOL(p, opt = {}) {
+  if (!TG || TG.N !== N) tensorSetup();
+  const { NN, R, C, B, P, UC, peers, LG, cnt } = TG;
+  const cap = opt.cap || 2000, startK = opt.start == null ? 2 : opt.start, dirs = opt.dirs || [1, 1, 1, 1], RETRY = Math.log(8);
+  const K = 4 * N;                                   // layer key = direction·N + index
+  let guesses = 0; const built = [0, 0, 0, 0];
+  const blank = () => ({ g: new Int8Array(NN), cv: new Uint32Array(NN), rv: new Uint32Array(N * N), kv: new Uint32Array(N * N), bv: new Uint32Array(N * N),
+    pn: new Int16Array(N), pu: new Int16Array(3 * N), left: NN, ver: 0, ch: 0, L: new Array(K).fill(null), lv: new Int32Array(K).fill(-1), st: new Uint8Array(K), bigE: new Float64Array(K) });
+  const clone = S => ({ g: S.g.slice(), cv: S.cv.slice(), rv: S.rv.slice(), kv: S.kv.slice(), bv: S.bv.slice(), pn: S.pn.slice(), pu: S.pu.slice(), left: S.left, ver: S.ver, ch: 0,
+    L: S.L.slice(), lv: S.lv.slice(), st: S.st.slice(), bigE: S.bigE.slice() });
+  // take one point (cell i, number index z) out of the tensor: all four views change together
+  function remove(S, i, z) {
+    const b = 1 << z; if (!(S.cv[i] & b)) return;
+    S.cv[i] &= ~b; S.rv[R[i] * N + z] &= ~(1 << C[i]); S.kv[C[i] * N + z] &= ~(1 << R[i]); S.bv[B[i] * N + z] &= ~(1 << P[i]);
+    S.ver++; S.ch = 1; if (TR) TR.rm.push(i * N + z);
+  }
+  function place(S, i, z) {
+    if (S.g[i]) return S.g[i] === z + 1;
+    if (!((S.cv[i] >>> z) & 1)) return false;
+    S.g[i] = z + 1; S.left--; S.pn[z]++; S.pu[R[i]]--; S.pu[N + C[i]]--; S.pu[2 * N + B[i]]--; S.ch = 1; if (TR) TR.pl.push(i * N + z);
+    for (let e = 0; e < N; e++) if (e !== z) remove(S, i, e);
+    const pe = peers[i]; for (let k = 0; k < pe.length; k++) remove(S, pe[k], z);
+    return true;
+  }
+  // lines with one point left are placed, in all four directions (a cell single is a pillar; the others are hidden singles)
+  function singles(S) {
+    for (let i = 0; i < NN; i++) if (!S.g[i]) { const x = S.cv[i]; if (!x) { if (TR) TR.why = [0, i]; return false; } if (!(x & (x - 1)) && !place(S, i, ctz(x))) return false; }
+    const V = [null, S.rv, S.kv, S.bv];
+    for (let k = 1; k <= 3; k++) { const v = V[k], U = UC[k];
+      for (let u = 0; u < N; u++) for (let z = 0; z < N; z++) { const x = v[u * N + z]; if (!x) { if (TR) TR.why = [k, u, z]; return false; } if (!(x & (x - 1))) { const i = U[u][ctz(x)]; if (!S.g[i] && !place(S, i, z)) return false; } } }
+    return true;
+  }
+  const done = (S, key) => { const k = (key / N) | 0, u = key % N; return k === 0 ? S.pn[u] === N : S.pu[(k - 1) * N + u] === 0; };
+  // the size bound of a layer: the product of the open places along its lines (log), the smaller of two ways to count
+  function estimate(S, key) {
+    const k = (key / N) | 0, u = key % N; let a = 0, b = 0, c = 0;
+    if (k === 0) { for (let x = 0; x < N; x++) { const p1 = popc(S.rv[x * N + u]), p2 = popc(S.kv[x * N + u]), p3 = popc(S.bv[x * N + u]); if (!p1 || !p2 || !p3) return -1; a += LG[p1]; b += LG[p2]; c += LG[p3]; } return Math.min(a, b, c); }
+    const cells = UC[k][u], v = k === 1 ? S.rv : k === 2 ? S.kv : S.bv;
+    for (let x = 0; x < N; x++) { const p1 = popc(S.cv[cells[x]]), p2 = popc(v[u * N + x]); if (!p1 || !p2) return -1; a += LG[p1]; b += LG[p2]; }
+    return Math.min(a, b);
+  }
+  // the thinnest layer not yet built, in any allowed direction
+  function nextLayer(S) {
+    let best = -1, be = Infinity;
+    for (let key = 0; key < K; key++) {
+      if (!dirs[(key / N) | 0] || S.st[key] === 1 || S.st[key] === 2) continue;
+      if (done(S, key)) { S.st[key] = 2; continue; }
+      const e = estimate(S, key); if (e < 0) return -2;
+      if (S.st[key] === 3 && e > S.bigE[key] - RETRY) continue;      // was too big: wait until it has shrunk a lot
+      if (e < be) { be = e; best = key; }
+    }
+    S.lastE = be; return best;
+  }
+  // list every option of a layer: a number layer = one place per box (rows and columns all different);
+  // a row / column / box layer = one number per cell (all different)
+  function build(S, key) {
+    const k = (key / N) | 0, u = key % N;
+    let out = new Int32Array(Math.max(256, N * 64)), n = 0, over = false; const cur = new Int32Array(N), scope = [];
+    const push = () => { if (n >= cap) { over = true; return; } if ((n + 1) * N > out.length) { const o2 = new Int32Array(out.length * 2); o2.set(out); out = o2; } out.set(cur, n * N); n++; };
+    if (k === 0) {
+      const slots = []; for (let b = 0; b < N; b++) { const x = S.bv[b * N + u], cells = []; for (let m = x; m; m &= m - 1) cells.push(UC[3][b][ctz(m)]); slots.push(cells); for (const i of cells) scope.push(i * N + u); }
+      slots.sort((a, b) => a.length - b.length);
+      (function rec(s, uR, uC) {
+        if (over) return; if (s === N) { push(); return; }
+        for (const i of slots[s]) { const rb = 1 << R[i], cb = 1 << C[i]; if ((uR & rb) || (uC & cb)) continue; cur[s] = i * N + u; rec(s + 1, uR | rb, uC | cb); }
+      })(0, 0, 0);
+    } else {
+      const cells = Array.from(UC[k][u]).sort((a, b) => popc(S.cv[a]) - popc(S.cv[b]));
+      for (const i of cells) for (let m = S.cv[i]; m; m &= m - 1) scope.push(i * N + ctz(m));
+      (function rec(s, used) {
+        if (over) return; if (s === N) { push(); return; }
+        const i = cells[s]; for (let m = S.cv[i] & ~used; m; m &= m - 1) { const z = ctz(m); cur[s] = i * N + z; rec(s + 1, used | (1 << z)); }
+      })(0, 0);
+    }
+    if (TR) TR.ev(S, { kind: "build", key, n: over ? cap : n, big: over });
+    if (over) { S.st[key] = 3; S.bigE[key] = S.lastE; return true; }        // too many options: leave it unbuilt for now
+    built[k]++; S.st[key] = 1; S.L[key] = { n, opts: out.subarray(0, n * N), scope: Int32Array.from(scope) }; S.lv[key] = -1;
+    return n > 0;
+  }
+  // cut a built layer (drop options that use a point no longer possible), then AND / OR over its options:
+  // a point no option uses is removed from the tensor, a point every option uses is placed
+  function useLayer(S, key) {
+    const L = S.L[key], cv = S.cv; let { n, opts, scope } = L;
+    let first = -1;
+    for (let t = 0; t < n && first < 0; t++) for (let j = 0; j < N; j++) { const q = opts[t * N + j], i = (q / N) | 0; if (!((cv[i] >>> (q - i * N)) & 1)) { first = t; break; } }
+    const n0 = n;
+    if (first >= 0) {
+      const o2 = new Int32Array(n * N); let m = 0;
+      for (let t = 0; t < n; t++) { let ok = true; if (t >= first) for (let j = 0; j < N; j++) { const q = opts[t * N + j], i = (q / N) | 0; if (!((cv[i] >>> (q - i * N)) & 1)) { ok = false; break; } } if (ok) { o2.set(opts.subarray(t * N, t * N + N), m * N); m++; } }
+      n = m; opts = o2.subarray(0, n * N); S.ch = 1;
+      if (!n) { if (TR) TR.why = [4, key]; return false; }
+    }
+    for (let t = 0, e = n * N; t < e; t++) cnt[opts[t]]++;
+    const keep = [];
+    if (TR) TR.cut = [n0, n];
+    for (let s = 0; s < scope.length; s++) {
+      const q = scope[s], i = (q / N) | 0, z = q - i * N, c = cnt[q]; cnt[q] = 0;
+      if (!((cv[i] >>> z) & 1)) continue;
+      if (!c) { remove(S, i, z); continue; }
+      keep.push(q);
+      if (c === n && !S.g[i] && !place(S, i, z)) { for (let s2 = s + 1; s2 < scope.length; s2++) cnt[scope[s2]] = 0; return false; }
+    }
+    if (n === 1) { S.st[key] = 2; S.L[key] = null; return true; }
+    S.L[key] = keep.length === scope.length && n === n0 ? L : { n, opts, scope: Int32Array.from(keep) };
+    return true;
+  }
+  function propagate(S) {
+    for (;;) {
+      S.ch = 0;
+      if (!singles(S)) return false;
+      if (TR) TR.flush(S, { kind: "singles" });
+      for (let key = 0; key < K; key++) {
+        if (S.st[key] !== 1 || S.lv[key] === S.ver) continue;
+        if (!useLayer(S, key)) return false;
+        if (S.st[key] === 1) S.lv[key] = S.ver;
+        if (TR) TR.flush(S, { kind: "cut", key });
+      }
+      if (!S.left) return true;
+      if (S.ch) continue;
+      const nx = nextLayer(S);
+      if (nx === -2) return false;
+      if (nx < 0) return true;                       // stuck, nothing more to build: guess
+      if (!build(S, nx)) return false;
+    }
+  }
+  function solve(S) {
+    if (!propagate(S)) { if (TR) TR.ev(S, { kind: "dead", why: TR.why }); return null; }
+    if (!S.left) return S;
+    // guess last, on the smallest choice: a built layer's options, or a line of the tensor with the fewest points
+    let lk = -1; for (let key = 0; key < K; key++) if (S.st[key] === 1 && (lk < 0 || S.L[key].n < S.L[lk].n)) lk = key;
+    let fk = -1, fu = -1, fz = -1, fb = 99; const V = [null, S.rv, S.kv, S.bv];
+    for (let i = 0; i < NN; i++) if (!S.g[i]) { const c = popc(S.cv[i]); if (c < fb) { fb = c; fk = 0; fu = i; } }
+    for (let k = 1; k <= 3; k++) for (let u = 0; u < N; u++) for (let z = 0; z < N; z++) { const x = V[k][u * N + z]; if (x & (x - 1)) { const c = popc(x); if (c < fb) { fb = c; fk = k; fu = u; fz = z; } } }
+    if (lk >= 0 && S.L[lk].n <= fb) {
+      const L = S.L[lk];
+      for (let t = 0; t < L.n; t++) {
+        guesses++; const U = clone(S); U.L[lk] = { n: 1, opts: L.opts.subarray(t * N, t * N + N), scope: L.scope }; U.lv[lk] = -1;
+        if (TR) TR.ev(U, { kind: "guess", key: lk, t, of: L.n, pts: Array.from(L.opts.subarray(t * N, t * N + N)), depth: ++TR.depth });
+        const r = solve(U); if (r) return r;
+        if (TR) TR.ev(S, { kind: "back", key: lk, t, of: L.n, depth: --TR.depth });
+      }
+      return null;
+    }
+    const pts = [];
+    if (fk === 0) for (let m = S.cv[fu]; m; m &= m - 1) pts.push(fu * N + ctz(m));
+    else for (let m = V[fk][fu * N + fz]; m; m &= m - 1) pts.push(UC[fk][fu][ctz(m)] * N + fz);
+    for (let t = 0; t < pts.length; t++) {
+      const i = (pts[t] / N) | 0, z = pts[t] % N;
+      guesses++; const U = clone(S);
+      if (TR) TR.ev(U, { kind: "guess", line: [fk, fu, fz], t, of: pts.length, pts: [pts[t]], depth: ++TR.depth });
+      if (!place(U, i, z)) { if (TR) TR.depth--; continue; }
+      const r = solve(U); if (r) return r;
+      if (TR) TR.ev(S, { kind: "back", line: [fk, fu, fz], t, of: pts.length, depth: --TR.depth });
+    }
+    return null;
+  }
+  const S0 = blank();
+  const all = N === 32 ? 0xFFFFFFFF : (1 << N) - 1;
+  S0.cv.fill(all); S0.rv.fill(all); S0.kv.fill(all); S0.bv.fill(all); S0.pn.fill(0); S0.pu.fill(N);
+  for (let i = 0; i < NN; i++) if (p[i] && !place(S0, i, p[i] - 1)) return { ok: false, grid: null, guesses, built };
+  if (TR) TR.ev(S0, { kind: "start" });
+  if (!singles(S0)) return { ok: false, grid: null, guesses, built };
+  if (TR) TR.flush(S0, { kind: "singles" });
+  for (let s = 0; s < startK; s++) { const nx = nextLayer(S0); if (nx === -2) return { ok: false, grid: null, guesses, built }; if (nx < 0) break; if (!build(S0, nx)) return { ok: false, grid: null, guesses, built }; }
+  const r = solve(S0);
+  return { ok: !!r, grid: r ? Array.from(r.g) : null, guesses, built };
+}
+
+// the step recorder for the replay: every event keeps the tensor (cell view) and the grid, and the points removed / placed since the last event
+function makeRecorder(maxEv) {
+  const T = { rm: [], pl: [], list: [], full: false, why: null, cut: null, depth: 0,
+    ev(S, e) {
+      if (T.list.length >= maxEv) { T.full = true; T.rm.length = 0; T.pl.length = 0; return; }
+      T.list.push({ ...e, g: S.g.slice(), cv: S.cv.slice(), left: S.left, rm: T.rm.splice(0), pl: T.pl.splice(0), cut: e.kind === "cut" ? T.cut : null, depth: e.depth != null ? e.depth : T.depth });
+    },
+    flush(S, e) { if (T.rm.length || T.pl.length || (e.kind === "cut" && T.cut && T.cut[0] !== T.cut[1])) T.ev(S, e); T.cut = null; } };
+  return T;
+}
+function tensorTrace(p, opt, maxEv = 20000) {
+  TR = makeRecorder(maxEv);
+  let r; try { r = tensorOL(p, opt); } finally { var rec = TR; TR = null; }
+  rec.ev({ g: r.grid ? Int8Array.from(r.grid) : rec.list[rec.list.length - 1].g, cv: rec.list[rec.list.length - 1].cv, left: r.grid ? 0 : -1 }, { kind: r.ok ? "done" : "fail" });
+  return { ev: rec.list, ok: r.ok, full: rec.full, guesses: r.guesses, built: r.built };
+}
+
+/* ---------- the matrix (matmul) option-layer method ---------- */
+// The tensor is one flat 0/1 vector x over all N·N·N points (point p = cell·N + number).
+// A = the fixed line matrix: 4·N² lines (cells, and each number in each row, column, box), N points each.
+//   line sums s = A·x : a line with sum 0 is a dead end, a line with sum 1 places its point.
+// For each direction, all its layers are stacked into one option × point matrix M (each option = N points):
+//   alive  = (M · (1 − x) == 0)       an option that uses a removed point is cut
+//   count  = aliveᵀ · M               how many live options use each point
+//   count 0 → the point is removed (OR); count = live options of its layer → the point is placed (AND).
+// Row, column and box (vertical) layers are all built in full at the start; only the top 2 or 3 number layers are built.
+function matrixSetup() {
+  if (!TG || TG.N !== N) tensorSetup();
+  if (TG.LP) return;
+  const { NN, R, C, B, UC } = TG, NL = 4 * NN;
+  const LP = new Int32Array(NL * N), PL = new Int32Array(NN * N * 4);
+  for (let i = 0; i < NN; i++) for (let z = 0; z < N; z++) LP[i * N + z] = i * N + z;
+  for (let k = 1; k <= 3; k++) for (let u = 0; u < N; u++) for (let z = 0; z < N; z++) for (let j = 0; j < N; j++) LP[(k * NN + u * N + z) * N + j] = UC[k][u][j] * N + z;
+  for (let i = 0; i < NN; i++) for (let z = 0; z < N; z++) { const p = i * N + z; PL[p * 4] = i; PL[p * 4 + 1] = NN + R[i] * N + z; PL[p * 4 + 2] = 2 * NN + C[i] * N + z; PL[p * 4 + 3] = 3 * NN + B[i] * N + z; }
+  // the layer that owns a point, in each direction: its number, its row, its column, its box
+  const OW = [new Int16Array(NN * N), new Int16Array(NN * N), new Int16Array(NN * N), new Int16Array(NN * N)];
+  for (let i = 0; i < NN; i++) for (let z = 0; z < N; z++) { const p = i * N + z; OW[0][p] = z; OW[1][p] = R[i]; OW[2][p] = C[i]; OW[3][p] = B[i]; }
+  Object.assign(TG, { LP, PL, OW, NL, ls: new Int32Array(NL), mcnt: new Int32Array(NN * N) });
+}
+
+function matrixOL(p, opt = {}) {
+  matrixSetup();
+  const { NN, R, C, UC, LG, LP, PL, OW, NL, mcnt } = TG, NP = NN * N;
+  const top = opt.top == null ? 2 : opt.top, capN = opt.cap || 300000, capV = opt.capV || 300000, RETRY = Math.log(8);
+  let guesses = 0; const built = [0, 0, 0, 0];
+  const EMPTY = { pts: new Int32Array(0), lay: new Int16Array(0), n: 0 };
+  const blank = () => ({ x: new Uint8Array(NP).fill(1), g: new Int8Array(NN), left: NN, ver: 0, ls: new Int32Array(NL),
+    M: [EMPTY, EMPTY, EMPTY, EMPTY], al: [new Uint8Array(0), new Uint8Array(0), new Uint8Array(0), new Uint8Array(0)], m: [new Int32Array(N), new Int32Array(N), new Int32Array(N), new Int32Array(N)],
+    st: new Uint8Array(4 * N), bigE: new Float64Array(4 * N), dv: new Int32Array(4).fill(-1) });
+  const clone = S => ({ x: S.x.slice(), g: S.g.slice(), left: S.left, ver: S.ver, ls: S.ls.slice(), M: S.M.slice(), al: S.al.map(a => a.slice()), m: S.m.map(a => a.slice()),
+    st: S.st.slice(), bigE: S.bigE.slice(), dv: new Int32Array(4).fill(-1) });
+  const view = S => { const cv = new Uint32Array(NN); for (let q = 0; q < NP; q++) if (S.x[q]) cv[(q / N) | 0] |= 1 << (q % N); return { g: S.g, cv, left: S.left }; };
+  function remove(S, q) { if (S.x[q]) { S.x[q] = 0; S.ver++; if (TR) TR.rm.push(q); } }
+  // place point q: every other point on its 4 lines goes (a row of Aᵀ·A)
+  function place(S, q) {
+    const i = (q / N) | 0; if (S.g[i]) return S.g[i] === q % N + 1;
+    if (!S.x[q]) return false;
+    S.g[i] = q % N + 1; S.left--; S.ver++; if (TR) TR.pl.push(q);
+    for (let a = 0; a < 4; a++) { const l = PL[q * 4 + a]; for (let j = 0; j < N; j++) { const r = LP[l * N + j]; if (r !== q) remove(S, r); } }
+    return true;
+  }
+  // s = A·x, then lines with one point place it
+  function singles(S) {
+    const s = S.ls, x = S.x;
+    for (let l = 0; l < NL; l++) { let t = 0; const o = l * N; for (let j = 0; j < N; j++) t += x[LP[o + j]]; s[l] = t; if (!t) { if (TR) TR.why = l < NN ? [0, l] : [(l / NN) | 0, (((l % NN) / N) | 0), l % N]; return false; } }
+    for (let l = 0; l < NL; l++) if (s[l] === 1) { const o = l * N; for (let j = 0; j < N; j++) { const q = LP[o + j]; if (x[q]) { if (!S.g[(q / N) | 0] && !place(S, q)) return false; break; } } }
+    return true;
+  }
+  const lsum = (S, l) => { let t = 0; for (let j = 0; j < N; j++) t += S.x[LP[l * N + j]]; return t; };
+  const unitOpen = (S, k, u) => { for (const i of UC[k][u]) if (!S.g[i]) return true; return false; };
+  // size bound of a layer from the line sums (log): the smaller of two ways to count
+  function estimate(S, key) {
+    const k = (key / N) | 0, u = key % N; let a = 0, b = 0, c = 0;
+    if (k === 0) { for (let v = 0; v < N; v++) { const p1 = lsum(S, NN + v * N + u), p2 = lsum(S, 2 * NN + v * N + u), p3 = lsum(S, 3 * NN + v * N + u); if (!p1 || !p2 || !p3) return -1; a += LG[p1]; b += LG[p2]; c += LG[p3]; } return Math.min(a, b, c); }
+    for (let v = 0; v < N; v++) { const p1 = lsum(S, UC[k][u][v]), p2 = lsum(S, k * NN + u * N + v); if (!p1 || !p2) return -1; a += LG[p1]; b += LG[p2]; }
+    return Math.min(a, b);
+  }
+  // list a layer's options and add them as new rows of its direction's matrix
+  function build(S, key, cap) {
+    const k = (key / N) | 0, u = key % N, x = S.x;
+    let out = new Int32Array(Math.max(256, N * 64)), n = 0, over = false; const cur = new Int32Array(N);
+    const push = () => { if (n >= cap) { over = true; return; } if ((n + 1) * N > out.length) { const o2 = new Int32Array(out.length * 2); o2.set(out); out = o2; } out.set(cur, n * N); n++; };
+    if (k === 0) {
+      const slots = []; for (let b = 0; b < N; b++) { const cells = []; for (const i of UC[3][b]) if (x[i * N + u]) cells.push(i); slots.push(cells); }
+      slots.sort((a, b) => a.length - b.length);
+      (function rec(s, uR, uC) { if (over) return; if (s === N) { push(); return; }
+        for (const i of slots[s]) { const rb = 1 << R[i], cb = 1 << C[i]; if ((uR & rb) || (uC & cb)) continue; cur[s] = i * N + u; rec(s + 1, uR | rb, uC | cb); } })(0, 0, 0);
+    } else {
+      const cand = i => { let m = 0; for (let z = 0; z < N; z++) if (x[i * N + z]) m |= 1 << z; return m; };
+      const cells = Array.from(UC[k][u]).map(i => [i, cand(i)]).sort((a, b) => popc(a[1]) - popc(b[1]));
+      (function rec(s, used) { if (over) return; if (s === N) { push(); return; }
+        const [i, cm] = cells[s]; for (let m = cm & ~used; m; m &= m - 1) { const z = ctz(m); cur[s] = i * N + z; rec(s + 1, used | (1 << z)); } })(0, 0);
+    }
+    if (TR && (k === 0 || over)) TR.ev(view(S), { kind: "build", key, n: over ? cap : n, big: over });
+    if (over) { S.st[key] = 3; return true; }
+    if (!n) return false;
+    built[k]++; S.st[key] = 1;
+    const M = S.M[k], pts = new Int32Array((M.n + n) * N), lay = new Int16Array(M.n + n), al = new Uint8Array(M.n + n);
+    pts.set(M.pts); pts.set(out.subarray(0, n * N), M.n * N); lay.set(M.lay); lay.fill(u, M.n); al.set(S.al[k]); al.fill(1, M.n);
+    S.M[k] = { pts, lay, n: M.n + n }; S.al[k] = al; S.dv[k] = -1;
+    return true;
+  }
+  // one direction: alive = (M·(1−x) == 0), count = aliveᵀ·M, then OR / AND on the points its layers own
+  function useDir(S, k) {
+    const M = S.M[k]; if (!M.n) return true;
+    const { pts, lay, n } = M, al = S.al[k], x = S.x, m = S.m[k], ow = OW[k]; m.fill(0);
+    let live = 0;
+    for (let r = 0; r < n; r++) {
+      if (!al[r]) continue;
+      const o = r * N; let ok = 1; for (let j = 0; j < N; j++) if (!x[pts[o + j]]) { ok = 0; break; }
+      if (!ok) { al[r] = 0; continue; }
+      live++; m[lay[r]]++; for (let j = 0; j < N; j++) mcnt[pts[o + j]]++;
+    }
+    let dead = -1; for (let u = 0; u < N; u++) if (S.st[k * N + u] === 1 && !m[u]) { dead = u; break; }
+    if (dead >= 0) { mcnt.fill(0); if (TR) TR.why = [4, k * N + dead]; return false; }
+    for (let q = 0; q < NP; q++) {
+      const c = mcnt[q]; mcnt[q] = 0;
+      const u = ow[q]; if (S.st[k * N + u] !== 1 || !x[q]) continue;
+      if (!c) remove(S, q);
+      else if (c === m[u] && !S.g[(q / N) | 0] && !place(S, q)) { mcnt.fill(0); return false; }
+    }
+    // drop cut rows from this branch's copy when most are gone (the matrix is shared between branches until then)
+    if (n > 64 && live * 2 < n) {
+      const p2 = new Int32Array(live * N), l2 = new Int16Array(live); let w = 0;
+      for (let r = 0; r < n; r++) if (al[r]) { p2.set(pts.subarray(r * N, r * N + N), w * N); l2[w] = lay[r]; w++; }
+      S.M[k] = { pts: p2, lay: l2, n: live }; S.al[k] = new Uint8Array(live).fill(1);
+    }
+    return true;
+  }
+  function propagate(S) {
+    for (;;) {
+      const v0 = S.ver;
+      if (!singles(S)) return false;
+      if (TR) TR.flush(view(S), { kind: "singles" });
+      for (let k = 0; k < 4; k++) {
+        if (!S.M[k].n || S.dv[k] === S.ver) continue;
+        const dv = S.ver;
+        if (!useDir(S, k)) return false;
+        S.dv[k] = dv;
+        if (TR) TR.flush(view(S), { kind: "matmul", dir: k });
+      }
+      if (!S.left) return true;
+      if (S.ver !== v0) continue;
+      // stuck: a vertical layer that was too big is tried again once it has shrunk a lot
+      let again = false;
+      for (let key = N; key < 4 * N; key++) if (S.st[key] === 3 && unitOpen(S, (key / N) | 0, key % N)) { const e = estimate(S, key); if (e < 0) return false; if (e <= S.bigE[key] - RETRY) { S.bigE[key] = e; if (!build(S, key, capV)) return false; if (S.st[key] === 1) again = true; } }
+      if (!again) return true;
+    }
+  }
+  function solve(S) {
+    if (!propagate(S)) { if (TR) TR.ev(view(S), { kind: "dead", why: TR.why }); return null; }
+    if (!S.left) return S;
+    // guess last, on the smallest choice: a layer with the fewest live options, or a line with the fewest points
+    let bk = -1, bu = -1, bn = 1e9;
+    for (let k = 0; k < 4; k++) for (let u = 0; u < N; u++) if (S.st[k * N + u] === 1 && S.m[k][u] > 1 && S.m[k][u] < bn) { bn = S.m[k][u]; bk = k; bu = u; }
+    let bl = -1, bs = 1e9; for (let l = 0; l < NL; l++) { const t = S.ls[l]; if (t > 1 && t < bs) { bs = t; bl = l; } }
+    if (bk >= 0 && bn <= bs) {
+      const M = S.M[bk], al = S.al[bk], rows = []; for (let r = 0; r < M.n; r++) if (al[r] && M.lay[r] === bu) rows.push(r);
+      for (let t = 0; t < rows.length; t++) {
+        guesses++; const U = clone(S); for (const r of rows) if (r !== rows[t]) U.al[bk][r] = 0;
+        if (TR) TR.ev(view(U), { kind: "guess", key: bk * N + bu, t, of: rows.length, pts: Array.from(M.pts.subarray(rows[t] * N, rows[t] * N + N)), depth: ++TR.depth });
+        const r = solve(U); if (r) return r;
+        if (TR) TR.ev(view(S), { kind: "back", key: bk * N + bu, t, of: rows.length, depth: --TR.depth });
+      }
+      return null;
+    }
+    const pts = []; for (let j = 0; j < N; j++) { const q = LP[bl * N + j]; if (S.x[q]) pts.push(q); }
+    const line = bl < NN ? [0, bl, -1] : [(bl / NN) | 0, (((bl % NN) / N) | 0), bl % N];
+    for (let t = 0; t < pts.length; t++) {
+      guesses++; const U = clone(S);
+      if (TR) TR.ev(view(U), { kind: "guess", line, t, of: pts.length, pts: [pts[t]], depth: ++TR.depth });
+      if (!place(U, pts[t])) { if (TR) TR.depth--; continue; }
+      const r = solve(U); if (r) return r;
+      if (TR) TR.ev(view(S), { kind: "back", line, t, of: pts.length, depth: --TR.depth });
+    }
+    return null;
+  }
+  const fail = () => ({ ok: false, grid: null, guesses, built });
+  const S0 = blank();
+  for (let i = 0; i < NN; i++) if (p[i] && !place(S0, i * N + p[i] - 1)) return fail();
+  if (TR) TR.ev(view(S0), { kind: "start" });
+  if (!singles(S0)) return fail();
+  if (TR) TR.flush(view(S0), { kind: "singles" });
+  // every row, column and box layer, in full
+  for (let k = 1; k <= 3; k++) for (let u = 0; u < N; u++) if (unitOpen(S0, k, u)) { S0.bigE[k * N + u] = estimate(S0, k * N + u); if (!build(S0, k * N + u, capV)) return fail(); }
+  if (TR) TR.ev(view(S0), { kind: "vertical", n: [1, 2, 3].map(k => S0.M[k].n), layers: [1, 2, 3].map(k => { let b = 0; for (let u = 0; u < N; u++) if (S0.st[k * N + u] === 1) b++; return b; }), big: [1, 2, 3].map(k => { let b = 0; for (let u = 0; u < N; u++) if (S0.st[k * N + u] === 3) b++; return b; }) });
+  // only the top 2 (or 3) thinnest number layers
+  const cand = []; for (let z = 0; z < N; z++) { let k = 0; for (let i = 0; i < NN; i++) if (S0.g[i] === z + 1) k++; if (k < N) { const e = estimate(S0, z); if (e < 0) return fail(); cand.push([e, z]); } }
+  cand.sort((a, b) => a[0] - b[0]);
+  for (const [, z] of cand.slice(0, top)) if (!build(S0, z, capN)) return fail();
+  const r = solve(S0);
+  return { ok: !!r, grid: r ? Array.from(r.g) : null, guesses, built };
+}
+function matrixTrace(p, opt, maxEv = 20000) {
+  TR = makeRecorder(maxEv);
+  let r; try { r = matrixOL(p, opt); } finally { var rec = TR; TR = null; }
+  const last = rec.list[rec.list.length - 1];
+  rec.ev({ g: r.grid ? Int8Array.from(r.grid) : last.g, cv: last.cv, left: r.grid ? 0 : -1 }, { kind: r.ok ? "done" : "fail" });
+  return { ev: rec.list, ok: r.ok, full: rec.full, guesses: r.guesses, built: r.built };
+}
+
+/* ---------- shared number patterns, cut incrementally ---------- */
+// A number layer's template is a pattern: one cell per row, column and box. The pattern does not depend on the number,
+// so all number layers are built in ONE walk over the patterns; each pattern is kept once with a number mask
+// (the numbers every one of its cells still allows).
+// Support counts replace re-cutting: sup[cell·N + number] = live patterns that use that point for that number,
+// live[number] = patterns still valid for it. Removing a point only touches the patterns through that cell:
+//   support 0 → the point is removed (OR); support = live → the point is placed (AND); live 0 → dead end.
+// After a failed guess the changes are undone from a trail, so the big list is never scanned again.
+function sharedOL(p, opt = {}) {
+  if (!TG || TG.N !== N) tensorSetup();
+  const { NN, R, C, B, P: PB, UC, peers, LG } = TG;
+  const cap = opt.cap || 300000, RETRY = Math.log(8), top = Math.max(1, opt.top || 2);
+  let guesses = 0, builds = 0;
+  const pend = [], chZ = new Uint8Array(N); let anyZ = false;
+  const blank = () => ({ g: new Int8Array(NN), cv: new Uint32Array(NN), rv: new Uint32Array(N * N), kv: new Uint32Array(N * N), bv: new Uint32Array(N * N), pn: new Int16Array(N), left: NN, ver: 0, P: null, lf: Infinity });
+  const clone = S => ({ g: S.g.slice(), cv: S.cv.slice(), rv: S.rv.slice(), kv: S.kv.slice(), bv: S.bv.slice(), pn: S.pn.slice(), left: S.left, ver: S.ver, P: S.P, lf: S.lf });
+  const reset = () => { pend.length = 0; chZ.fill(0); anyZ = false; };
+  // a pattern stops being valid for number z: clear its bit and lower the supports of its cells
+  function unlink(P, t, z) {
+    P.mask[t] &= ~(1 << z); P.trail.push(t * 32 + z); P.live[z]--; chZ[z] = 1; anyZ = true;
+    const o = t * N; for (let s = 0; s < N; s++) { const q = P.cells[o + s] * N + z; if (--P.sup[q] === 0) pend.push(q); }
+  }
+  function undo(P, mark) {
+    const tr = P.trail;
+    while (tr.length > mark) { const v = tr.pop(), t = v >>> 5, z = v & 31; P.mask[t] |= 1 << z; P.live[z]++; const o = t * N; for (let s = 0; s < N; s++) P.sup[P.cells[o + s] * N + z]++; }
+  }
+  function remove(S, i, z) {
+    const b = 1 << z; if (!(S.cv[i] & b)) return;
+    S.cv[i] &= ~b; S.rv[R[i] * N + z] &= ~(1 << C[i]); S.kv[C[i] * N + z] &= ~(1 << R[i]); S.bv[B[i] * N + z] &= ~(1 << PB[i]);
+    S.ver++; if (TR) TR.rm.push(i * N + z);
+    const P = S.P; if (P) for (let k = P.off[i], e = P.off[i + 1]; k < e; k++) { const t = P.idx[k]; if (P.mask[t] & b) unlink(P, t, z); }
+  }
+  function place(S, i, z) {
+    if (S.g[i]) return S.g[i] === z + 1;
+    if (!((S.cv[i] >>> z) & 1)) return false;
+    S.g[i] = z + 1; S.left--; S.pn[z]++; S.ver++; if (TR) TR.pl.push(i * N + z);
+    for (let e = 0; e < N; e++) if (e !== z) remove(S, i, e);
+    const pe = peers[i]; for (let k = 0; k < pe.length; k++) remove(S, pe[k], z);
+    return true;
+  }
+  function singles(S) {
+    for (let i = 0; i < NN; i++) if (!S.g[i]) { const x = S.cv[i]; if (!x) { if (TR) TR.why = [0, i]; return false; } if (!(x & (x - 1)) && !place(S, i, ctz(x))) return false; }
+    const V = [null, S.rv, S.kv, S.bv];
+    for (let k = 1; k <= 3; k++) { const v = V[k], U = UC[k];
+      for (let u = 0; u < N; u++) for (let z = 0; z < N; z++) { const x = v[u * N + z]; if (!x) { if (TR) TR.why = [k, u, z]; return false; } if (!(x & (x - 1))) { const i = U[u][ctz(x)]; if (!S.g[i] && !place(S, i, z)) return false; } } }
+    return true;
+  }
+  // size bound of all number layers together (log of the sum of each number's bound)
+  function estZ(S, z) { let a = 0, b = 0, c = 0;
+    for (let x = 0; x < N; x++) { const p1 = popc(S.rv[x * N + z]), p2 = popc(S.kv[x * N + z]), p3 = popc(S.bv[x * N + z]); if (!p1 || !p2 || !p3) return -1; a += LG[p1]; b += LG[p2]; c += LG[p3]; }
+    return Math.min(a, b, c); }
+  // the numbers to share: the current set plus the thinnest open numbers, up to k of them
+  function pickSet(S, base, k) {
+    const c = []; for (let z = 0; z < N; z++) if (S.pn[z] < N && !((base >>> z) & 1)) { const e = estZ(S, z); if (e < 0) return -1; c.push([e, z]); }
+    c.sort((a, b) => a[0] - b[0]); let m = base, have = popc(base) ; for (const [, z] of c) { if (have >= k) break; m |= 1 << z; have++; } return m >>> 0; }
+  function bound(S, set) {
+    let mx = -Infinity; const es = [];
+    for (let z = 0; z < N; z++) { if (S.pn[z] === N || !((set >>> z) & 1)) continue; let a = 0, b = 0, c = 0;
+      for (let x = 0; x < N; x++) { const p1 = popc(S.rv[x * N + z]), p2 = popc(S.kv[x * N + z]), p3 = popc(S.bv[x * N + z]); if (!p1 || !p2 || !p3) return -1; a += LG[p1]; b += LG[p2]; c += LG[p3]; }
+      const e = Math.min(a, b, c); es.push(e); if (e > mx) mx = e; }
+    if (!es.length) return 0; let s = 0; for (const e of es) s += Math.exp(e - mx); return mx + Math.log(s);
+  }
+  // one walk over the patterns for all numbers at once; a branch stops when no number fits all its cells
+  function buildShared(S, set) {
+    const order = [...Array(N).keys()].map(b => [b, UC[3][b].reduce((a, i) => a + popc(S.cv[i]), 0)]).sort((a, b) => a[1] - b[1]).map(x => x[0]);
+    const slots = order.map(b => Array.from(UC[3][b]));
+    let cells = new Int16Array(Math.max(1024, N * 256)), mask = new Uint32Array(Math.max(64, 256)), n = 0, over = false; const cur = new Int16Array(N), cv = S.cv;
+    (function rec(s, uR, uC, m) {
+      if (over) return;
+      if (s === N) { if (n >= cap) { over = true; return; }
+        if ((n + 1) * N > cells.length) { const c2 = new Int16Array(cells.length * 2); c2.set(cells); cells = c2; }
+        if (n + 1 > mask.length) { const m2 = new Uint32Array(mask.length * 2); m2.set(mask); mask = m2; }
+        cells.set(cur, n * N); mask[n] = m; n++; return; }
+      for (const i of slots[s]) { const rb = 1 << R[i], cb = 1 << C[i]; if ((uR & rb) || (uC & cb)) continue; const m2 = m & cv[i]; if (!m2) continue; cur[s] = i; rec(s + 1, uR | rb, uC | cb, m2); }
+    })(0, 0, 0, set);
+    if (TR) TR.ev(S, { kind: "sbuild", n: over ? cap : n, big: over, set: [...Array(N).keys()].filter(z => (set >>> z) & 1) });
+    if (over) return 0;
+    builds++;
+    const P = { set, n, cells: cells.subarray(0, n * N), mask: mask.slice(0, n), off: new Int32Array(NN + 1), idx: new Int32Array(n * N), sup: new Int32Array(NN * N), live: new Int32Array(N), trail: [] };
+    for (let k = 0; k < n * N; k++) P.off[P.cells[k] + 1]++;
+    for (let i = 0; i < NN; i++) P.off[i + 1] += P.off[i];
+    const fill = P.off.slice(0, NN);
+    for (let t = 0; t < n; t++) { const o = t * N; for (let s = 0; s < N; s++) { const i = P.cells[o + s]; P.idx[fill[i]++] = t; } for (let m = P.mask[t]; m; m &= m - 1) { const z = ctz(m); P.live[z]++; for (let s = 0; s < N; s++) P.sup[P.cells[o + s] * N + z]++; } }
+    S.P = P;
+    for (let q = 0; q < NN * N; q++) if (((set >>> (q % N)) & 1) && !P.sup[q] && ((cv[(q / N) | 0] >>> (q % N)) & 1)) pend.push(q);
+    for (let z = 0; z < N; z++) if ((set >>> z) & 1) chZ[z] = 1; anyZ = true;
+    return 1;
+  }
+  const doneSet = S => { let m = 0; for (let z = 0; z < N; z++) if (S.pn[z] === N) m |= 1 << z; return m >>> 0; };
+  function propagate(S) {
+    for (;;) {
+      const v0 = S.ver;
+      // OR: points no live pattern uses
+      while (pend.length) { const q = pend.pop(), i = (q / N) | 0, z = q % N; if ((S.cv[i] >>> z) & 1) { if (S.g[i]) { if (TR) TR.why = [0, i]; return false; } remove(S, i, z); } }
+      // AND: a number with no pattern is a dead end; a point every live pattern of its number uses is placed
+      if (anyZ) { anyZ = false; const P = S.P;
+        for (let z = 0; z < N; z++) if (chZ[z]) { chZ[z] = 0; if (S.pn[z] === N) continue; const L = P.live[z]; if (!L) { if (TR) TR.why = [5, z]; return false; }
+          for (let j = 0; j < NN; j++) if (!S.g[j] && ((S.cv[j] >>> z) & 1) && P.sup[j * N + z] === L && !place(S, j, z)) return false; } }
+      if (pend.length || anyZ) continue;
+      if (TR) TR.flush(S, { kind: "shared" });
+      if (!singles(S)) return false;
+      if (TR) TR.flush(S, { kind: "singles" });
+      if (!S.left) return true;
+      if (S.ver !== v0 || pend.length || anyZ) continue;
+      // stuck: share the patterns of one more number (or of the top numbers, if nothing is built yet)
+      { const base = S.P ? S.P.set : 0, set = pickSet(S, base, S.P ? popc(base & ~doneSet(S)) + 1 : top); if (set < 0) return false;
+        if ((set & ~base) >>> 0) { const e = bound(S, set); if (e < 0) return false; if (e <= S.lf - RETRY) { if (buildShared(S, set)) { S.lf = Infinity; continue; } S.lf = e; } } }
+      return true;
+    }
+  }
+  function solve(S) {
+    if (!propagate(S)) { reset(); if (TR) TR.ev(S, { kind: "dead", why: TR.why }); return null; }
+    if (!S.left) return S;
+    // guess last, on the smallest choice: the number with the fewest live patterns, or the tensor line with the fewest points
+    const P = S.P; let bz = -1, bn = 1e9;
+    if (P) for (let z = 0; z < N; z++) if (S.pn[z] < N && P.live[z] > 1 && P.live[z] < bn) { bn = P.live[z]; bz = z; }
+    let fk = -1, fu = -1, fz = -1, fb = 99; const V = [null, S.rv, S.kv, S.bv];
+    for (let i = 0; i < NN; i++) if (!S.g[i]) { const c = popc(S.cv[i]); if (c < fb) { fb = c; fk = 0; fu = i; } }
+    for (let k = 1; k <= 3; k++) for (let u = 0; u < N; u++) for (let z = 0; z < N; z++) { const x = V[k][u * N + z]; if (x & (x - 1)) { const c = popc(x); if (c < fb) { fb = c; fk = k; fu = u; fz = z; } } }
+    const tries = [];                                 // each try = the points to place
+    let info;
+    if (bz >= 0 && bn <= fb) { const b = 1 << bz; for (let t = 0; t < P.n; t++) if (P.mask[t] & b) tries.push(Array.from(P.cells.subarray(t * N, t * N + N), i => i * N + bz)); info = { key: bz }; }
+    else { if (fk === 0) for (let m = S.cv[fu]; m; m &= m - 1) tries.push([fu * N + ctz(m)]); else for (let m = V[fk][fu * N + fz]; m; m &= m - 1) tries.push([UC[fk][fu][ctz(m)] * N + fz]); info = { line: [fk, fu, fz] }; }
+    for (let t = 0; t < tries.length; t++) {
+      guesses++; const U = clone(S), mark = P ? P.trail.length : 0;
+      if (TR) TR.ev(U, { kind: "guess", ...info, t, of: tries.length, pts: tries[t], depth: ++TR.depth });
+      let ok = true; for (const q of tries[t]) if (!place(U, (q / N) | 0, q % N)) { ok = false; break; }
+      const r = ok ? solve(U) : null; if (r) return r;
+      if (P) undo(P, mark); reset();
+      if (TR) TR.ev(S, { kind: "back", ...info, t, of: tries.length, depth: --TR.depth });
+    }
+    return null;
+  }
+  const fail = () => ({ ok: false, grid: null, guesses, built: [builds, 0, 0, 0] });
+  const S0 = blank(), all = N === 32 ? 0xFFFFFFFF : (1 << N) - 1;
+  S0.cv.fill(all); S0.rv.fill(all); S0.kv.fill(all); S0.bv.fill(all);
+  for (let i = 0; i < NN; i++) if (p[i] && !place(S0, i, p[i] - 1)) return fail();
+  if (TR) TR.ev(S0, { kind: "start" });
+  if (!singles(S0)) return fail();
+  if (TR) TR.flush(S0, { kind: "singles" });
+  if (S0.left) { const set = pickSet(S0, 0, top); if (set < 0) return fail(); if (set) { const e = bound(S0, set); if (e < 0) return fail(); if (!buildShared(S0, set)) S0.lf = e; } }
+  const r = solve(S0);
+  return { ok: !!r, grid: r ? Array.from(r.g) : null, guesses, built: [builds, 0, 0, 0] };
+}
+function sharedTrace(p, opt, maxEv = 20000) {
+  TR = makeRecorder(maxEv);
+  let r; try { r = sharedOL(p, opt); } finally { var rec = TR; TR = null; }
+  const last = rec.list[rec.list.length - 1];
+  rec.ev({ g: r.grid ? Int8Array.from(r.grid) : last.g, cv: last.cv, left: r.grid ? 0 : -1 }, { kind: r.ok ? "done" : "fail" });
+  return { ev: rec.list, ok: r.ok, full: rec.full, guesses: r.guesses, built: r.built };
+}
+
+/* ---------- seed: the same seed makes the same puzzles again ---------- */
+const RND = Math.random;
+function seeded(seed) { let s = seed >>> 0; return () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function withSeed(fn) { const v = $("seed").value.trim(); if (!/^\d+$/.test(v)) return fn(); Math.random = seeded(+v); try { return fn(); } finally { Math.random = RND; } }
+function makePuzzle(level) {
+  const sol = randomSolution(); let p;
+  if (/^\d+$/.test(level)) { p = new Array(N * N).fill(0); shuffle([...Array(N * N).keys()]).slice(0, Math.round(N * N * +level / 100)).forEach(i => p[i] = sol[i]); }
+  else p = carve(sol, level);
+  return { p, sol };
+}
+const sOpt = () => ({ top: Math.max(1, +$("startK").value), cap: +$("cap").value });
+const mOpt = eng => ({ top: eng === "m3" ? 3 : 2, cap: +$("cap").value });
+const tOpt = () => ({ dirs: $("dirs").value.split("").map(Number), start: +$("startK").value, cap: +$("cap").value });
+
+/* ---------- names ---------- */
+const DN = ["number", "row", "column", "box"];
+const layerName = key => { const k = (key / N) | 0, u = key % N; return k === 0 ? `number ${sym(u + 1)}` : `${DN[k]} ${u + 1}`; };
+const lineName = ([k, u, z]) => k === 0 ? `cell ${rc(u)}` : `number ${sym(z + 1)} in ${DN[k]} ${u + 1}`;
+const ptName = q => `${sym(q % N + 1)} in ${rc((q / N) | 0)}`;
+const ptList = (a, max = 8) => a.slice(0, max).map(ptName).join(", ") + (a.length > max ? ` and ${a.length - max} more` : "");
+
+/* ---------- watch: state ---------- */
+let P = null, T = null, CUM = null;
+const V = { k: 0, timer: null, running: false };
+function newPuzzle() {
+  stop(); $("busy").classList.remove("hidden");
+  setTimeout(() => {
+    const n = +$("size").value, level = $("level").value;
+    setSize(n);
+    const z = withSeed(() => makePuzzle(level));
+    P = { p: z.p, n, level };
+    const eng = $("engine").value, run = eng === "tensor" ? q => tensorOL(q, tOpt()) : eng === "shared" ? q => sharedOL(q, sOpt()) : q => matrixOL(q, mOpt(eng));
+    const t0 = performance.now(); const r = run(P.p); const ms = performance.now() - t0;
+    T = eng === "tensor" ? tensorTrace(P.p, tOpt()) : eng === "shared" ? sharedTrace(P.p, sOpt()) : matrixTrace(P.p, mOpt(eng)); V.k = 0;
+    // running totals for the stats boxes
+    CUM = []; const b = [0, 0, 0, 0]; let gu = 0;
+    for (const e of T.ev) { if (e.kind === "build" && !e.big) b[(e.key / N) | 0]++; if (e.kind === "vertical") e.layers.forEach((v, k) => b[k + 1] += v); if (e.kind === "sbuild" && !e.big) b[0] = Math.max(b[0], e.set.length); if (e.kind === "guess") gu++; CUM.push({ b: b.slice(), gu }); }
+    $("busy").classList.add("hidden");
+    const giv = P.p.filter(Boolean).length;
+    $("info").innerHTML = `${n}×${n}, ${giv} givens (${Math.round(100 * giv / (n * n))}%) — ${/^\d+$/.test(level) ? "random cells, usually many answers" : "exactly one answer"}. ` +
+      `Solved in <b>${ms < 1 ? ms.toFixed(2) : ms.toFixed(1)} ms</b> (one run, not warmed up), ${r.guesses.toLocaleString()} guesses, layers built: numbers ${r.built[0]}, rows ${r.built[1]}, columns ${r.built[2]}, boxes ${r.built[3]}` +
+      `${T.full ? ` (the replay keeps the first ${(T.ev.length - 1).toLocaleString()} steps; the last step shows the finished grid)` : ""}.`;
+    $("log").innerHTML = ""; layout(); show();
+  }, 30);
+}
+
+/* ---------- the layer or line an event is about ---------- */
+function region(e) {
+  if (e.key != null) return { key: e.key };
+  if (e.line) return { line: e.line };
+  if (e.kind === "dead" && e.why) return e.why[0] === 4 ? { key: e.why[1] } : { line: e.why[0] === 0 ? [0, e.why[1], -1] : e.why };
+  return null;
+}
+function inRegion(rg, i, z) {
+  if (!rg) return false;
+  const r = (i / N) | 0, c = i % N;
+  if (rg.key != null) { const k = (rg.key / N) | 0, u = rg.key % N; return k === 0 ? z === u : k === 1 ? r === u : k === 2 ? c === u : boxOf(r, c) === u; }
+  const [k, u, zz] = rg.line; if (k === 0) return i === u;
+  return z === zz && (k === 1 ? r === u : k === 2 ? c === u : boxOf(r, c) === u);
+}
+function cellInRegion(rg, i) { if (!rg) return false; for (let z = 0; z < N; z++) if (inRegion(rg, i, z)) return true; return false; }
+// the region's box in cube coordinates: [c0, c1, r0, r1, z0, z1]
+function bounds(rg) {
+  const A = [0, N - 1, 0, N - 1, 0, N - 1];
+  const unitB = (k, u) => k === 1 ? [0, N - 1, u, u] : k === 2 ? [u, u, 0, N - 1] : [(u % (N / BC)) * BC, (u % (N / BC)) * BC + BC - 1, Math.floor(u / (N / BC)) * BR, Math.floor(u / (N / BC)) * BR + BR - 1];
+  if (rg.key != null) { const k = (rg.key / N) | 0, u = rg.key % N; return k === 0 ? [0, N - 1, 0, N - 1, u, u] : [...unitB(k, u), 0, N - 1]; }
+  const [k, u, z] = rg.line; if (k === 0) { const r = (u / N) | 0, c = u % N; return [c, c, r, r, 0, N - 1]; }
+  return [...unitB(k, u), z, z];
+}
+
+/* ---------- board ---------- */
+function layout() {
+  const n = P.n, el = $("board");
+  el.style.gridTemplateColumns = `repeat(${n},1fr)`;
+  el.style.fontSize = `min(${n > 9 ? 2.8 : 4.4}vw, ${n > 9 ? 15 : 24}px)`;
+  el.style.setProperty("--cfs", `min(${n > 9 ? 1.6 : 2.2}vw, ${n > 9 ? 8 : 10}px)`);
+  el.innerHTML = [...Array(n * n).keys()].map(i => { const r = (i / n) | 0, c = i % n; return `<div class="${(c + 1) % BC === 0 && c < n - 1 ? "br" : ""}${(r + 1) % BR === 0 && r < n - 1 ? " bb" : ""}"></div>`; }).join("");
+}
+function drawBoard(e) {
+  const n = P.n, cells = $("board").children, side = Math.ceil(Math.sqrt(n)), rg = region(e);
+  const rm = new Set(e.rm), pl = new Set(e.pl), pick = new Set(e.kind === "guess" ? e.pts : []), bad = e.kind === "dead" || e.kind === "back";
+  for (let i = 0; i < n * n; i++) {
+    const el = cells[i], v = e.g[i], given = !!P.p[i];
+    let cls = el.className.replace(/\b(given|placed|reg|regbad|now|pick)\b/g, "").trim();
+    if (v) cls += given ? " given" : " placed";
+    if (rg && (rg.key != null && ((rg.key / N) | 0) === 0 ? (e.cv[i] >>> (rg.key % N)) & 1 : cellInRegion(rg, i))) cls += bad ? " regbad" : " reg";
+    if (v && pl.has(i * n + v - 1)) cls += " now";
+    for (let z = 0; z < n; z++) if (pick.has(i * n + z)) { cls += " pick"; break; }
+    el.className = cls.trim();
+    if (v) { el.textContent = sym(v); continue; }
+    if (n <= 9) el.innerHTML = `<div class="cd" style="grid-template-columns:repeat(${side},1fr)">${[...Array(n)].map((_, z) => {
+      const on = (e.cv[i] >>> z) & 1, gone = rm.has(i * n + z), hl = rg && rg.key != null ? inRegion(rg, i, z) && ((rg.key / N) | 0) === 0 : rg && rg.line && rg.line[0] > 0 && inRegion(rg, i, z);
+      return `<span class="${gone ? "rm" : hl && on ? "hl" : ""}">${on || gone ? sym(z + 1) : ""}</span>`; }).join("")}</div>`;
+    else { let k = 0; for (let z = 0; z < n; z++) k += (e.cv[i] >>> z) & 1; el.innerHTML = `<span class="cnt">${k || "✗"}</span>`; }
+  }
+}
+
+/* ---------- cube (same projection and drawing style as the MRV in 3D page) ---------- */
+const C3 = { yaw: -0.65, pitch: 0.5, spread: 0.6, auto: true, dots: true, drag: null, raf: 0, dirty: true };
+function cubeDraw() {
+  const cv = $("cube3"), w = cv.clientWidth; if (!w || !P || !T) return;
+  const dpr = window.devicePixelRatio || 1;
+  if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(w * dpr); }
+  const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const css = getComputedStyle(document.documentElement), col = s => css.getPropertyValue(s).trim();
+  ctx.fillStyle = col("--bg"); ctx.fillRect(0, 0, w, w);
+  const n = P.n, NN = n * n, e = T.ev[V.k], g = e.g, rg = region(e), bad = e.kind === "dead" || e.kind === "back";
+  const rm = new Set(e.rm), pl = new Set(e.pl), pick = new Set(e.kind === "guess" ? e.pts : []);
+  const u = w * 0.5 / n, gap = u * (1 + C3.spread), half = (n - 1) / 2;
+  const cy = Math.cos(C3.yaw), sy = Math.sin(C3.yaw), cp = Math.cos(C3.pitch), sp = Math.sin(C3.pitch), F = w * 2.2;
+  const proj = (x, y, z) => { const X = x * cy - z * sy, Z1 = x * sy + z * cy, Y = y * cp - Z1 * sp, Z = y * sp + Z1 * cp, s = F / (F + Z); return [w / 2 + X * s, w / 2 - Y * s, Z, s]; };
+  const items = [];
+  for (let i = 0; i < NN; i++) {
+    const x = (i % n - half) * u, zz = (((i / n) | 0) - half) * u;
+    for (let z = 0; z < n; z++) {
+      const q = i * n + z, placed = g[i] === z + 1, removed = rm.has(q), possible = !g[i] && ((e.cv[i] >>> z) & 1), inside = inRegion(rg, i, z);
+      if (!placed && !removed && !(possible && (C3.dots || inside))) continue;
+      const [px, py, pz, s] = proj(x, (z - half) * gap, zz);
+      items.push({ px, py, pz, s, z, placed, removed, possible, inside, given: placed && !!P.p[i], now: pl.has(q), pick: pick.has(q) });
+    }
+  }
+  const box = (b, color, lw) => {
+    const [c0, c1, r0, r1, z0, z1] = b, xs = [(c0 - half - 0.5) * u, (c1 - half + 0.5) * u], zs = [(r0 - half - 0.5) * u, (r1 - half + 0.5) * u], ys = [(z0 - half) * gap - u * 0.55, (z1 - half) * gap + u * 0.55], P8 = [];
+    for (const a of [0, 1]) for (const bb of [0, 1]) for (const c of [0, 1]) P8.push(proj(xs[a], ys[bb], zs[c]));
+    ctx.strokeStyle = color; ctx.lineWidth = lw;
+    for (let a = 0; a < 8; a++) for (let bb = a + 1; bb < 8; bb++) if ([1, 2, 4].includes(a ^ bb)) { ctx.beginPath(); ctx.moveTo(P8[a][0], P8[a][1]); ctx.lineTo(P8[bb][0], P8[bb][1]); ctx.stroke(); }
+  };
+  box([0, n - 1, 0, n - 1, 0, n - 1], col("--line"), 1);
+  if (rg) box(bounds(rg), bad ? col("--bad") : col("--accent"), 2.5);
+  items.sort((a, b) => b.pz - a.pz);
+  for (const it of items) {
+    const h = hue(it.z + 1), size = u * 0.72 * it.s;
+    ctx.globalAlpha = rg && !it.inside && !it.placed && !it.removed ? 0.28 : 1;
+    if (it.removed) {
+      ctx.strokeStyle = col("--bad"); ctx.lineWidth = 1.8; const r = Math.max(2, u * 0.22 * it.s);
+      ctx.beginPath(); ctx.moveTo(it.px - r, it.py - r); ctx.lineTo(it.px + r, it.py + r); ctx.moveTo(it.px + r, it.py - r); ctx.lineTo(it.px - r, it.py + r); ctx.stroke();
+    } else if (it.placed) {
+      ctx.fillStyle = `hsl(${h} 70% ${it.given ? 42 : 62}%)`; ctx.fillRect(it.px - size / 2, it.py - size / 2, size, size);
+      if (it.given) { ctx.strokeStyle = "rgba(0,0,0,.45)"; ctx.lineWidth = 1; ctx.strokeRect(it.px - size / 2, it.py - size / 2, size, size); }
+      if (it.now || it.pick) { ctx.strokeStyle = col("--accent"); ctx.lineWidth = 2.2; const g2 = size * 1.35; ctx.strokeRect(it.px - g2 / 2, it.py - g2 / 2, g2, g2); }
+    } else {
+      ctx.fillStyle = `hsl(${h} 70% 55%)`; ctx.globalAlpha *= it.inside ? 0.95 : 0.5;
+      ctx.beginPath(); ctx.arc(it.px, it.py, Math.max(1.2, u * (it.inside || it.pick ? 0.24 : 0.1) * it.s), 0, 7); ctx.fill();
+      if (it.pick) { ctx.globalAlpha = 1; ctx.strokeStyle = col("--accent"); ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(it.px, it.py, u * 0.36 * it.s, 0, 7); ctx.stroke(); }
+    }
+    ctx.globalAlpha = 1;
+  }
+  ctx.font = `600 ${Math.max(9, u * 0.7)}px -apple-system,Segoe UI,Roboto,sans-serif`; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  const ex = (half + 0.6) * u;
+  for (let z = 0; z < n; z++) {
+    const [px, py] = proj(ex + u * 0.9, (z - half) * gap, -ex); let k = 0; for (let i = 0; i < NN; i++) if (g[i] === z + 1) k++;
+    ctx.fillStyle = `hsl(${hue(z + 1)} 70% 45%)`; ctx.fillText(`${sym(z + 1)} ${k === n ? "✓" : k + "/" + n}`, px - u * 0.35, py);
+  }
+}
+function cubeLoop() {
+  if ($("view").value === "board") { C3.raf = 0; return; }
+  if (C3.auto && !C3.drag && !document.hidden) { C3.yaw += 0.0035; C3.dirty = true; }
+  if (C3.dirty) { C3.dirty = false; cubeDraw(); }
+  C3.raf = requestAnimationFrame(cubeLoop);
+}
+function setView() {
+  const v = $("view").value;
+  ["cube3", "cubeCtl", "cubeCtl2", "legCube"].forEach(id => $(id).classList.toggle("hidden", v === "board"));
+  $("board").classList.toggle("hidden", v === "cube");
+  if (v !== "board" && !C3.raf) C3.raf = requestAnimationFrame(cubeLoop);
+  C3.dirty = true;
+}
+function look(yaw, pitch, auto) { C3.yaw = yaw; C3.pitch = pitch; C3.auto = auto; $("cubeAuto").checked = auto; C3.dirty = true; }
+
+/* ---------- replay ---------- */
+function explain(e) {
+  const L = e.key != null ? `the <b>${layerName(e.key)}</b> layer` : "";
+  switch (e.kind) {
+    case "start": return ["Start", `The givens are placed in the tensor: each one removes the other numbers of its cell and its number from its row, column and box.`];
+    case "singles": return ["Lines with one point", `${e.pl.length ? `Placed ${ptList(e.pl)} — a line of the cube (a cell, or a number in a row, column or box) had only that point left.` : ""} ${e.rm.length ? `${e.rm.length} point${e.rm.length > 1 ? "s" : ""} removed from the tensor.` : ""}`];
+    case "sbuild": return e.big ? ["Shared walk too long", `Walking the patterns of numbers <b>${e.set.map(z => sym(z + 1)).join(", ")}</b> together passed the cap (${e.n.toLocaleString()} patterns). It waits until they shrink.`]
+      : ["Build the shared patterns", `One walk over the patterns for numbers <b>${e.set.map(z => sym(z + 1)).join(", ")}</b> together: <b>${e.n.toLocaleString()}</b> patterns, each kept once with the set of these numbers it fits. Support counts are set up for every point.`];
+    case "shared": return ["Support counts", `${e.pl.length ? `Every live pattern of its number uses ${ptList(e.pl)}: placed. ` : ""}${e.rm.length ? `${e.rm.length} point${e.rm.length > 1 ? "s" : ""} lost their last supporting pattern (or were taken by what was placed): removed.` : ""} Only the patterns through changed cells were touched.`];
+    case "vertical": return ["All vertical layers, in full", `Every open row, column and box layer is listed in full and stacked into one matrix per direction: rows <b>${e.n[0].toLocaleString()}</b>, columns <b>${e.n[1].toLocaleString()}</b>, boxes <b>${e.n[2].toLocaleString()}</b> options${e.big.some(Boolean) ? ` (${e.big.reduce((a, b) => a + b, 0)} layer(s) over 300,000 options wait until they shrink)` : ""}. Next: the top number layers.`];
+    case "matmul": return ["Matrix product", `The ${DN[e.dir]} matrix: alive = (M·(1−x) = 0), count = aliveᵀ·M. ${e.pl.length ? `Every live option of its layer uses ${ptList(e.pl)}: placed. ` : ""}${e.rm.length ? `${e.rm.length} point${e.rm.length > 1 ? "s" : ""} no live option uses (or taken by what was placed): removed.` : ""}`];
+    case "build": return e.big ? ["Layer too big", `${L[0].toUpperCase() + L.slice(1)} was the thinnest left, but it has more than ${e.n.toLocaleString()} options (the cap). It stays unbuilt until it shrinks.`]
+      : ["Build a layer", `${L[0].toUpperCase() + L.slice(1)} is the thinnest layer in any direction: <b>${e.n.toLocaleString()}</b> option${e.n > 1 ? "s" : ""} listed.`];
+    case "cut": return ["Cut and AND / OR", `${L[0].toUpperCase() + L.slice(1)}: ${e.cut && e.cut[0] !== e.cut[1] ? `options ${e.cut[0].toLocaleString()} → <b>${e.cut[1].toLocaleString()}</b>. ` : ""}${e.pl.length ? `Every option uses ${ptList(e.pl)}: placed. ` : ""}${e.rm.length ? `${e.rm.length} point${e.rm.length > 1 ? "s" : ""} no option uses (or taken by what was placed): removed.` : ""}`];
+    case "guess": return ["Guess", e.key != null ? `Nothing more follows. Guess option <b>${e.t + 1} of ${e.of}</b> of ${L}, the smallest choice.` : `Nothing more follows. Guess <b>${ptName(e.pts[0])}</b>, point ${e.t + 1} of ${e.of} on the line ${lineName(e.line)} (the smallest choice).`];
+    case "dead": { const w = e.why; const tx = !w ? "a contradiction" : w[0] === 0 ? `cell ${rc(w[1])} has no number left` : w[0] === 4 ? `the ${layerName(w[1])} layer has no option left` : `number ${sym(w[2] + 1)} has no place left in ${DN[w[0]]} ${w[1] + 1}`;
+      return ["Dead end", `After the last guess, ${tx}. The guess was wrong.`]; }
+    case "back": return ["Go back", `Undo the guess and try the next choice${e.t + 1 < e.of ? ` (${e.t + 2} of ${e.of})` : " — none left here, so go back further"}.`];
+    case "done": return ["Solved", `Every cell is filled. ${T.guesses.toLocaleString()} guesses in all.`];
+    case "fail": return ["Stopped", "No answer exists for these givens."];
+  }
+  return ["", ""];
+}
+const chip = e => { switch (e.kind) {
+  case "singles": return e.pl.length ? [`single ×${e.pl.length}`, ""] : null;
+  case "build": return [`${e.big ? "✗ " : "▣ "}${layerName(e.key)}${e.big ? "" : " (" + e.n + ")"}`, e.big ? "back" : "pick"];
+  case "sbuild": return [`${e.big ? "✗" : "▣"} shared ${e.set.map(z => sym(z + 1)).join("")}${e.big ? "" : " (" + e.n + ")"}`, e.big ? "back" : "pick"];
+  case "shared": return [`support${e.pl.length ? " +" + e.pl.length : ""}${e.rm.length ? " −" + e.rm.length : ""}`, ""];
+  case "vertical": return [`▦ vertical ${e.n.reduce((a, b) => a + b, 0).toLocaleString()}`, "pick"];
+  case "matmul": return [`M·x ${DN[e.dir]}${e.pl.length ? " +" + e.pl.length : ""}`, ""];
+  case "cut": return [`✂ ${layerName(e.key)}${e.cut && e.cut[0] !== e.cut[1] ? " " + e.cut[1] : ""}${e.pl.length ? " +" + e.pl.length : ""}`, ""];
+  case "guess": return [`? ${e.key != null ? layerName(e.key) + " #" + (e.t + 1) : ptName(e.pts[0])}`, "pick"];
+  case "dead": return ["✗ dead end", "back"];
+  case "back": return ["↩ back", "back"];
+  case "done": return ["✓ solved", ""];
+  default: return null; } };
+function show(addChip) {
+  const e = T.ev[V.k], c = CUM[V.k];
+  drawBoard(e); C3.dirty = true;
+  let pts = 0; for (let i = 0; i < e.g.length; i++) if (!e.g[i]) pts += popc(e.cv[i]);
+  $("sPts").textContent = pts.toLocaleString(); $("sLeft").textContent = e.g.filter(v => !v).length;
+  $("sBuilt").textContent = c.b.join("·"); $("sGuess").textContent = `${c.gu.toLocaleString()} · ${e.depth}`;
+  const [ph, tx] = explain(e); $("stepNo").textContent = `Step ${V.k} of ${T.ev.length - 1} · ${ph}`; $("stepText").innerHTML = tx;
+  if (addChip) { const ch = chip(e); if (ch) { const s = document.createElement("span"); s.textContent = ch[0]; if (ch[1]) s.className = ch[1]; const l = $("log"); l.appendChild(s); while (l.children.length > 250) l.removeChild(l.firstChild); l.scrollTop = l.scrollHeight; } }
+}
+const SPEEDS = { slow: 1200, normal: 500, fast: 120, turbo: 0 };
+function stop() { if (V.timer) clearTimeout(V.timer); V.timer = null; V.running = false; $("playBtn").textContent = "▶ Play"; }
+function tick() {
+  if (!V.running) return;
+  const turbo = $("speed").value === "turbo", batch = turbo ? Math.max(1, Math.ceil(T.ev.length / 300)) : 1;
+  for (let b = 0; b < batch && V.k < T.ev.length - 1; b++) { V.k++; if (batch === 1 || b >= batch - 3) show(true); }
+  if (batch > 1) show(false);
+  if (V.k >= T.ev.length - 1) { stop(); return; }
+  V.timer = setTimeout(tick, turbo ? 16 : SPEEDS[$("speed").value]);
+}
+$("playBtn").onclick = () => { if (!T) return; if (V.running) { stop(); return; } if (V.k >= T.ev.length - 1) { V.k = 0; $("log").innerHTML = ""; } V.running = true; $("playBtn").textContent = "⏸ Pause"; tick(); };
+$("stepBtn").onclick = () => { if (!T) return; stop(); if (V.k < T.ev.length - 1) { V.k++; show(true); } };
+$("backBtn").onclick = () => { if (!T) return; stop(); if (V.k > 0) { V.k--; const l = $("log"); if (l.lastChild) l.removeChild(l.lastChild); show(false); } };
+$("resetBtn").onclick = () => { if (!T) return; stop(); V.k = 0; $("log").innerHTML = ""; show(false); };
+$("endBtn").onclick = () => { if (!T) return; stop(); V.k = T.ev.length - 1; show(true); };
+$("newBtn").onclick = newPuzzle;
+$("view").addEventListener("change", setView);
+$("cubeSpread").addEventListener("input", e => { C3.spread = +e.target.value; C3.dirty = true; });
+$("cubeAuto").addEventListener("change", e => { C3.auto = e.target.checked; });
+$("cubeDots").addEventListener("change", e => { C3.dots = e.target.checked; C3.dirty = true; });
+$("vTop").onclick = () => look(0, 1.5, false);
+$("vFront").onclick = () => look(0, 0, false);
+$("vSide").onclick = () => look(Math.PI / 2, 0, false);
+$("vTurn").onclick = () => look(-0.65, 0.5, true);
+{
+  const cv = $("cube3");
+  cv.addEventListener("pointerdown", e => { C3.drag = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener("pointermove", e => {
+    if (!C3.drag) return;
+    C3.yaw += (e.clientX - C3.drag.x) * 0.01; C3.pitch = Math.max(-1.5, Math.min(1.5, C3.pitch + (e.clientY - C3.drag.y) * 0.01));
+    C3.drag = { x: e.clientX, y: e.clientY }; C3.dirty = true;
+  });
+  ["pointerup", "pointercancel"].forEach(t => cv.addEventListener(t, () => { C3.drag = null; }));
+  window.addEventListener("resize", () => { C3.dirty = true; });
+}
+
+/* ---------- race ---------- */
+const METHODS = [
+  { key: "tAll", name: "Tensor OL · all four directions", color: "#2455c7", run: p => tensorOL(p, { ...tOpt(), dirs: [1, 1, 1, 1] }) },
+  { key: "tNum", name: "Tensor OL · number layers only", color: "#6f98ff", run: p => tensorOL(p, { ...tOpt(), dirs: [1, 0, 0, 0] }) },
+  { key: "tUnit", name: "Tensor OL · row, column, box layers", color: "#8a4fd0", run: p => tensorOL(p, { ...tOpt(), dirs: [0, 1, 1, 1] }) },
+  { key: "sh", name: "Shared number patterns · support counts", color: "#00897b", run: p => sharedOL(p, sOpt()) },
+  { key: "x2", name: "Matrix OL · top 2 + full vertical (matmul)", color: "#c2185b", run: p => matrixOL(p, { top: 2, cap: +$("cap").value }) },
+  { key: "x3", name: "Matrix OL · top 3 + full vertical (matmul)", color: "#f06292", run: p => matrixOL(p, { top: 3, cap: +$("cap").value }) },
+  // exactly the Speed page's lean method, as is (top 2, fewest open cells first, cap 300,000)
+  { key: "lean", name: "Lean OL · Speed page (as is)", color: "#e08a00", run: p => leanLayers(p, { start: 2, order: "cells", cap: 300000 }) },
+  { key: "dlx", name: "Dancing Links (Algorithm X)", color: "#2e9e57", run: p => dlxSolve(p) },
+  { key: "mrv", name: "MRV backtracking", color: "#6a6e77", run: p => mrvSolve(p) },
+];
+$("methods").innerHTML = METHODS.map(m => `<label><input type="checkbox" id="use_${m.key}" checked><span class="sw" style="background:${m.color}"></span>${m.name}</label>`).join("");
+$("rLevel").innerHTML = $("level").innerHTML;
+const sleep0 = () => new Promise(r => setTimeout(r, 0));
+const median = a => { if (!a.length) return NaN; const s = a.slice().sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+const mean = a => a.reduce((x, y) => x + y, 0) / (a.length || 1);
+const fmt = ms => !isFinite(ms) ? "–" : ms >= 100 ? ms.toFixed(0) + " ms" : ms >= 10 ? ms.toFixed(1) + " ms" : ms >= 1 ? ms.toFixed(2) + " ms" : ms >= 0.1 ? ms.toFixed(3) + " ms" : (ms * 1000).toFixed(0) + " µs";
+function timeIt(fn) {
+  let t0 = performance.now(); const res = fn(); let ms = performance.now() - t0;
+  if (ms < 4) { const reps = Math.min(400, Math.ceil(8 / Math.max(ms, 0.01))); t0 = performance.now(); for (let k = 0; k < reps; k++) fn(); ms = (performance.now() - t0) / reps; }
+  return { res, ms };
+}
+function validGrid(g, p) {
+  const NN = N * N, full = (1 << (N + 1)) - 2;
+  if (!g || g.length !== NN) return false;
+  for (let i = 0; i < NN; i++) { if (!(g[i] >= 1 && g[i] <= N)) return false; if (p[i] && g[i] !== p[i]) return false; }
+  const r = new Int32Array(N), c = new Int32Array(N), b = new Int32Array(N);
+  for (let i = 0; i < NN; i++) { const bit = 1 << g[i]; r[(i / N) | 0] |= bit; c[i % N] |= bit; b[boxOf((i / N) | 0, i % N)] |= bit; }
+  for (let k = 0; k < N; k++) if (r[k] !== full || c[k] !== full || b[k] !== full) return false;
+  return true;
+}
+let raceStop = false;
+$("raceStop").onclick = () => { raceStop = true; };
+$("raceBtn").onclick = async () => {
+  const use = METHODS.filter(m => $("use_" + m.key).checked); if (!use.length) return;
+  const n = +$("rSize").value, level = $("rLevel").value, count = +$("rCount").value;
+  stop(); raceStop = false; $("raceBtn").disabled = true; $("raceStop").disabled = false; $("rTbl").innerHTML = ""; $("rNote").textContent = "";
+  const prog = f => $("prog").style.width = (100 * f).toFixed(1) + "%";
+  setSize(n);
+  // all puzzles first (the seed, if given, makes the same set again), then every method on the same puzzles
+  const puzzles = [];
+  const v = $("seed").value.trim(); if (/^\d+$/.test(v)) Math.random = seeded(+v);
+  try { for (let k = 0; k < count && !raceStop; k++) { $("rStatus").textContent = `Making puzzle ${k + 1} of ${count}…`; prog(0.3 * k / count); await sleep0(); puzzles.push(makePuzzle(level).p); } }
+  finally { Math.random = RND; }
+  const res = {}; use.forEach(m => res[m.key] = []);
+  $("rStatus").textContent = "Warming up…"; await sleep0();
+  for (const m of use) m.run(puzzles[0]);
+  for (let k = 0; k < puzzles.length && !raceStop; k++) {
+    for (const m of use) { $("rStatus").textContent = `Puzzle ${k + 1} of ${puzzles.length}: ${m.name}…`; await sleep0(); const t = timeIt(() => m.run(puzzles[k])); res[m.key].push({ ms: t.ms, ok: validGrid(t.res.grid, puzzles[k]), gu: t.res.guesses, b: t.res.built }); }
+    prog(0.3 + 0.7 * (k + 1) / puzzles.length);
+  }
+  const done = Math.min(...use.map(m => res[m.key].length));
+  const best = Math.min(...use.map(m => median(res[m.key].slice(0, done).map(x => x.ms))));
+  const giv = mean(puzzles.slice(0, done).map(p => p.filter(Boolean).length));
+  $("rTbl").innerHTML = `<tr><th>Method</th><th>Solved</th><th>Median</th><th>Mean</th><th>Slowest</th><th>Guesses (median)</th><th>Layers built N·R·C·B (median)</th></tr>` + use.map(m => {
+    const R = res[m.key].slice(0, done), ms = R.map(x => x.ms), md = median(ms), t = m.key.startsWith("t") || m.key.startsWith("x") || m.key === "sh";
+    return `<tr><td><span class="sw" style="background:${m.color}"></span>${m.name}</td><td>${R.filter(x => x.ok).length} of ${R.length}</td><td class="${md === best ? "best" : ""}">${fmt(md)}</td><td>${fmt(mean(ms))}</td><td>${fmt(Math.max(...ms))}</td>` +
+      `<td>${t || m.key === "mrv" || m.key === "dlx" ? median(R.map(x => x.gu)).toLocaleString() : "–"}</td><td>${t ? [0, 1, 2, 3].map(d => median(R.map(x => x.b[d]))).join("·") : "–"}</td></tr>`; }).join("");
+  $("rStatus").textContent = `${n}×${n}, ${$("rLevel").selectedOptions[0].textContent}: ${done} puzzle${done > 1 ? "s" : ""}, ${giv.toFixed(1)} givens on average (${(100 * giv / (n * n)).toFixed(0)}%).${raceStop ? " Stopped early." : ""}`;
+  $("rNote").textContent = `Tensor settings: start top ${$("startK").value}, cap ${(+$("cap").value).toLocaleString()}. Matrix: top 2 or 3 number layers (same cap) + every row, column and box layer in full. Shared: starts with the top numbers from the Start menu (at least 1); its "layers built" = how many shared walks. MRV and Dancing Links stop at 5 million steps; a stopped run counts as not solved. For MRV and Dancing Links the "guesses" column is their search nodes.`;
+  $("raceBtn").disabled = false; $("raceStop").disabled = true; prog(1);
+  if (P) setSize(P.n);                               // the replay above keeps its own size
+};
+$("engine").onchange = () => $("dirs").classList.toggle("dim", $("engine").value !== "tensor");
+setView(); newPuzzle();
+</script>
+</body>
+</html>
