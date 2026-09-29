@@ -8,7 +8,7 @@ const A = new Function(load("C:/Sudoku_shaimaa/LayerSudoku-FewGivens.html") + "\
 const SP = new Function(load("C:/Sudoku_shaimaa/LayerSudoku-Speed.html") + "; return { carve };")();
 const time = f => { const t0 = performance.now(); const r = f(); return [r, performance.now() - t0]; };
 const cases = (process.env.CASES || "9:hard,9:34,9:20,16:hard,16:40").split(",");
-const M = [["dancing top2", p => A.dancingLayers(p, { top: 2 })], ["dancing top9", p => A.dancingLayers(p, { top: 9 })], ["dancing top0", p => A.dancingLayers(p, { top: 0 })], ["shared", p => A.sharedOL(p, { top: 2, cap: 2000 })], ["tensor all", p => A.tensorOL(p, {})], ["tensor numbers", p => A.tensorOL(p, { dirs: [1, 0, 0, 0] })], ["tensor units", p => A.tensorOL(p, { dirs: [0, 1, 1, 1] })],
+const M = [["tensor num+box", p => A.tensorOL(p, { dirs: [1, 0, 0, 1] })], ["tensor box only", p => A.tensorOL(p, { dirs: [0, 0, 0, 1] })], ["tensor all", p => A.tensorOL(p, {})], ["tensor numbers", p => A.tensorOL(p, { dirs: [1, 0, 0, 0] })], ["tensor units", p => A.tensorOL(p, { dirs: [0, 1, 1, 1] })],
   ["lean (Speed)", p => A.leanLayers(p, { start: 2, order: "cells", cap: 300000 })], ["MRV", p => A.mrvSolve(p, 2e6)], ["DLX", p => A.dlxSolve(p, 2e6)]];
 const K = +(process.env.K || 6);
 for (const cs of cases) {

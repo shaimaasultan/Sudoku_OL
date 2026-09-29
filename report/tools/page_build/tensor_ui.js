@@ -121,14 +121,18 @@ function cubeDraw() {
       items.push({ px, py, pz, s, z, placed, removed, possible, inside, given: placed && !!P.p[i], now: pl.has(q), pick: pick.has(q) });
     }
   }
-  const box = (b, color, lw) => {
+  const box = (b, color, lw, fill) => {
     const [c0, c1, r0, r1, z0, z1] = b, xs = [(c0 - half - 0.5) * u, (c1 - half + 0.5) * u], zs = [(r0 - half - 0.5) * u, (r1 - half + 0.5) * u], ys = [(z0 - half) * gap - u * 0.55, (z1 - half) * gap + u * 0.55], P8 = [];
     for (const a of [0, 1]) for (const bb of [0, 1]) for (const c of [0, 1]) P8.push(proj(xs[a], ys[bb], zs[c]));
+    // a box layer is a solid prism: shade its six faces so the whole box column stands out
+    if (fill) { ctx.fillStyle = color; ctx.globalAlpha = 0.07;
+      for (const f of [[0, 1, 3, 2], [4, 5, 7, 6], [0, 1, 5, 4], [2, 3, 7, 6], [0, 2, 6, 4], [1, 3, 7, 5]]) { ctx.beginPath(); f.forEach((k, j) => j ? ctx.lineTo(P8[k][0], P8[k][1]) : ctx.moveTo(P8[k][0], P8[k][1])); ctx.closePath(); ctx.fill(); }
+      ctx.globalAlpha = 1; }
     ctx.strokeStyle = color; ctx.lineWidth = lw;
     for (let a = 0; a < 8; a++) for (let bb = a + 1; bb < 8; bb++) if ([1, 2, 4].includes(a ^ bb)) { ctx.beginPath(); ctx.moveTo(P8[a][0], P8[a][1]); ctx.lineTo(P8[bb][0], P8[bb][1]); ctx.stroke(); }
   };
   box([0, n - 1, 0, n - 1, 0, n - 1], col("--line"), 1);
-  if (rg) box(bounds(rg), bad ? col("--bad") : col("--accent"), 2.5);
+  if (rg) box(bounds(rg), bad ? col("--bad") : col("--accent"), 2.5, rg.key != null && ((rg.key / N) | 0) === 3);
   items.sort((a, b) => b.pz - a.pz);
   for (const it of items) {
     const h = hue(it.z + 1), size = u * 0.72 * it.s;
@@ -262,6 +266,7 @@ const METHODS = [
   { key: "tAll", name: "Tensor OL · all four directions", color: "#2455c7", run: p => tensorOL(p, { ...tOpt(), dirs: [1, 1, 1, 1] }) },
   { key: "tNum", name: "Tensor OL · number layers only", color: "#6f98ff", run: p => tensorOL(p, { ...tOpt(), dirs: [1, 0, 0, 0] }) },
   { key: "tUnit", name: "Tensor OL · row, column, box layers", color: "#8a4fd0", run: p => tensorOL(p, { ...tOpt(), dirs: [0, 1, 1, 1] }) },
+  { key: "tBox", name: "Tensor OL · number layers + box prisms", color: "#3949ab", run: p => tensorOL(p, { ...tOpt(), dirs: [1, 0, 0, 1] }) },
   { key: "sh", name: "Shared number patterns · support counts", color: "#00897b", run: p => sharedOL(p, sOpt()) },
   { key: "dl", name: "Dancing Layers · templates as rows", color: "#6d4c41", run: p => dancingLayers(p, dOpt()) },
   { key: "dl0", name: "Dancing Layers · no templates (plain exact cover)", color: "#a1887f", run: p => dancingLayers(p, { top: 0 }) },
@@ -316,7 +321,7 @@ $("raceBtn").onclick = async () => {
   const best = Math.min(...use.map(m => median(res[m.key].slice(0, done).map(x => x.ms))));
   const giv = mean(puzzles.slice(0, done).map(p => p.filter(Boolean).length));
   $("rTbl").innerHTML = `<tr><th>Method</th><th>Solved</th><th>Median</th><th>Mean</th><th>Slowest</th><th>Guesses (median)</th><th>Layers built N·R·C·B (median)</th></tr>` + use.map(m => {
-    const R = res[m.key].slice(0, done), ms = R.map(x => x.ms), md = median(ms), t = ["tAll", "tNum", "tUnit", "sh", "x2", "x3", "dl", "dl0"].includes(m.key);
+    const R = res[m.key].slice(0, done), ms = R.map(x => x.ms), md = median(ms), t = ["tAll", "tNum", "tUnit", "tBox", "sh", "x2", "x3", "dl", "dl0"].includes(m.key);
     return `<tr><td><span class="sw" style="background:${m.color}"></span>${m.name}</td><td>${R.filter(x => x.ok).length} of ${R.length}</td><td class="${md === best ? "best" : ""}">${fmt(md)}</td><td>${fmt(mean(ms))}</td><td>${fmt(Math.max(...ms))}</td>` +
       `<td>${t || m.key === "mrv" || m.key === "dlx" ? median(R.map(x => x.gu)).toLocaleString() : "–"}</td><td>${t ? [0, 1, 2, 3].map(d => median(R.map(x => x.b[d]))).join("·") : "–"}</td></tr>`; }).join("");
   $("rStatus").textContent = `${n}×${n}, ${$("rLevel").selectedOptions[0].textContent}: ${done} puzzle${done > 1 ? "s" : ""}, ${giv.toFixed(1)} givens on average (${(100 * giv / (n * n)).toFixed(0)}%).${raceStop ? " Stopped early." : ""}`;

@@ -23,7 +23,9 @@
     </div>
     <div class="row" id="tensorMenus">
       <select id="dirs" aria-label="Layer directions">
-        <option value="1111" selected>Layers in all four directions</option>
+        <option value="1001" selected>Number layers + box prisms (vertical = the whole box)</option>
+        <option value="0001">Box prisms only</option>
+        <option value="1111">Layers in all four directions</option>
         <option value="1000">Number layers only (as lean OL)</option>
         <option value="0111">Row, column and box layers only</option>
         <option value="0000">No layers (tensor lines only)</option>
@@ -94,7 +96,7 @@
     <ol>
       <li><b>The cube is one tensor.</b> A point (row, column, number) is true while that number can still go in that cell. The same tensor is kept in four views, and each view packs one line of the cube into a 32-bit word: a cell's numbers (the <b>pillar</b>), a number's columns in a row, its rows in a column, and its places in a box. Removing a point changes all four views at once.</li>
       <li><b>Lines with one point.</b> Every rule of Sudoku says "exactly one point on each line". A line with no point is a dead end; a line with one point places it. On pillars this is a naked single; on the other three views it is a hidden single — one pass over the tensor finds both.</li>
-      <li><b>Layers in four directions.</b> A layer is a slice of the cube with its list of options. A <b>number</b> layer (horizontal slice) lists every way to place that number once in each row, column and box — the templates of the lean method. A <b>row</b>, <b>column</b> or <b>box</b> layer (vertical slices and prisms) lists every way to give its open cells different numbers.</li>
+      <li><b>Layers in four directions.</b> A layer is a slice of the cube with its list of options. A <b>number</b> layer (horizontal slice) lists every way to place that number once in each row, column and box — the templates of the lean method. A <b>row</b>, <b>column</b> or <b>box</b> layer (vertical slices and prisms) lists every way to give its open cells different numbers. The default setting uses the <b>box prism</b> as the vertical layer: a whole box (3×3 cells on 9×9) standing through all the number slices, instead of a slice one cell thick — in the cube it is drawn as a shaded prism.</li>
       <li><b>Thinnest first, in any direction.</b> For each layer a size bound is worked out from the tensor (the product of the open points along its lines). The start builds the top 1–9 thinnest layers; when nothing changes, one more is built, the thinnest in any allowed direction. A layer with more options than the cap is left unbuilt, and tried again only when its bound has shrunk about 8 times.</li>
       <li><b>Cut and AND / OR.</b> An option that uses a removed point is cut. A point used by no option is removed from the tensor (OR); a point used by every option is placed (AND). The same rule works for all four directions.</li>
       <li><b>Guess last, on the smallest choice.</b> When nothing more can be done, guess on the built layer with the fewest options or on the tensor line with the fewest points, whichever is smaller; go back if it leads to a dead end.</li>
